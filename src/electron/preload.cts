@@ -16,7 +16,16 @@ electron.contextBridge.exposeInMainWorld("electron", {
     ipcSend("sendFrameAction", payload);
   },
 
+  // Game HUD overlay
   startOverlay: () => ipcSend("startOverlay", null),
+  
+  // Agent AI Overlay
+  startAgentOverlay: () => ipcSend("startAgentOverlay", null),
+  stopAgentOverlay: () => ipcSend("stopAgentOverlay", null),
+  updateAgentStatus: (status) => ipcSend("updateAgentStatus", status),
+  onAgentStatusUpdate: (callback: (status: any) => void) =>
+    ipcOn("agent-status-update", callback),
+
   openExternalLink: (url) => ipcSend("openExternalLink", url),
   openHudsDirectory: () => ipcSend("openHudsDirectory", undefined),
 } satisfies Window["electron"]);

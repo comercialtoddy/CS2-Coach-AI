@@ -3,3 +3,7 @@ export * from "./playersServices.js";
 export * from "./teamsServices.js";
 export * from "./coachesServices.js";
 export * from "./settingsServices.js";
+export * from "./trackerGGServices.js";
+export * from "./piperTTSServices.js";
+export * from "./agentOverlayDemoService.js";
+export * from "./openRouterServices.js";

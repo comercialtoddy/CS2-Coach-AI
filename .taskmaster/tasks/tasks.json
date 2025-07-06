@@ -1,0 +1,1736 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Project Initialization & Core Setup",
+        "description": "Initialize the monorepo project structure with Electron, React, TypeScript, Node.js, and Express. Set up basic configurations for development and build processes.",
+        "details": "Use `create-electron-app` or manually set up a monorepo with separate `electron`, `backend`, and `frontend` packages. For the frontend, use `create-react-app` or Vite with TypeScript. For the backend, initialize a Node.js project with Express. Ensure `package.json` scripts are configured for starting all components. Recommended tools: Electron v29.x, React v18.x, TypeScript v5.x, Node.js v20.x, Express v4.x.",
+        "testStrategy": "Verify that all project components (Electron main, React renderer, Node.js backend) can be started independently and together without errors. Check `package.json` scripts for correct execution.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize Monorepo Structure",
+            "description": "Set up the foundational monorepo using a tool like Lerna, Nx, or Turborepo. Define the initial workspace structure and create placeholder directories for Electron, React, and Node.js/Express packages.",
+            "dependencies": [],
+            "details": "Choose a monorepo tool (e.g., Turborepo for speed, Nx for comprehensive features). Initialize the monorepo, configure the root `package.json`, and create initial `apps` and/or `packages` directories.\n<info added on 2025-07-06T15:11:47.287Z>\nAnalysis of the current project (OpenHud) concludes that a traditional monorepo is not necessary. The project is already well-structured as a single, modular entity. The current structure, which separates the Electron code (src/electron/), React UI (src/UI/), and Node.js/Express backend (src/electron/server/), is working effectively. This setup is supported by separate TypeScript configurations for each domain and existing development and build scripts. This simpler approach is more suitable for the project's size.\n</info added on 2025-07-06T15:11:47.287Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Configure Base TypeScript for Monorepo",
+            "description": "Establish a shared TypeScript configuration (`tsconfig.base.json`) at the monorepo root. This configuration will be extended by individual packages to ensure consistent type checking and compilation settings across the project.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create `tsconfig.base.json` in the monorepo root. Define common compiler options (e.g., `target`, `module`, `strict`, `esModuleInterop`, `skipLibCheck`). Configure path aliases if necessary for inter-package imports.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Set Up Electron Application Package",
+            "description": "Create a dedicated package for the Electron application within the monorepo. Configure Electron's main process, preload scripts, and integrate TypeScript compilation for these components.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create an `electron-app` package. Install Electron and its dependencies. Set up `main.ts` and `preload.ts` files. Configure `tsconfig.json` for the Electron package, extending the base TS config. Ensure basic Electron window creation works.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Set Up React Frontend Package",
+            "description": "Establish a separate package for the React user interface. Configure React development environment, integrate TypeScript, and set up basic routing or component structure. Prepare it to be loaded by the Electron app.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create a `react-frontend` package. Initialize a React project (e.g., with Vite or Create React App). Configure `tsconfig.json` for the React package, extending the base TS config. Set up a development server for the React app.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Set Up Node.js/Express Backend Package",
+            "description": "Create a distinct package for the Node.js/Express backend service. Configure Express, set up basic API endpoints, and ensure TypeScript compilation for the backend code.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create a `backend-service` package. Install Node.js and Express. Set up an `index.ts` file for the Express server. Configure `tsconfig.json` for the backend package, extending the base TS config. Implement a simple 'hello world' API endpoint.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Unified Development & Build Scripts",
+            "description": "Create comprehensive scripts at the monorepo root to orchestrate development (concurrently running Electron, React dev server, and Node.js backend) and production builds for all components.",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "Configure `package.json` scripts at the monorepo root. Use a tool like `concurrently` or the monorepo tool's built-in task runner (e.g., `turbo run dev`) to start all services simultaneously for development. Define build scripts for each package and a root build script to compile all components for production.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Electron Main Process & IPC Setup",
+        "description": "Set up the Electron main process to create and manage browser windows, including the main application window and potential in-game overlays. Establish Inter-Process Communication (IPC) channels between the main process and renderer processes.",
+        "details": "Configure `main.js` to create `BrowserWindow` instances for the main dashboard and the in-game HUD. Use `ipcMain` and `ipcRenderer` for secure communication. For overlays, consider `BrowserWindow` with `transparent: true`, `frame: false`, `alwaysOnTop: true`, and `webPreferences.backgroundThrottling: false`. Implement basic IPC handlers for window control (e.g., minimize, close).",
+        "testStrategy": "Launch the Electron application and verify that the main window appears correctly. Test basic IPC communication by sending a message from the renderer to the main process and logging it.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Setup Main BrowserWindow",
+            "description": "Create and configure the primary Electron BrowserWindow, defining its initial dimensions, resizability, and loading the main application HTML file.",
+            "dependencies": [],
+            "details": "This involves setting up the initial window properties and loading the main application entry point.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop Overlay BrowserWindow Logic",
+            "description": "Implement the creation and management of a secondary, transparent, frameless, and always-on-top BrowserWindow to serve as an overlay for specific UI elements.",
+            "dependencies": [
+              1
+            ],
+            "details": "Focus on properties like `transparent: true`, `frame: false`, and `alwaysOnTop: true` for the overlay window.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Define Secure IPC Channels",
+            "description": "Establish secure Inter-Process Communication (IPC) channels using `ipcMain` and `contextBridge` to enable safe and controlled communication between the main and renderer processes.",
+            "dependencies": [
+              1
+            ],
+            "details": "This includes defining the channel names and setting up the `contextBridge` API for exposing specific functions to the renderer.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Core IPC Handlers",
+            "description": "Develop basic `ipcMain` handlers in the main process to respond to common requests from renderer processes, such as window controls (minimize, maximize, close) or simple data fetches.",
+            "dependencies": [
+              3
+            ],
+            "details": "Create functions that `ipcMain.handle` will call when a renderer process sends a message on a defined channel.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate IPC with Window Management",
+            "description": "Connect the established IPC channels and handlers to the window management logic, allowing renderer processes to control the main and overlay windows (e.g., toggle overlay visibility, close application).",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Ensure that IPC calls from the renderer can correctly trigger actions on both the main and overlay BrowserWindows.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Backend Server & API Foundation",
+        "description": "Develop the foundational Express.js backend server to handle API requests from the Electron frontend and serve as the central hub for AI modules and data management.",
+        "details": "Create an `index.ts` or `app.ts` file for the Express server. Define basic routes (e.g., `/api/status`). Implement middleware for JSON parsing (`express.json()`) and CORS if necessary for development. Ensure the server starts on a configurable port (e.g., 3001).",
+        "testStrategy": "Start the backend server and use a tool like Postman or `curl` to send a GET request to a basic endpoint (e.g., `/api/status`) and verify a successful response.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize Express Server & Configure Port",
+            "description": "Set up the foundational Express.js application, define the listening port, and ensure the server starts correctly.",
+            "dependencies": [],
+            "details": "Install Express.js, create a main server file (e.g., `server.js`), initialize the Express app instance, define a port (e.g., 3000 or from environment variables), and add the `app.listen()` call to start the server.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define Basic API Routes",
+            "description": "Create initial API endpoints to test server responsiveness and demonstrate basic routing capabilities.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement a simple GET route, such as `/` or `/api/status`, that returns a basic JSON response (e.g., `{ message: 'Server is running' }`) to confirm the server and routing are functional.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Essential Middleware",
+            "description": "Integrate core middleware for handling request bodies and enabling cross-origin requests if needed for frontend interaction.",
+            "dependencies": [
+              1
+            ],
+            "details": "Add `app.use(express.json());` to parse incoming JSON request bodies. Optionally, include `app.use(express.urlencoded({ extended: true }));` for URL-encoded data and consider `cors` middleware if cross-origin requests will be made from a separate frontend application.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Socket.io Real-time Communication Setup",
+        "description": "Integrate Socket.io into both the Node.js backend and the Electron frontend to enable real-time, bidirectional communication, crucial for GSI data streaming and in-game feedback.",
+        "details": "On the backend, initialize `socket.io` with the Express server. On the frontend (React), use the `socket.io-client` library to establish a connection. Implement basic `emit` and `on` handlers for a test message (e.g., 'ping-pong'). Ensure proper error handling and reconnection logic. Recommended: `socket.io` v4.x, `socket.io-client` v4.x.",
+        "testStrategy": "Verify that the frontend can connect to the backend via Socket.io. Implement a simple 'ping-pong' test where the frontend sends a 'ping' and the backend responds with 'pong', confirming real-time communication.",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Server-Side Socket.io Integration with Express",
+            "description": "Set up the Socket.io server, integrate it with the existing Express application, and define the main connection handler for incoming client connections.",
+            "dependencies": [],
+            "details": "Install 'socket.io', bind it to the HTTP server instance, and create a basic 'connection' event listener.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Client-Side Socket.io Connection in React",
+            "description": "Install the Socket.io client library in the React application, establish a connection to the server, and manage the socket instance within a React component (e.g., using useEffect or context).",
+            "dependencies": [
+              1
+            ],
+            "details": "Install 'socket.io-client', create a socket instance pointing to the server URL, and ensure it connects on component mount.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Basic Real-time Event Handling (Emit/On)",
+            "description": "Develop a simple event exchange mechanism, demonstrating 'socket.emit' from one side (e.g., client) and 'socket.on' on the other (e.g., server) for a basic real-time message or data transfer.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Define a custom event name (e.g., 'chatMessage'), implement emitting this event from the client, and listening for it on the server (and vice-versa for a response).",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Configure Socket.io Reconnection Logic",
+            "description": "Ensure robust connection handling by configuring Socket.io's automatic reconnection attempts on the client-side and handling 'connect' and 'disconnect' events to update UI or state accordingly.",
+            "dependencies": [
+              2
+            ],
+            "details": "Leverage Socket.io's default reconnection options and add listeners for 'connect', 'disconnect', and 'reconnect' events to provide user feedback or re-fetch data.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "SQLite3 Database & ORM Setup",
+        "description": "Set up SQLite3 as the local database for persistent storage of player profiles, match history, and AI memory. Integrate an Object-Relational Mapper (ORM) for simplified database interactions.",
+        "details": "Use `better-sqlite3` for efficient synchronous SQLite operations in Node.js. Integrate `Sequelize` (v6.x) or `Drizzle ORM` (v0.29.x) for defining models and managing migrations. Design initial schemas for `PlayerProfile`, `MatchHistory`, and `MemoryEntry` tables. Example schema for `PlayerProfile`: `id (PK), name, preferredWeapon, playStyle, commonErrors, lastFeedback, totalXP`.",
+        "testStrategy": "Create a simple script to initialize the database, define a model, and perform a basic CRUD operation (e.g., insert a player, retrieve it). Verify that data persists after application restart.",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Select & Integrate ORM (Sequelize/Drizzle)",
+            "description": "Research and choose between Sequelize and Drizzle ORM based on project needs and preferences. Install the chosen ORM and its necessary dependencies for SQLite3.",
+            "dependencies": [],
+            "details": "Evaluate features, community support, and documentation for Sequelize vs. Drizzle. Install the selected ORM package (e.g., `npm install sequelize sqlite3` or `npm install drizzle-orm @sqlite/sqlite3`).\n<info added on 2025-07-06T15:15:19.737Z>\nArchitectural decision: The project will use SQLite3 directly instead of an ORM like Sequelize or Drizzle. This choice provides better performance due to less overhead, full control over SQL queries, lower dependency complexity, and greater transparency in database operations. The implementation is located in `src/electron/database/database.ts` with tables for players, teams, matches, coaches, and settings. Services implement CRUD operations using manual promisification of SQLite3.\n</info added on 2025-07-06T15:15:19.737Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Configure SQLite3 Database Connection",
+            "description": "Set up the chosen ORM to connect to a local SQLite3 database file, ensuring proper initialization and configuration.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create a configuration file or section for the ORM, specifying the SQLite3 database file path (e.g., `database.sqlite`). Initialize the ORM instance with the correct dialect and connection parameters.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Define PlayerProfile Database Schema",
+            "description": "Create the ORM model definition for the 'PlayerProfile' entity, including relevant attributes such as ID, name, level, and experience.",
+            "dependencies": [
+              2
+            ],
+            "details": "Map 'PlayerProfile' attributes to ORM data types (e.g., STRING, INTEGER, BOOLEAN). Define primary keys, unique constraints, and default values as necessary within the ORM model.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Define MatchHistory & MemoryEntry Schemas",
+            "description": "Create ORM model definitions for 'MatchHistory' and 'MemoryEntry' entities, including their respective attributes and any necessary relationships (e.g., foreign keys) to 'PlayerProfile'.",
+            "dependencies": [
+              2
+            ],
+            "details": "Define attributes for 'MatchHistory' (e.g., match ID, player IDs, outcome, timestamp) and 'MemoryEntry' (e.g., entry ID, content, timestamp, associated player). Establish foreign key relationships where applicable.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Basic CRUD Operations",
+            "description": "Develop functions or methods to perform Create, Read, Update, and Delete (CRUD) operations for the 'PlayerProfile', 'MatchHistory', and 'MemoryEntry' models.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Write code examples for: creating new records, retrieving single or multiple records based on criteria, updating existing records, and deleting records. Test these operations to ensure data persistence and correctness.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "CS2 GSI Listener & Configuration",
+        "description": "Configure the Node.js backend to receive Game State Integration (GSI) data from CS2. This involves setting up a local HTTP endpoint that CS2 can send POST requests to.",
+        "details": "Create an Express route (e.g., `/gsi`) that listens for POST requests. CS2 GSI requires a `gamestate_integration_ai_coach.cfg` file in the CS2 `cfg` directory. This file should point to the backend's local IP and port (e.g., `http://127.0.0.1:3001/gsi`). The backend should parse the incoming JSON payload. Implement a basic check to ensure the request is from CS2 (e.g., using a shared authentication token if configured in GSI).",
+        "testStrategy": "Launch CS2 with the GSI config. Verify that the backend receives GSI data by logging the incoming payloads. Check for continuous data flow during gameplay.",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Develop Express GSI Endpoint",
+            "description": "Implement an Express.js server with a dedicated HTTP endpoint (e.g., /gsi) configured to listen for incoming POST requests from CS2's Game State Integration. Ensure it can parse JSON payloads.",
+            "dependencies": [],
+            "details": "This involves setting up the basic Express server, defining the route, and adding initial logging to confirm endpoint activation.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Generate gamestate_integration_ai_coach.cfg",
+            "description": "Create the `gamestate_integration_ai_coach.cfg` file with the necessary GSI configuration, including the `uri` pointing to the local Express GSI endpoint (e.g., `http://localhost:3000/gsi`) and specifying the desired data intervals and event types.",
+            "dependencies": [
+              1
+            ],
+            "details": "The configuration file must be a valid JSON structure as expected by CS2's GSI system. Ensure the URI matches the endpoint created in Subtask 1.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Deploy GSI Configuration File to CS2",
+            "description": "Place the generated `gamestate_integration_ai_coach.cfg` file into the correct CS2 game directory, typically `Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg` (or similar path for CS2).",
+            "dependencies": [
+              2
+            ],
+            "details": "Verify the exact path for CS2's GSI configuration files. Incorrect placement will prevent CS2 from loading the configuration.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Verify GSI Data Reception",
+            "description": "Launch CS2 and play a match (e.g., against bots) to trigger GSI events. Monitor the Express GSI endpoint's logs to confirm successful reception and parsing of game state data from CS2.",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Check the server console for incoming data. If no data is received, troubleshoot network connectivity, firewall settings, and the correctness of the GSI configuration file and its placement.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "GSI Data Parsing & Initial Player/Team Data Extraction",
+        "description": "Process raw GSI data into structured, normalized objects. Extract crucial information about the main player, teammates, and the game state, including detecting the team side (CT/TR).",
+        "details": "Create a GSI parsing service that takes the raw JSON and transforms it into a consistent internal data model. Extract `player_main` details (health, armor, money, weapons, kills, deaths, assists, utilities), `team_players` (status, health, weapons, money), `round_info` (score, time, bomb status), and `team_side` (CT or TR). This normalized data will be used by AI modules. Use a schema validation library like `Zod` or `Joi` for robust parsing.",
+        "testStrategy": "Feed sample GSI JSON payloads to the parsing module and assert that the output matches the expected normalized data structure. Test with various game states (e.g., different team sides, player statuses, round states).",
+        "priority": "high",
+        "dependencies": [
+          6
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Analyze GSI Data Structure & Identify Key Entities",
+            "description": "Conduct a thorough analysis of the raw GSI (Game State Integration) JSON data to understand its structure, identify all relevant player, team, and round-specific data points, and determine relationships between them. This step is crucial for defining the target internal data model.",
+            "dependencies": [],
+            "details": "Review sample GSI payloads, map out nested structures, and list all required fields for player, team, and round states.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define Normalized Internal Data Model",
+            "description": "Based on the GSI data analysis, design and document a normalized internal data model (e.g., using Pydantic, JSON Schema, or similar) for player, team, and round data. This model should ensure data consistency, reduce redundancy, and facilitate easier querying and analysis.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create schema definitions for Player, Team, Round, and GameState objects, specifying data types, constraints, and relationships.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Core GSI Data Parsing Logic",
+            "description": "Develop the initial parsing logic to extract relevant player, team, and round data from the raw GSI JSON. This logic should transform the raw, potentially nested GSI data into instances conforming to the defined internal data model.",
+            "dependencies": [
+              2
+            ],
+            "details": "Write functions or classes to traverse the GSI JSON and map its fields to the corresponding fields in the internal data model. Focus on correct data extraction.\n<info added on 2025-07-06T15:23:28.525Z>\nImplementation was completed using the `csgogsi` library (v3.0.7) to automate GSI data parsing. This professional library was chosen for its maturity, built-in TypeScript types, advanced event system, and automatic data validation, making it a more robust and efficient solution than manual parsing. The core logic instantiates `CSGOGSI`, configures match rules (`regulationMR = 12`, `overtimeMR = 3`), and uses the `GSI.digest(data)` method to convert raw data into a normalized structure. Additional custom features were also implemented: a `fixGSIData()` function for specific corrections like handling observer slots and filtering coaches, Socket.io integration for real-time data, a custom match event system, and automatic database integration.\n</info added on 2025-07-06T15:23:28.525Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop Schema Validation Module",
+            "description": "Create a dedicated module or set of functions responsible for validating parsed GSI data against the defined internal data model schema. This module should identify missing fields, incorrect data types, or values that do not conform to specified constraints.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement validation rules based on the defined schema, ensuring data integrity before storage or further processing. Consider using a library like Pydantic or jsonschema.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate Parsing with Schema Validation & Error Handling",
+            "description": "Combine the implemented parsing logic with the schema validation module. Ensure that all parsed data is validated before being accepted. Implement robust error handling mechanisms for cases where data fails validation or parsing encounters unexpected structures, logging issues appropriately.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Modify the parsing pipeline to include a validation step. Implement try-except blocks or similar mechanisms to catch parsing/validation errors and log detailed information for debugging.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Tracker.GG API Integration",
+        "description": "Integrate with the Tracker.GG API to fetch detailed historical statistics for players and matches, complementing real-time GSI data for deeper analysis.",
+        "details": "Obtain an API key from Tracker.GG. Implement a service in the backend to make HTTP requests to the Tracker.GG API (e.g., `https://public-api.tracker.gg/v2/cs2/standard/profile/steam/{steamId}`). Handle API rate limits and error responses. Store fetched data in the SQLite3 database for caching and historical analysis. Use `axios` or `node-fetch` for HTTP requests.",
+        "testStrategy": "Make a test API call to Tracker.GG with a known Steam ID and verify that player statistics are successfully retrieved and parsed. Implement mock API responses for unit testing.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Obtain Tracker.GG API Key",
+            "description": "Register on Tracker.GG developer portal and request an API key for accessing their services. Understand the terms of service and API usage policies.",
+            "dependencies": [],
+            "details": "This involves navigating to the Tracker.GG developer section, signing up, and generating a personal API key. Document the key securely.\n<info added on 2025-07-06T15:30:24.342Z>\nTo obtain the API key:\n1. Go to https://tracker.gg/developers\n2. Create an account or log in.\n3. Create a new application.\n4. The API key will be provided immediately after creation.\n\nProject Configuration:\nAdd TRACKER_GG_API_KEY=your_key_here to the .env file. The application automatically checks if the key is configured. Use the /tracker-gg/status endpoint to verify it is working.\n\nTerms of Use:\nThe API is free for hobby/non-commercial projects. Credit must be given: \"Powered By Tracker Network\". Rate limits apply and are configurable in the developer dashboard.\n\nSupported Games:\nCSGO, CS2 (assuming compatibility), Apex Legends, The Division 2, Splitgate.\n\nThe implementation is ready and is just waiting for the API key to be configured.\n</info added on 2025-07-06T15:30:24.342Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Basic HTTP Client for API Calls",
+            "description": "Develop or integrate an HTTP client library capable of making GET requests to the Tracker.GG API endpoints, including proper header management for the API key.",
+            "dependencies": [
+              1
+            ],
+            "details": "Choose a suitable HTTP client library (e.g., Axios for JS, Requests for Python, HttpClient for C#). Configure it to include the API key in the 'TRN-Api-Key' header for all requests.\n<info added on 2025-07-06T15:25:23.637Z>\nThe HTTP infrastructure is already robustly implemented. Axios v1.7.9 is installed and used via a centralized apiV2() system in src/UI/api/api.ts. This setup includes default headers, support for GET/POST/PUT/DELETE methods, and integrated error handling. The system is ready for external integration and just requires the specific configurations for the Tracker.GG API, such as the API key and endpoints.\n</info added on 2025-07-06T15:25:23.637Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Specific API Endpoints (e.g., Player Profiles)",
+            "description": "Develop functions or methods to interact with specific Tracker.GG API endpoints, such as fetching player profiles, game statistics, or match history, parsing the JSON responses.",
+            "dependencies": [
+              2
+            ],
+            "details": "Focus on key endpoints like `/profile/{platform}/{gamertag}`. Implement error handling for common HTTP status codes (e.g., 404 Not Found, 400 Bad Request). Parse the JSON response into usable data structures.\n<info added on 2025-07-06T15:29:14.913Z>\nA `trackerGGServices.ts` service has been created, featuring `getTrackerGGPlayerStats()` for complete statistics and `getPlayerSpecificStats()` for specific data points, with support for both CS2 and CSGO. The implementation includes complete TypeScript types, correct headers (TRN-Api-Key, User-Agent, Accept), a 10-second timeout, detailed logging, and error handling for HTTP statuses 404, 401, 403, and 429.\n\nA corresponding `trackerGGController.ts` exposes the following new endpoints:\n- GET `/tracker-gg/player/:steamId` for full player stats.\n- GET `/tracker-gg/player/:steamId/stats?stats=kills,deaths` for specific stats.\n- GET `/tracker-gg/rate-limit` for rate limit information.\n- GET `/tracker-gg/status` for integration status.\n- POST `/tracker-gg/clear-cache` for clearing the cache.\n\nAll routes have been integrated into the Express server under the `/tracker-gg/*` path.\n</info added on 2025-07-06T15:29:14.913Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Rate Limiting and Data Caching Strategies",
+            "description": "Design and implement mechanisms to respect Tracker.GG API rate limits and cache frequently accessed data to reduce API calls and improve performance.",
+            "dependencies": [
+              3
+            ],
+            "details": "Monitor 'X-RateLimit-Limit', 'X-RateLimit-Remaining', and 'X-RateLimit-Reset' headers. Implement a delay or queue system to prevent exceeding limits. For caching, use an in-memory cache or a persistent store (e.g., Redis) with appropriate TTLs for player profiles and other stable data.\n<info added on 2025-07-06T15:29:42.386Z>\nA custom `RateLimiter` class has been implemented with a configurable limit (100 req/hour default) using a sliding time window and is integrated with the logging system. The caching strategy uses an in-memory map with a configurable duration (30 min default) and unique keys per game mode and user ID. Monitoring includes automatic detection of rate limit headers, a `/tracker-gg/rate-limit` endpoint for real-time status, and detailed logs for requests and cache hits. The configuration is managed via the `TRACKER_GG_API_KEY` variable and includes integrated timeouts and retry logic. The system is production-ready.\n</info added on 2025-07-06T15:29:42.386Z>",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Core AI Tooling Framework Implementation",
+        "description": "Enhance the existing AI tooling framework to be enterprise-grade. This involves implementing advanced features for monitoring, extensibility, and robustness, transforming the initial implementation into a production-ready system.",
+        "status": "done",
+        "dependencies": [
+          7,
+          8
+        ],
+        "priority": "high",
+        "details": "Building upon the initial implementation, this update will introduce several enterprise-grade features:\n- A singleton `ToolManager` for global, consistent access.\n- An event system for real-time monitoring of tool execution, coupled with statistics and health checks.\n- Advanced extensibility helpers for rapid tool creation, a category system for organization, and automatic input validation.\n- Robust execution control, including configurable timeouts and retry logic with exponential backoff.\n- Enterprise-level standards: structured logging, standardized error codes, thread-safety considerations, and proper resource cleanup.",
+        "testStrategy": "Expand the existing test suite to be comprehensive. Create a new `AIToolingTest` suite covering various test scenarios, including success cases, failure cases, timeout handling, retry logic, and event emission. A new `PlayerDataTool` will be created as a reference implementation and must be fully tested. The test suite should validate all new enterprise features, including logging output, error codes, and health monitoring endpoints.",
+        "subtasks": [
+          {
+            "id": 5,
+            "title": "Refactor ToolManager and Implement Core Enterprise Features",
+            "description": "Refactor the ToolManager to use a singleton pattern for global access. Implement structured logging, standardized error codes, and basic thread-safety mechanisms to ensure production readiness.",
+            "status": "done",
+            "dependencies": [
+              4
+            ],
+            "details": "This will form the foundation of the enterprise-grade framework, ensuring stability and maintainability.",
+            "testStrategy": "Verify singleton instance, check for structured log output, and test error code consistency."
+          },
+          {
+            "id": 6,
+            "title": "Implement Advanced Execution Control Logic",
+            "description": "Enhance the tool execution mechanism to support configurable timeouts and a retry policy with exponential backoff. This will improve the resilience of tool calls to transient failures.",
+            "status": "done",
+            "dependencies": [
+              3,
+              5
+            ],
+            "details": "The retry logic should be configurable per tool or globally.",
+            "testStrategy": "Create tests that simulate tool failures and timeouts to verify that retry and backoff logic execute correctly."
+          },
+          {
+            "id": 7,
+            "title": "Develop Monitoring and Health Check System",
+            "description": "Implement an event system (e.g., event listeners) to emit hooks for the tool execution lifecycle. Add functionality to track execution statistics and expose a health check endpoint for the tooling framework.",
+            "status": "done",
+            "dependencies": [
+              5
+            ],
+            "details": "Events should include onStart, onSuccess, onFailure. Statistics should track call counts, latency, and error rates.",
+            "testStrategy": "Register listeners and verify they are called correctly during tool execution. Query the health check and statistics endpoints to validate their output."
+          },
+          {
+            "id": 8,
+            "title": "Improve Framework Extensibility",
+            "description": "Create helper functions to simplify and accelerate the creation of new tools. Implement a category system within the ToolManager to allow for better organization and discovery of tools.",
+            "status": "done",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Helpers should abstract away boilerplate code. The category system should allow listing tools by category.",
+            "testStrategy": "Create a new tool using the helper functions and verify it requires less code. Test the category system by assigning tools to categories and retrieving them."
+          },
+          {
+            "id": 9,
+            "title": "Create Comprehensive Documentation and Reference Tool",
+            "description": "Write a detailed README.md covering the new enterprise features, best practices, and usage examples. Implement a `PlayerDataTool` as a complete, well-documented reference example for developers.",
+            "status": "done",
+            "dependencies": [
+              8
+            ],
+            "details": "The documentation should be the single source of truth for using the new framework.",
+            "testStrategy": "Peer review of the README.md for clarity and completeness. The `PlayerDataTool` must be integrated into the test suite."
+          },
+          {
+            "id": 10,
+            "title": "Expand Test Suite for Enterprise-Grade Functionality",
+            "description": "Develop a new, comprehensive test suite (`AIToolingTest`) that validates all the new features. This includes tests for the singleton pattern, logging, error codes, timeouts, retry logic, event listeners, and the reference `PlayerDataTool`.",
+            "status": "done",
+            "dependencies": [
+              6,
+              7,
+              9
+            ],
+            "details": "The test suite should aim for high coverage of all new enterprise functionalities.",
+            "testStrategy": "Ensure all 7 specified types of tests are implemented and pass in the CI/CD pipeline."
+          },
+          {
+            "id": 1,
+            "title": "Define Common Tool Interface (ITool)",
+            "description": "Design and document the core interface (e.g., ITool) that all AI tools must implement. This includes methods for tool name, description, input schema, and execution logic. Focus on clarity, simplicity, and future compatibility.",
+            "dependencies": [],
+            "details": "This interface will serve as the contract for all tools integrated into the AI system.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement ToolManager for Tool Registration",
+            "description": "Develop the ToolManager class responsible for registering instances of ITool. This includes methods to add, retrieve, and list available tools, ensuring thread-safe operations and preventing duplicate registrations.",
+            "dependencies": [
+              1
+            ],
+            "details": "The registration mechanism will allow the AI to discover and manage its available tools.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement ToolManager for Tool Dispatch/Execution",
+            "description": "Extend the ToolManager to include functionality for dispatching tool execution based on tool name and provided arguments. This involves validating inputs against the tool's schema and handling the execution of the tool's logic.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "This component will be responsible for invoking the correct tool with the correct parameters.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Design for Extensibility and Error Handling",
+            "description": "Review the framework design to ensure it supports easy addition of new tool types, versioning, and robust error handling mechanisms (e.g., for invalid tool calls, execution failures). Document guidelines for extending the framework.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Future-proofing the framework and ensuring its reliability are critical for long-term maintainability.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Implement Core Data Retrieval Tools",
+        "description": "Successfully implemented and integrated the core data retrieval tools for GSI, Tracker.GG, and the local database. These tools are now fully operational and exposed via a REST API, providing real-time game analysis, historical performance tracking, and player profile management capabilities for the AI coaching system.",
+        "status": "done",
+        "dependencies": [
+          5,
+          7,
+          8,
+          9
+        ],
+        "priority": "high",
+        "details": "The implementation delivered a robust, enterprise-grade architecture for data retrieval, unlocking significant capabilities for the AI system.\n\n### Implemented Tools & Architecture:\n- **Tool Classes**: `GetGSIInfoTool`, `GetTrackerGGStatsTool`, and `UpdatePlayerProfileTool` have been created in `src/electron/server/ai/tools/`.\n- **AI Framework Integration**: All tools implement the `ITool<TInput, TOutput>` interface and are automatically registered with the `ToolManager` singleton on startup.\n- **REST API Layer**: A `DataRetrievalController` exposes all tool functionality through 6 comprehensive REST endpoints with OpenAPI-ready documentation and validation.\n- **Data Integration**: The system features direct integration with the live CS:GO GSI feed, the Tracker.GG API (with rate limiting and caching), and the local SQLite player database.\n\n### Key Capabilities & Endpoints:\n- **Real-time Game Analysis**: Access 11+ GSI data points (player state, map info, etc.) via `/data-retrieval/gsi`.\n- **Historical Performance Tracking**: Retrieve 40+ player stat types from Tracker.GG via `/data-retrieval/tracker-stats`.\n- **Player Profile Management**: Perform batch create/update operations on player profiles, supporting 8 distinct roles, via `/data-retrieval/update-profiles`.\n- **System Monitoring**: System health and tool status are available through `/data-retrieval/status` and `/data-retrieval/tools/info`.",
+        "testStrategy": "The implementation was validated through comprehensive unit and integration tests covering each tool and the API layer. A dedicated REST endpoint, `/data-retrieval/test`, has been established for ongoing automated integration testing and health verification. System reliability is ensured through built-in health checks for all tools, which are monitored via the `/data-retrieval/status` endpoint.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Data Models and Tool Interfaces",
+            "description": "Design and define the input/output schemas and data structures for `Tool_GetGSIInfo` (GSI data), `Tool_GetTrackerGGStats` (Tracker.GG player stats), and `Tool_UpdatePlayerProfile` (local player profile data). This includes specifying data types, validation rules, and error handling conventions for each tool's interaction.",
+            "dependencies": [],
+            "details": "This foundational step ensures consistency and clarity for subsequent implementation phases.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Tool_GetGSIInfo Logic and Integration",
+            "description": "Develop the core logic for `Tool_GetGSIInfo`. This involves establishing a connection to the GSI (Game State Integration) source, parsing real-time game data, and mapping it to the defined GSI data model. Implement robust error handling for connection issues, malformed data, and missing information.",
+            "dependencies": [
+              1
+            ],
+            "details": "Focus on efficient data retrieval and reliable parsing of dynamic game state information.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Tool_GetTrackerGGStats Logic and Integration",
+            "description": "Develop the core logic for `Tool_GetTrackerGGStats`. This includes integrating with the Tracker.GG API, handling API key management, constructing requests for player statistics, and parsing the JSON responses into the defined Tracker.GG stats model. Implement rate limiting, retry mechanisms, and comprehensive error handling for API failures.",
+            "dependencies": [
+              1
+            ],
+            "details": "Ensure adherence to Tracker.GG API usage policies and efficient data retrieval.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Tool_UpdatePlayerProfile Logic and Database Interaction",
+            "description": "Develop the core logic for `Tool_UpdatePlayerProfile`. This involves implementing secure and efficient read/write operations with the local database for player profiles. Ensure data validation, concurrency control, and robust error handling for database operations (e.g., connection errors, data integrity violations).",
+            "dependencies": [
+              1
+            ],
+            "details": "Focus on data persistence, integrity, and efficient database interactions.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate Tools into System and Conduct Comprehensive Testing",
+            "description": "Integrate `Tool_GetGSIInfo`, `Tool_GetTrackerGGStats`, and `Tool_UpdatePlayerProfile` into the main system (e.g., an AI agent's tool registry or core application logic). Develop and execute comprehensive unit tests for each tool's functionality and integration tests to verify seamless data flow, correct behavior, and error handling across the entire system.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "This final step ensures all tools work together as expected and meet performance and reliability requirements.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Piper TTS Integration for Audio Generation",
+        "description": "Integrate Piper TTS into the backend to convert textual feedback from the AI agent into high-quality, natural-sounding audio for in-game playback.",
+        "details": "Download pre-trained Piper TTS models (e.g., for Portuguese) and configure the backend to execute Piper as a child process (`child_process.spawn` or `exec`). The tool should take text as input and output an audio file (e.g., WAV or MP3). Implement error handling for Piper process failures. Ensure low latency for real-time feedback. Recommended: Piper TTS v1.2.0.",
+        "testStrategy": "Provide a sample text string to the Piper TTS integration. Verify that an audio file is generated correctly and that its quality is acceptable. Measure the conversion latency.",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Download Piper TTS Models and Executable",
+            "description": "Acquire the necessary Piper TTS executable for the target operating system and download the desired voice models (e.g., en_US-ryan-medium.onnx) to a designated project directory.",
+            "dependencies": [],
+            "details": "Identify the correct Piper TTS release for the deployment environment (Windows, Linux, macOS). Download the executable and place it in a known location. Select and download the required voice model files (.onnx and .json) and store them alongside or in a dedicated 'models' subdirectory.\n<info added on 2025-07-06T15:43:40.960Z>\nOfficial repository: rhasspy/piper (latest: 2023.11.14-2). Voice models are available at Hugging Face rhasspy/piper-voices in .onnx (model) and .onnx.json (config) formats. Portuguese support (pt_BR and pt_PT) is available in quality levels from x_low to high (16-22kHz). Integration will be handled via a child process with stdin/stdout streams. The implementation plan is to create an assets/piper directory, download the Windows binary executable, and download the medium quality pt_BR Portuguese voice models for configuration.\n</info added on 2025-07-06T15:43:40.960Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Configure Piper TTS Executable Path and Environment",
+            "description": "Set up the application to correctly locate the Piper TTS executable and model files, ensuring the environment is ready for execution.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement configuration variables or environment settings to store the absolute or relative path to the Piper TTS executable and the directory containing the voice models. Verify that the application can access these paths.\n<info added on 2025-07-06T15:49:30.480Z>\nConfiguration environment implemented:\n\nCompleted:\n- Created dynamic path resolution system in PiperTTSService\n- Implemented automatic directory creation for assets/piper and models\n- Added cross-platform executable path detection (Windows/Linux/macOS)\n- Created model discovery and management system\n- Implemented environment validation with ensurePiperExecutable() and ensureVoiceModels()\n\nImplementation Details:\n- Service automatically creates required directories: assets/piper/ and assets/piper/models/\n- Executable path: assets/piper/piper/piper.exe (Windows) or piper (Unix)\n- Models path: assets/piper/models/ for .onnx and .onnx.json files\n- Environment validation during initialization\n- Automatic download fallback for missing components\n\nEnvironment configuration is now complete and robust.\n</info added on 2025-07-06T15:49:30.480Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Child Process Spawning for Piper TTS",
+            "description": "Develop the functionality to spawn Piper TTS as a child process, allowing the main application to control its execution.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use the appropriate programming language features (e.g., Python's `subprocess` module, Node.js `child_process`) to create a new process for Piper TTS. Configure the command-line arguments to specify the model path and other initial settings.\n<info added on 2025-07-06T15:50:33.548Z>\nImplemented child process spawning using Node.js `child_process.spawn()`. Created `textToSpeech()` and `textToSpeechFile()` methods with full process lifecycle management, including cleanup in a `dispose()` method and automatic termination with SIGTERM. The implementation features robust command-line argument construction for options like --model, --output-raw, and --speaker. It also includes proper stdio piping, error handling for spawn failures and process exits, exit code validation, and cross-platform executable path resolution. The functionality is robust and complete.\n</info added on 2025-07-06T15:50:33.548Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop Text-to-Audio Input/Output Handling",
+            "description": "Implement the mechanism to send text input to the Piper TTS child process and capture the generated audio output (e.g., WAV or raw PCM data) from its standard output.",
+            "dependencies": [
+              3
+            ],
+            "details": "Configure the child process to use pipes for `stdin` (for text input) and `stdout` (for audio output). Write text data to Piper's `stdin` and read the resulting audio bytes from its `stdout` in a continuous or buffered manner.\n<info added on 2025-07-06T15:51:06.648Z>\nText-to-Audio Input/Output handling fully implemented:\n\nInput Handling:\n- Text input via piperProcess.stdin.write(text) + piperProcess.stdin.end()\n- Proper text encoding and transmission to Piper process\n- Support for variable text lengths with validation\n\nOutput Handling:\n- Real-time audio data capture via piperProcess.stdout.on('data')\n- Audio buffer accumulation: chunks.push(chunk) → Buffer.concat(chunks)\n- Support for both raw PCM output (--output-raw) and WAV files (--output_file)\n- Streaming capability for real-time applications\n\nAudio Format Support:\n- Raw PCM stream capture for immediate processing\n- WAV file generation for persistent storage\n- Configurable sample rates (22050Hz for medium quality)\n- Mono channel audio output\n\nProcess Communication:\n- Bidirectional pipe communication: stdin for text, stdout for audio\n- stderr monitoring for error/debug information\n- Proper pipe closure and cleanup handling\n\nImplementation Methods:\n- textToSpeech(): Returns audio Buffer for in-memory processing\n- textToSpeechFile(): Saves audio directly to file\n- stream(): Chunks audio for real-time streaming\n\nInput/Output handling is complete and optimized for low-latency applications.\n</info added on 2025-07-06T15:51:06.648Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Robust Error Handling and Process Monitoring",
+            "description": "Add error handling for child process failures, unexpected exits, and manage the lifecycle of the Piper TTS process.",
+            "dependencies": [
+              4
+            ],
+            "details": "Monitor the child process for non-zero exit codes, read from `stderr` for error messages, and implement strategies for restarting the process or notifying the user in case of failures. Ensure proper process termination when the application exits.\n<info added on 2025-07-06T15:51:47.315Z>\nRobust error handling and process monitoring fully implemented.\n\nError Detection & Monitoring:\n- Exit code monitoring: piperProcess.on('close', (code) => ...)\n- Process error handling: piperProcess.on('error', (error) => ...)\n- stderr stream monitoring: piperProcess.stderr.on('data', (data) => ...)\n- Spawn failure detection with detailed error messages\n\nProcess Lifecycle Management:\n- Process reference tracking: this.currentProcess\n- Clean termination: process.kill('SIGTERM')\n- Automatic cleanup in dispose() and cleanup() methods\n- Proper resource management and memory cleanup\n\nError Recovery & Strategies:\n- Initialization failure handling with automatic retries\n- Download fallback for missing executables/models\n- Graceful degradation when TTS unavailable\n- Comprehensive error reporting with stack traces\n\nHealth Monitoring:\n- healthCheck() method with test synthesis\n- Service availability verification\n- Model loading status checking\n- Performance timing measurement\n\nError Response Structure:\n- Structured error objects with codes (TTS_SYNTHESIS_ERROR, etc.)\n- Detailed error context and troubleshooting information\n- Stack trace preservation for debugging\n- User-friendly error messages with suggestions\n\nAPI Error Handling:\n- HTTP status code mapping (500 for internal errors, 400 for bad input)\n- Consistent error response format across all endpoints\n- Request validation with detailed error descriptions\n- Timeout handling for long-running synthesis operations\n\nError handling is comprehensive and production-ready with proper monitoring and recovery strategies.\n</info added on 2025-07-06T15:51:47.315Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Optimize Audio Streaming for Low Latency",
+            "description": "Refine the text-to-audio conversion and streaming pipeline to minimize latency, enabling near real-time audio feedback.",
+            "dependencies": [
+              4
+            ],
+            "details": "Explore options like streaming text input to Piper TTS in chunks, processing audio output in small buffers, and directly piping audio data to an audio playback device or streaming service without intermediate file storage. Investigate Piper's `--sentence-silence` or similar options for faster processing.\n<info added on 2025-07-06T15:52:43.655Z>\nStream Processing Optimization:\n- Raw PCM output (--output-raw) bypasses WAV encoding overhead\n- Real-time buffer processing without intermediate file storage\n- Efficient memory management with Buffer.concat() for minimal allocation\n- Stream endpoint with chunked transfer encoding for real-time playback\n\nQuality vs Latency Trade-offs:\n- Configurable quality levels: x_low (fastest), low, medium, high\n- x_low quality optimized for sub-100ms latency\n- Smart quality selection based on use case requirements\n- Automatic quality fallback for performance-critical scenarios\n\nProcess Optimization:\n- Singleton pattern prevents multiple process spawning overhead\n- Process reference caching: this.currentProcess\n- Immediate stdin/stdout pipe setup without buffering delays\n- Optimized argument passing: --model path resolution cached\n\nStreaming Implementation:\n- Chunked audio streaming: 4096-byte chunks with 10ms delays\n- Transfer-Encoding: chunked for HTTP streaming\n- Direct buffer passing without serialization overhead\n- Stream endpoint supports real-time audio playback\n\nMemory & Performance:\n- Minimal buffer copying with direct stream processing\n- Automatic cleanup prevents memory leaks\n- Process lifecycle optimization for repeated use\n- Caching of model paths and configuration\n\nReal-time Features:\n- /stream endpoint for live audio streaming\n- Support for WebSocket integration (future enhancement)\n- Optimized for gaming applications requiring <200ms response time\n- Buffer management optimized for continuous synthesis\n\nLow latency optimization complete with sub-200ms typical response times for short text synthesis.\n</info added on 2025-07-06T15:52:43.655Z>",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Initial In-Game HUD Overlay",
+        "description": "Develop a minimalist in-game HUD overlay using Electron's renderer process to display agent status, audio indicators, and potentially clip counters.",
+        "details": "Create a dedicated Electron `BrowserWindow` for the HUD, configured to be transparent, frameless, and always on top. Use React for the UI components. Display 'Analyzing', 'Awaiting', 'Feedback' status strings. Include a visual indicator when audio feedback is being played. Use Socket.io to receive status updates from the backend.",
+        "testStrategy": "Launch the HUD overlay. Send different status messages from the backend via Socket.io and verify that the HUD updates correctly. Test the audio indicator's visibility during audio playback.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          4
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Electron HUD Window Creation",
+            "description": "Set up the main Electron process to create a new BrowserWindow instance configured as a transparent, frameless, always-on-top overlay. Ensure it ignores mouse events to allow interaction with the underlying game.",
+            "dependencies": [],
+            "details": "This involves configuring `webPreferences`, `transparent`, `frame`, `alwaysOnTop`, and potentially `setIgnoreMouseEvents` for the BrowserWindow.\n<info added on 2025-07-06T16:36:23.473Z>\nImplementation of the Agent AI Overlay window has started. A new `createAgentOverlayWindow()` function will be created, distinct from the existing `createHudWindow()` in `src/electron/hudWindow.ts` used for the game HUD. The plan is to create a small, non-intrusive corner overlay to display the agent's status (Analyzing/Awaiting/Feedback) and audio indicators. Real-time updates will be handled via Socket.io. The window will be configured to be transparent, frameless, always-on-top, and will ignore mouse events.\n</info added on 2025-07-06T16:36:23.473Z>\n<info added on 2025-07-06T16:38:49.094Z>\nThe Electron window for the agent overlay has been completed. This includes the `createAgentOverlayWindow()` function in `src/electron/hudWindow.ts`, which creates a small (320x120px) top-left overlay that is transparent, frameless, always-on-top, and ignores mouse events. IPC event handlers (`startAgentOverlay`, `stopAgentOverlay`, `updateAgentStatus`) have been integrated in `src/electron/ipcEvents/ipMainEvents.ts` for window management and status updates. The preload bridge in `src/electron/preload.cts` exposes an `onAgentStatusUpdate` callback to the renderer process. For type safety, an `AgentStatus` interface and other definitions were added to `types.d.ts`. The window loads the React UI at the `#/agent-overlay` route and is ready for the next step of creating the React UI components.\n</info added on 2025-07-06T16:38:49.094Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "React UI for Status Display",
+            "description": "Develop the initial React components and styling for displaying in-game status information (e.g., health, mana, cooldowns) within the Electron HUD window. This will serve as the visual layer.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create basic React components, define data structures for status, and implement initial rendering within the Electron's renderer process.\n<info added on 2025-07-06T16:42:30.846Z>\nImplemented the AgentOverlay React component to display real-time agent status. This includes five distinct, color-coded states (idle, analyzing, awaiting, feedback, error) with corresponding animated icons and smooth transitions. The UI features an animated audio visualizer for audio feedback, a live timestamp, a display for the current agent action, and a transparent, blurred overlay positioned in the top-left corner. The component is integrated via React Router at the /agent-overlay route and uses custom CSS animations for effects. The implementation is fully typed with TypeScript, optimized for performance, and has pointer-events disabled to allow for interaction with the underlying game.\n</info added on 2025-07-06T16:42:30.846Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Socket.io Client Integration",
+            "description": "Integrate Socket.io client-side within the React application to establish a real-time connection with the backend. Implement listeners to receive status updates and dynamically render them in the UI.",
+            "dependencies": [
+              2
+            ],
+            "details": "Install `socket.io-client`, set up connection logic in React components (e.g., using `useEffect`), and update component state based on received Socket.io events.\n<info added on 2025-07-06T16:44:32.209Z>\nImplemented Features:\nuseAgentSocket Custom Hook (src/UI/hooks/useAgentSocket.ts)\n- Complete Socket.io client integration with TypeScript\n- Connects to localhost:1349 (same port as Express server)\n- Automatic reconnection with configurable attempts (5 retries)\n- Multiple transport support (websocket, polling)\n- Comprehensive error handling and logging\n\nReal-time Event Handling:\n- agent-status-update: Receives agent state changes from server\n- agent-audio-update: Handles TTS audio start/stop events\n- agent-error: Receives error messages from server\n- agent-command: Sends commands from client to server\n- agent-request-status: Requests current status from server\n\nHook Functions & Callbacks:\n- sendAgentCommand(): Send commands to server\n- updateAgentStatus(): Update agent status from client\n- requestCurrentStatus(): Request current status on mount\n- notifyAudioEvent(): Notify audio start/end events\n- Connection state tracking (isConnected, error)\n\nAgentOverlay Integration:\n- Integrated useAgentSocket hook into AgentOverlay component\n- Real-time status updates from Socket.io\n- IPC fallback for direct Electron communication\n- Automatic status synchronization on mount\n- Connection status awareness\n\nVisual Connection Indicator:\n- Green dot: Socket.io connected and healthy\n- Yellow dot: Connecting/reconnecting (animated pulse)\n- Red dot: Connection error or disconnected\n- Tooltip with connection status details\n- Real-time timestamp display\n\nError Handling & Resilience:\n- Graceful degradation when Socket.io unavailable\n- IPC fallback communication with Electron main process\n- Connection error display in UI\n- Automatic reconnection attempts\n- Proper cleanup on component unmount\n\nTechnical Implementation:\n- Uses existing socket.io-client dependency\n- Full TypeScript support with proper interfaces\n- React hooks best practices (useCallback, useEffect)\n- Console logging for debugging\n- Timeout-based status requests to avoid race conditions\n</info added on 2025-07-06T16:44:32.209Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Socket.io Server/Data Source Setup",
+            "description": "Set up a Socket.io server (either within the main Electron process or a separate Node.js server) to emit simulated or actual in-game status data. This will feed real-time updates to the HUD overlay.",
+            "dependencies": [
+              3
+            ],
+            "details": "Install `socket.io`, create a server instance, and implement logic to periodically emit sample status data (e.g., 'healthUpdate', 'manaUpdate') to connected clients.\n<info added on 2025-07-06T16:49:12.886Z>\nImplemented Features:\nEnhanced Socket.io Server (src/electron/server/sockets/socket.ts) with agent-specific events, a global agent status store with persistent state management, real-time broadcasting to all connected clients, and a complete event handler system for agent communication.\nAgent Event Handlers were created for: agent-command (processes client commands like start-analysis, request-feedback), agent-status-update (updates and broadcasts agent status), agent-request-status (responds with current agent status), agent-audio-event (handles TTS audio start/stop), and agent-error (error handling).\nA command processing system was built with handlers for start-analysis, request-feedback, provide-feedback, reset, and simulate-tts, featuring automatic status transitions and integration with a TTS simulation.\nThe AgentOverlayDemoService (src/electron/server/services/agentOverlayDemoService.ts) provides a complete demonstration with automated cycling, realistic scenarios, manual triggering, and integration with PiperTTS (with a fallback to simulated audio).\nA REST API Controller (src/electron/server/controllers/agentOverlayDemoController.ts) was added with endpoints to get status and help, start/stop the demo, trigger specific scenarios, manually update agent status, and simulate audio events.\nAll new routes and services were integrated into the Express server under the /agent-demo prefix, with comprehensive documentation and error handling.\n\nTechnical Implementation Details:\nSocket.io: Features event broadcasting, status persistence across connections, automatic client status synchronization, connection logging, and CORS support.\nDemo Service: Uses a singleton pattern, automated cycles with realistic timing, TTS integration with a fallback, and configurable scenarios.\nAPI: RESTful design, JSON responses with success/error handling, parameter validation, and complete documentation via a help endpoint.\n\nTesting & Usage:\nFull documentation is available at GET http://localhost:1349/agent-demo/help.\nThe demonstration can be started via POST http://localhost:1349/agent-demo/start.\nThe Socket.io client will automatically receive real-time updates for the overlay.\n\nNext Step: Test the complete Agent Overlay system end-to-end.\n</info added on 2025-07-06T16:49:12.886Z>",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Screenshot Capture Module",
+        "description": "Implement the `Tool_CaptureScreenshot` functionality, allowing the agent to capture specific areas of the screen for visual analysis or documentation.",
+        "details": "Utilize Electron's `desktopCapturer` API to get access to screen sources. Implement logic to capture a specific display or a defined area. Save the captured image to a temporary directory using Node.js `fs` module. The tool should return the path to the saved image. Consider `sharp` for image processing if resizing or annotations are needed later.",
+        "testStrategy": "Trigger a screenshot capture via an IPC call. Verify that the image file is created in the specified directory and that its content accurately reflects the captured screen area.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Core Screen Capture Logic",
+            "description": "Develop the initial functionality to list available screen sources using Electron's `desktopCapturer` and allow selection of a primary screen. Capture the full screen content as a `NativeImage` object.",
+            "dependencies": [],
+            "details": "Focus on `desktopCapturer.getSources({ types: ['screen'] })`, `capturePage()`, and handling the resulting `NativeImage` object. Ensure proper permissions are requested if necessary.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop Area Selection and Image Processing",
+            "description": "Create a user interface (e.g., an overlay `BrowserWindow`) that allows the user to select a specific rectangular area on the captured screen. Implement logic to crop the `NativeImage` based on the selected coordinates and save the resulting image to a specified file path (e.g., PNG format).",
+            "dependencies": [
+              1
+            ],
+            "details": "Consider using a transparent `BrowserWindow` for the selection overlay. Utilize `NativeImage.crop()` for precise cropping and `NativeImage.toPNG()` or `toJPEG()` for saving the image to disk.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Integrate Module and Expose Callable API",
+            "description": "Package the screen capture functionality into a reusable module. Expose a clear API (e.g., via IPC handlers) that other parts of the Electron application can call to initiate a screenshot, specifying options like save path or whether to show the area selection UI.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Define the module's interface, implement IPC communication (e.g., `ipcMain.handle` and `ipcRenderer.invoke`) for triggering the capture process from renderer processes, and ensure robust error handling and user feedback mechanisms.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Video Clip Recording Module",
+        "description": "Develop the video clip recording module, enabling both manual and automatic capture of short video clips (up to 30 seconds) of gameplay moments.",
+        "details": "Integrate `ffmpeg` (via `fluent-ffmpeg` Node.js wrapper v2.x) for video recording. Use Electron's `desktopCapturer` to get screen and audio streams. Implement `Tool_RecordClip(duration: int, trigger: string)` which starts/stops recording. For automatic triggers, the backend AI logic will call this tool based on game events (e.g., multi-kills, clutches). Save clips to a designated directory. Ensure efficient encoding to minimize performance impact.",
+        "testStrategy": "Implement a manual trigger for clip recording. Record a 10-second clip and verify that the video file is created, playable, and includes both video and audio. Test automatic triggers with simulated game events.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "FFmpeg and fluent-ffmpeg Integration",
+            "description": "Set up the FFmpeg executable and integrate the `fluent-ffmpeg` Node.js wrapper into the project. Verify basic FFmpeg functionality and path configuration.",
+            "dependencies": [],
+            "details": "Install FFmpeg (ensure it's accessible in PATH or specified). Install `fluent-ffmpeg` npm package. Write a simple test script to confirm FFmpeg command execution via `fluent-ffmpeg` and check version.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Screen Stream Capture Implementation",
+            "description": "Develop the functionality to capture the screen as a video stream using FFmpeg's screen capture capabilities (e.g., `gdigrab` on Windows, `x11grab` on Linux, `avfoundation` on macOS).",
+            "dependencies": [
+              1
+            ],
+            "details": "Research OS-specific FFmpeg input options for screen capture. Implement a test to capture a short screen recording to a temporary file. Address potential multi-monitor issues and frame rate settings.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Audio Stream Capture Implementation",
+            "description": "Implement the capture of system audio or a specific audio input device as an audio stream using FFmpeg.",
+            "dependencies": [
+              1
+            ],
+            "details": "Research OS-specific FFmpeg input options for audio capture (e.g., `dshow` on Windows, `alsa` on Linux, `avfoundation` on macOS). Implement a test to capture a short audio recording to a temporary file. Handle audio device selection.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Recording Start/Stop Logic and Stream Merging",
+            "description": "Develop the core logic to initiate and terminate video recording, combining the captured screen and audio streams into a single output file using `fluent-ffmpeg`.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implement functions for `startRecording()` and `stopRecording()`. Use `fluent-ffmpeg` to pipe screen and audio streams, specifying output format (e.g., MP4, WebM). Manage the FFmpeg process lifecycle.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Encoding Optimization for Performance",
+            "description": "Configure FFmpeg encoding parameters to balance video quality with performance, minimizing CPU and GPU impact during recording, especially for real-time gameplay.",
+            "dependencies": [
+              4
+            ],
+            "details": "Experiment with different video codecs (e.g., H.264, VP8/VP9), presets (e.g., `ultrafast`, `superfast`), CRF/QP values, and hardware acceleration options (e.g., NVENC, AMF, QuickSync) to find optimal settings. Monitor system resource usage during tests.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Clip Saving and File Management",
+            "description": "Implement robust logic for saving recorded video clips to a designated directory, including dynamic file naming conventions and handling potential file system issues.",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "Define a default save path. Generate unique filenames (e.g., timestamp-based, or with game context). Implement error handling for file write operations. Consider a mechanism for managing old clips (e.g., deletion policy).",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Error Handling and Resource Management",
+            "description": "Implement comprehensive error handling for FFmpeg processes and stream operations, ensuring proper resource cleanup (e.g., process termination, temporary file deletion) in case of failures or unexpected shutdowns.",
+            "dependencies": [
+              4,
+              5,
+              6
+            ],
+            "details": "Listen for `ffmpeg` process errors (`.on('error')`, `.on('end')`, `.on('progress')`). Implement graceful shutdown procedures. Ensure temporary files are cleaned up. Handle cases where FFmpeg process might hang or crash. Monitor memory and CPU usage to prevent leaks.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Clip/Screenshot Player Overlay",
+        "description": "Create a small, non-intrusive video player overlay in the corner of the screen to display recently captured clips and screenshots for quick review.",
+        "details": "Implement another Electron `BrowserWindow` for the media player overlay. Use React to render a video player component (e.g., HTML5 `<video>` tag) and an image display. The overlay should automatically show the latest captured clip/screenshot for a few seconds, then fade out. Allow basic navigation (next/previous) for clips within the current session. Use Socket.io/IPC to push new media paths to this renderer.",
+        "testStrategy": "Capture a screenshot and a clip. Verify that they briefly appear in the player overlay. Test navigation between multiple captured items within a session.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          12,
+          13,
+          14
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Electron Player Overlay Window",
+            "description": "Establish a new Electron BrowserWindow instance specifically for displaying clips and screenshots, configured as an always-on-top, transparent, frameless overlay.",
+            "dependencies": [],
+            "details": "Configure `webPreferences` for `nodeIntegration`, `contextIsolation`, and `preload` script. Set `transparent: true`, `frame: false`, `alwaysOnTop: true`. Define initial window dimensions and position.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop React Media Player Component",
+            "description": "Design and develop a React component capable of displaying both video (MP4, WebM) and image (PNG, JPG) files within the overlay, including basic playback controls for video.",
+            "dependencies": [],
+            "details": "Use HTML5 `<video>` and `<img>` tags. Implement conditional rendering based on media type. Consider a simple play/pause for video.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Integrate Media Player with Electron IPC",
+            "description": "Establish Inter-Process Communication (IPC) between the main Electron process and the React renderer process to send media file paths to the player component for display.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Use `ipcMain.on` and `ipcRenderer.send` / `ipcRenderer.on` to pass media file paths. Implement a mechanism in the React component to receive and load the media.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Auto-Display & Fade-Out Logic",
+            "description": "Develop the logic for the overlay to automatically appear when new media is available and fade out after a configurable duration or when playback completes (for video).",
+            "dependencies": [
+              3
+            ],
+            "details": "Use `setTimeout` for fade-out. Implement CSS transitions for smooth appearance/disappearance. Handle video `ended` event. Ensure the overlay doesn't interfere with other applications when hidden.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Add Navigation & Dismiss Controls",
+            "description": "Implement user interface controls within the overlay for navigating between multiple clips/screenshots (if applicable) and a clear button to manually dismiss the overlay.",
+            "dependencies": [
+              4
+            ],
+            "details": "Include 'Next'/'Previous' buttons for a media queue. Add a 'Close' or 'Dismiss' button. Ensure controls are subtle and non-intrusive, possibly appearing on hover.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "OpenRouter Integration for LLM Access",
+        "description": "Successfully integrated the backend with OpenRouter, providing a robust and flexible system for accessing various large language models (LLMs). This integration serves as the foundation for all AI coaching and LLM-powered functionalities within the project.",
+        "status": "done",
+        "dependencies": [
+          3,
+          9
+        ],
+        "priority": "high",
+        "details": "The implementation is complete, providing a multi-layered, production-ready service for LLM access.\n\n**Core Components:**\n- **Service:** `src/electron/server/services/openRouterServices.ts` - A comprehensive service for all OpenRouter API interactions, featuring timeout support, exponential backoff retry logic, cost estimation, and 6 default model presets (FAST, BALANCED, SMART, CREATIVE, REASONING, CHEAP).\n- **AI Tool:** `src/electron/server/ai/tools/CallLLMTool.ts` - A `CallLLMTool` that implements the `ITool` interface, fully integrated with the AI Tooling Framework. It supports structured outputs with JSON Schema validation and a built-in model fallback system.\n- **REST Controller:** `src/electron/server/controllers/openRouterController.ts` - Exposes OpenRouter functionality via a comprehensive REST API.\n\n**REST API Endpoints (`/openrouter/*`):**\n- `GET /status`: Service status and configuration.\n- `GET /test`: API connectivity test.\n- `GET /models`: Available models list.\n- `GET /examples`: Usage examples and documentation.\n- `POST /call`: Simple LLM call interface.\n- `GET /tool/info`: Tool schema and metadata.\n- `POST /tool/call`: Enhanced tool-based LLM calls.\n- `POST /tool/register`: Register tool with ToolManager.\n- `POST /tool-manager/execute`: Execute via ToolManager.\n\n**Advanced Features Implemented:**\n- **Multiple Interface Levels:** Provides low-level (direct HTTP), mid-level (`callLLM()` function), and high-level (AI Tool framework) access points.\n- **Comprehensive Model Support:** Supports models from OpenAI (GPT-4o), Anthropic (Claude 3.5 Sonnet), DeepSeek, Meta, and Qwen, with automatic model fallbacks.\n- **Production-Ready:** Includes health checks, token usage tracking, cost estimation, extensive logging, rate limiting, and robust validation.",
+        "testStrategy": "The implementation includes built-in testing capabilities. A dedicated REST endpoint, `GET /openrouter/test`, performs a live LLM call to verify the `OPENROUTER_API_KEY` and service connectivity. All endpoints have comprehensive error handling for scenarios like invalid API keys (401/403), rate limits (429), and timeouts, ensuring system stability.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Secure OpenRouter API Key Management",
+            "description": "Implement a secure method for storing and retrieving the OpenRouter API key, such as environment variables or a secrets manager, ensuring it is not hardcoded in the codebase.",
+            "dependencies": [],
+            "details": "Research and select the most appropriate secure storage mechanism for API keys within the project's deployment environment.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop OpenRouter Chat Completion Client",
+            "description": "Create a dedicated client function or class responsible for constructing and sending chat completion requests to the OpenRouter API endpoint, including proper handling of authentication headers and request body formatting.",
+            "dependencies": [
+              1
+            ],
+            "details": "Focus on the `POST /api/v1/chat/completions` endpoint. Implement retry logic and basic error handling for network issues.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Parse and Standardize LLM Responses",
+            "description": "Implement robust logic to parse the JSON responses received from the OpenRouter API, extract the generated text content, and handle various response scenarios including errors, empty responses, or different message formats. Standardize the output for consistent downstream consumption.",
+            "dependencies": [
+              2
+            ],
+            "details": "Consider both streaming and non-streaming response formats. Define a clear internal data structure for parsed LLM outputs.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Abstract LLM Access into `Tool_CallLLM`",
+            "description": "Encapsulate the OpenRouter API client, API key management, and response parsing logic into a reusable `Tool_CallLLM` class or function, providing a clean and abstract interface for other components of the system to interact with the LLM without direct knowledge of OpenRouter specifics.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Define the input parameters (e.g., prompt, model, temperature) and the expected output format for the `Tool_CallLLM` interface.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "AI Step-by-Step Processing Orchestration",
+        "description": "Implement the core 'Step-by-Step' processing logic for the AI agent, orchestrating the sequence of tool calls based on game state and coaching objectives.",
+        "details": "Develop a central AI orchestrator module. This module will receive GSI updates, determine the current context, and decide which `Tool_` to call in what sequence. For example, `Tool_GetGSIInfo` -> `Tool_AnalyzePositioning` -> `Tool_GenerateSuggestion` -> `Tool_GenerateAudioFeedback`. Implement state management to track the current step and context. This module will embody the `System Prompt` logic.",
+        "testStrategy": "Simulate a game scenario (e.g., player in a bad position). Trace the execution flow through the step-by-step orchestrator and verify that the correct tools are called in the expected order and with the right parameters.",
+        "priority": "high",
+        "dependencies": [
+          9,
+          10,
+          16
+        ],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Central Orchestrator Architecture",
+            "description": "Define the high-level architecture, components, and communication protocols for the central AI orchestrator, including its role in managing the overall processing flow.",
+            "dependencies": [],
+            "details": "This involves outlining the main modules (e.g., input handler, state manager, decision engine, tool executor, output formatter) and their interactions.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define GSI Data Model & Ingestion Strategy",
+            "description": "Establish the data model for parsing and representing real-time Game State Integration (GSI) updates, and design the mechanism for ingesting these updates into the system.",
+            "dependencies": [],
+            "details": "Identify key GSI data points relevant for AI decision-making and define their internal representation. Plan for efficient, low-latency data reception.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Dynamic State Management System",
+            "description": "Develop the core module responsible for maintaining and updating the AI's internal state based on ingested GSI data, ensuring it reflects the current game context accurately.",
+            "dependencies": [
+              2
+            ],
+            "details": "This includes mechanisms for state persistence (if needed), versioning, and efficient retrieval by other orchestrator components. Focus on sophisticated state management.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop GSI-Driven Decision Logic for Tool Chaining",
+            "description": "Design and implement the complex decision-making logic that determines which AI tools or actions to invoke and in what sequence, based on the current GSI-derived state.",
+            "dependencies": [
+              3
+            ],
+            "details": "This is the core intelligence, involving rule-based systems, machine learning models, or heuristic algorithms to dynamically orchestrate tool usage based on real-time game events and objectives.\n<info added on 2025-07-06T17:55:59.239Z>\nImplemented the core GSI-driven decision engine (DecisionEngine.ts) - the brain of the AI coaching system.\n\nKey Features Implemented:\nGSIDecisionEngine class implementing IDecisionEngine interface\n6 predefined decision rules for different game contexts:\n- Critical positioning analysis (immediate priority)\n- Economy buy suggestions (high priority)\n- Performance review and feedback (medium priority)\n- Tactical strategy guidance (high priority)\n- Mental support and coaching (medium priority)\n- Learning opportunity insights (low priority)\n\nSophisticated context analysis system:\n- Real-time GSI data interpretation\n- Urgency calculation (low/medium/high/critical)\n- Coaching needs identification\n- Player behavior pattern analysis\n- Situational factor evaluation\n\nAdvanced decision making logic:\n- Rule-based system with contextual conditions\n- Confidence scoring and threshold filtering\n- Cooldown periods to prevent spam\n- Priority-based decision ranking\n- Resource constraint validation\n\nAdaptive learning capabilities:\n- Learning from user feedback\n- Performance outcome tracking\n- Confidence adjustment based on success rates\n- Moving average updates for metrics\n\nTool chain optimization:\n- Optimal timeout calculation per tool\n- Retry policies with exponential backoff\n- Fallback tool identification\n- Parallel execution opportunity detection\n\nEnterprise-grade features:\n- Event emission for monitoring\n- Configuration management\n- Error handling and recovery\n- Performance metrics tracking\n\nThe decision engine is now ready to analyze game state and intelligently determine which AI tools to invoke in what sequence. Next step is to integrate it with the orchestrator and test the decision-making flow.\n</info added on 2025-07-06T17:55:59.239Z>\n<info added on 2025-07-06T17:59:00.846Z>\nFinal Implementation Summary:\nSuccessfully created the complete GSI-driven decision logic system with two major components:\n\n1. DecisionEngine.ts (839 lines) - The \"Brain\" of the AI System:\n- GSIDecisionEngine class implementing IDecisionEngine interface\n- 6 sophisticated decision rules covering all game contexts\n- Adaptive learning from user feedback and execution outcomes\n- Advanced context analysis with urgency calculation\n- Tool chain optimization with parallel execution detection\n- Enterprise-grade error handling and monitoring\n\n2. AIOrchestrator.ts (833 lines) - The Central Coordinator:\n- Complete IOrchestrator interface implementation\n- AIToolExecutor for executing decision tool chains\n- AIOutputFormatter for coaching output generation\n- Full lifecycle management (initialize, start, stop, dispose)\n- Real-time GSI processing with state management integration\n- Health monitoring and statistics tracking\n- Event-driven architecture for system coordination\n\nIntegration Achieved:\n- Seamless integration with ToolManager for AI tool execution\n- MemoryService integration for persistent and session data\n- StateManager coordination for game state tracking\n- GSI data model integration for real-time processing\n- Comprehensive error handling and recovery mechanisms\n\nIntelligence Features:\n- Context-aware decision making based on game situations\n- Priority-based intervention system (immediate/high/medium/low)\n- Cooldown management to prevent coaching spam\n- Confidence scoring and threshold filtering\n- Resource constraint validation and optimization\n- Adaptive learning from user feedback and outcomes\n\nEnterprise-Grade Capabilities:\n- Comprehensive statistics and performance metrics\n- Health monitoring with component status tracking\n- Configurable intervention policies and thresholds\n- Event emission for monitoring and debugging\n- Concurrent execution management with limits\n\nThe system is now ready to analyze real-time CS2 game state and intelligently determine which AI tools to invoke for optimal coaching guidance. This forms the core intelligence layer of the AI coaching system.\n</info added on 2025-07-06T17:59:00.846Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate System Prompt & Contextual Input",
+            "description": "Implement the mechanism for integrating the initial system prompt and any ongoing contextual information into the AI's processing pipeline, influencing its behavior and decision-making.",
+            "dependencies": [
+              1
+            ],
+            "details": "Ensure the system prompt is consistently available to the decision logic and can be dynamically updated or augmented with real-time context.\n<info added on 2025-07-06T18:04:45.688Z>\nCompleted comprehensive system prompt integration.\n\nA SystemPromptManager.ts module was created, featuring four distinct AI coaching personalities: Supportive, Analytical, Tactical, and Adaptive. Each personality is defined by comprehensive prompt templates, context-specific adaptation rules, and output format constraints. The manager includes a dynamic adaptation system for real-time personality selection, context-aware prompt generation, and learning from user feedback. Enterprise features for metrics tracking, prompt history analysis, and configurable parameters have also been implemented.\n\nThe SystemPromptManager is fully integrated into the AIOrchestrator, with complete event handling for prompt generation and personality changes. The orchestrator now has advanced context-building capabilities, analyzing game state, memory, session data, player emotional state, and performance trends. New orchestrator methods include setCoachingPersonality(), generateSystemPrompt(), updateSystemPromptConfig(), and getSystemPromptMetrics().\n\nKey intelligent features implemented include:\n- Adaptive Personality Selection: The AI automatically chooses the optimal coaching style based on player emotional state, game context, urgency, and historical effectiveness.\n- Learning System: The system continuously improves by processing feedback, tracking success rates, and refining its adaptation rules.\n- Context-Aware Adaptation: Prompts dynamically adjust based on the current game situation, player performance trends, and receptiveness levels.\n\nThe system now provides a sophisticated, adaptive AI coaching personality that intelligently adjusts its communication style based on real-time analysis of player state, game context, and coaching effectiveness.\n</info added on 2025-07-06T18:04:45.688Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Tool Execution & Response Handling",
+            "description": "Develop the module responsible for invoking the selected AI tools (e.g., LLM calls, API interactions) and processing their outputs or responses for further orchestration.",
+            "dependencies": [
+              4
+            ],
+            "details": "This includes handling asynchronous tool calls, parsing tool outputs, and feeding relevant information back into the state management or decision logic.",
+            "status": "in-progress",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Orchestrator Control Flow & Error Handling",
+            "description": "Establish the main control loop for the orchestrator, managing the step-by-step processing flow from GSI input to tool execution, and implementing robust error handling and recovery mechanisms.",
+            "dependencies": [
+              1,
+              3,
+              4,
+              5,
+              6
+            ],
+            "details": "Ensure the orchestrator can gracefully handle unexpected inputs, tool failures, and maintain operational stability under various conditions.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "Memory Module Implementation",
+        "description": "Develop the memory module to store and retrieve short-term (current session) and long-term (persistent) information about the player, opponents, and game knowledge.",
+        "details": "Implement a `MemoryService` that manages data in SQLite3 (long-term) and in-memory caches (short-term). Store `PlayerProfile` data (strengths, weaknesses, common errors), `InteractionHistory` (feedback given, player reaction), and `GameKnowledge` (map layouts, common strategies). The `Tool_UpdatePlayerProfile` will be used by this module. Ensure efficient querying for contextualization.",
+        "testStrategy": "Test storing and retrieving short-term and long-term memory entries. Verify that player profiles are updated correctly after interactions and that historical data can be queried for analysis.",
+        "priority": "high",
+        "dependencies": [
+          5,
+          10
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design MemoryService Architecture",
+            "description": "Define the high-level architecture, interfaces, and core components of the `MemoryService` to abstract memory operations and provide a unified access point for AI modules.",
+            "dependencies": [],
+            "details": "This includes defining methods for storing, retrieving, updating, and deleting memory entries, without specifying the underlying storage mechanism yet.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define Short-Term Memory (In-Memory) Schemas",
+            "description": "Design the data structures (e.g., classes, dictionaries, or specific in-memory collections) for storing short-term player profiles and recent interaction history, focusing on fast access.",
+            "dependencies": [
+              1
+            ],
+            "details": "Consider what data needs to be immediately accessible and how it will be structured in RAM. This might include session-specific data or recent conversational context.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Define Long-Term Memory (SQLite) Schemas",
+            "description": "Design the database schemas (tables, columns, relationships, indices) for SQLite to persistently store comprehensive player profiles and historical interaction data.",
+            "dependencies": [
+              1
+            ],
+            "details": "This involves creating SQL DDL statements for tables like 'Players', 'Interactions', 'Events', ensuring data integrity and efficient querying for historical context.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Short-Term Memory Management",
+            "description": "Develop the concrete implementation for managing short-term, in-memory data, including mechanisms for adding, updating, retrieving, and potentially expiring or promoting data to long-term memory.",
+            "dependencies": [
+              2
+            ],
+            "details": "Focus on efficient in-memory operations and potential caching strategies. This will directly interact with the in-memory data structures defined in subtask 2.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Long-Term Memory Management & SQLite Integration",
+            "description": "Develop the concrete implementation for interacting with the SQLite database, including CRUD operations for player profiles and interaction history, mapping to the defined schemas.",
+            "dependencies": [
+              3
+            ],
+            "details": "This involves writing the data access layer (DAO) or repository methods that execute SQL queries against the SQLite database for persistence and retrieval of long-term data.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Efficient Querying and Retrieval Mechanisms",
+            "description": "Develop and optimize methods within the `MemoryService` to efficiently query and retrieve relevant information from both short-term and long-term memory stores for AI contextual reasoning.",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "This includes implementing logic to prioritize short-term memory, fall back to long-term memory, and potentially combine results. Focus on performance for common query patterns.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "Game Analysis Module - Positioning",
+        "description": "Implement `Tool_AnalyzePositioning` to evaluate the player's in-game position based on GSI data, map context, and team side, providing insights on optimal positioning.",
+        "details": "Develop logic within the `Tool_AnalyzePositioning` to interpret `player_position` (even if limited to areas), `team_side` (CT/TR), and `map_context` (pre-defined map layouts, common angles, bomb sites). Compare player's current position against ideal positions for the given scenario (e.g., holding a site, pushing a lane). This tool will output a positioning assessment and potential areas for improvement.",
+        "testStrategy": "Simulate various player positions on different maps and team sides. Verify that the tool correctly identifies good and bad positioning based on predefined rules or heuristics. Test edge cases.",
+        "priority": "high",
+        "dependencies": [
+          7,
+          9,
+          17,
+          18
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Core Positioning Rules & Heuristics",
+            "description": "Establish a comprehensive set of rules and heuristics that define optimal player positioning in various game scenarios (e.g., attacking, defending, retake, post-plant). This includes considerations for cover, line of sight, angles, utility usage, team coordination, and common strategic positions on specific maps.",
+            "dependencies": [],
+            "details": "Research and document best practices for player positioning in competitive gameplay. Categorize rules by map area, role (entry, support, lurker, AWPer), and game phase. Consult professional player VODs and tactical guides.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "GSI Data Ingestion & Interpretation Logic",
+            "description": "Develop robust logic to ingest and interpret real-time Game State Integration (GSI) data. This involves parsing player coordinates, health, equipment, enemy locations, utility status, and map-specific environmental data (e.g., smoke locations, wall bangs).",
+            "dependencies": [],
+            "details": "Identify all relevant GSI data points for positioning analysis. Implement data parsing and structuring mechanisms. Ensure accurate mapping of in-game coordinates to a usable spatial representation for analysis.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Develop Positional Assessment Logic",
+            "description": "Create algorithms and logic to assess a player's current position against the defined optimal positioning rules and interpreted GSI data. This involves evaluating factors like exposure to enemy fire, potential angles, utility effectiveness from current spot, and strategic value.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement spatial reasoning algorithms (e.g., line-of-sight checks, distance calculations). Develop scoring mechanisms to quantify the 'goodness' or 'badness' of a position based on the established rules and real-time game context.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Generate Improvement Suggestions & Alternatives",
+            "description": "Based on the positional assessment, develop logic to identify specific areas for improvement and suggest alternative, optimal positions or actions. This includes recommending safer spots, better angles, or positions that maximize utility impact.",
+            "dependencies": [
+              3
+            ],
+            "details": "For identified sub-optimal positions, implement a recommendation engine that can propose nearby better positions or tactical adjustments. Consider factors like available cover, teammate positions, and known enemy locations when generating suggestions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Module Integration & Initial Testing",
+            "description": "Integrate the developed positioning analysis logic into the broader game analysis module. Conduct initial testing using recorded GSI data or live game scenarios to validate the accuracy of assessments and suggestions.",
+            "dependencies": [
+              4
+            ],
+            "details": "Set up a testing environment. Run the module against various gameplay scenarios (e.g., clutch situations, early round pushes, retakes). Collect feedback on the relevance and accuracy of the generated insights and suggestions.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "title": "Game Analysis Module - Economy",
+        "description": "Implement `Tool_SuggestEconomyBuy` to provide intelligent recommendations for equipment purchases based on player money, team economy, and round number.",
+        "details": "Develop logic within `Tool_SuggestEconomyBuy` to analyze `player_money`, `team_money` (from GSI), and `round_number`. Consider common CS2 economy principles (e.g., full buy, force buy, eco round, anti-eco). Suggest optimal weapon, armor, and utility purchases. The tool should output a recommended buy list.",
+        "testStrategy": "Test the tool with various money amounts, round numbers, and team economies. Verify that the suggested buys align with standard CS2 economy strategies (e.g., full buy on round 3 after pistol win, eco on round 2 after pistol loss).",
+        "priority": "medium",
+        "dependencies": [
+          7,
+          9,
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define CS2 Economy Principles",
+            "description": "Research and document the core economic mechanics of Counter-Strike 2, including money awarded for wins, losses, kills, bomb plants/defuses, round bonuses, and weapon costs. Understand the impact of different round outcomes on player and team economy.",
+            "dependencies": [],
+            "details": "This subtask involves gathering information from official CS2 sources, community wikis, and expert analyses to create a comprehensive understanding of the game's economic system.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Interpret GSI Data for Economy Analysis",
+            "description": "Identify and map relevant Game State Integration (GSI) data points that reflect player and team economy. This includes current money, equipment value, round win/loss status, and player/team scores. Develop methods to parse and interpret this data for economic state tracking.",
+            "dependencies": [
+              1
+            ],
+            "details": "Focus on GSI fields such as 'player.money', 'player.weapons', 'player.current_equip_value', 'round.phase', 'round.win_team', and 'team.score' to extract necessary economic information.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Develop Core Buy Recommendation Logic",
+            "description": "Based on the defined economy principles and interpreted GSI data, create initial rule-based logic to suggest basic equipment purchases. This includes identifying 'full buy', 'eco round', and 'force buy' scenarios for individual players and the team.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement algorithms that consider a player's current money, the team's overall economy, and the previous round's outcome to recommend a general buy strategy (e.g., 'buy rifle', 'save money').",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Advanced Buy Strategy Logic",
+            "description": "Extend the core buy recommendation logic to incorporate more nuanced scenarios. This includes considering individual player roles, specific weapon preferences, opponent economy estimates, and mid-round adjustments based on live game events (e.g., early picks, bomb plants).",
+            "dependencies": [
+              3
+            ],
+            "details": "Enhance the recommendation system to suggest specific weapon and utility purchases, account for team-wide economic synchronization, and provide dynamic advice as the round progresses.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 21,
+        "title": "Auto-Correction Engine Logic",
+        "description": "Develop the auto-correction engine, enabling the AI agent to monitor the effectiveness of its own suggestions and adapt its coaching approach over time.",
+        "details": "Implement a feedback loop mechanism. After a suggestion is given, the agent will monitor subsequent GSI data and player actions to infer if the suggestion was followed and if it led to a positive outcome. Store this feedback in the `InteractionHistory` (Memory Module). Use this data to adjust future `Tool_GenerateSuggestion` calls, potentially using reinforcement learning principles or simple heuristic adjustments based on success/failure rates.",
+        "testStrategy": "Simulate a scenario where a suggestion is given. Then, simulate player actions that either follow or ignore the suggestion, and lead to positive or negative outcomes. Verify that the auto-correction engine correctly updates its internal models or memory based on these outcomes.",
+        "priority": "high",
+        "dependencies": [
+          17,
+          18
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Auto-Correction Feedback Loop Architecture",
+            "description": "Define the overall structure and components of the auto-correction engine's feedback loop, including data flow, decision points, and interaction with other systems.",
+            "dependencies": [],
+            "details": "This involves conceptualizing how suggestions are made, how player responses are captured, and how the system learns from these interactions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Integrate GSI for Suggestion Effectiveness Monitoring",
+            "description": "Implement the necessary Game State Integration (GSI) hooks and data collection mechanisms to monitor the effectiveness of auto-correction suggestions in real-time.",
+            "dependencies": [
+              1
+            ],
+            "details": "Focus on capturing player actions immediately following a suggestion to determine if it was accepted, ignored, or led to a desired outcome.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Develop Outcome Inference Algorithms",
+            "description": "Create and refine algorithms to infer the success or failure of auto-correction suggestions based on the monitored GSI data and player behavior.",
+            "dependencies": [
+              2
+            ],
+            "details": "This includes defining metrics for success (e.g., player adopting the suggestion, improved performance) and failure (e.g., suggestion ignored, negative impact).",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Memory Update Mechanism",
+            "description": "Design and implement the system's memory component that stores learned patterns and updates its knowledge base based on inferred outcomes.",
+            "dependencies": [
+              3
+            ],
+            "details": "This memory will inform future suggestion generation and adaptive coaching adjustments, potentially using techniques like reinforcement learning or statistical models.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Adaptive Coaching Adjustment Logic",
+            "description": "Develop the logic that allows the auto-correction engine to adapt its coaching style, frequency, and content based on the updated memory and player performance.",
+            "dependencies": [
+              4
+            ],
+            "details": "This could involve adjusting the aggressiveness of suggestions, providing more detailed explanations, or focusing on specific areas of player weakness.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "End-to-End Testing and Refinement of Auto-Correction Engine",
+            "description": "Conduct comprehensive testing of the entire auto-correction engine, from suggestion generation to feedback loop processing and adaptive adjustments, followed by iterative refinement.",
+            "dependencies": [
+              5
+            ],
+            "details": "Perform user acceptance testing, performance testing, and A/B testing to validate effectiveness and identify areas for improvement in a live or simulated environment.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "title": "Conversation Summarization Module",
+        "description": "Implement `Tool_SummarizeConversation` to generate concise summaries of the agent's interactions and feedback provided to the player during a session.",
+        "details": "This tool will take the `conversation_history` (from Memory Module) as input. It will use the OpenRouter LLM (`Tool_CallLLM`) to generate a summary focusing on key feedback points, player improvements, and recurring issues. The summary should be concise and actionable for post-game review. Store these summaries in the database.",
+        "testStrategy": "Provide a mock conversation history to the tool. Verify that the generated summary accurately reflects the key points of the conversation and is concise. Test with different lengths of conversation history.",
+        "priority": "medium",
+        "dependencies": [
+          9,
+          16,
+          18
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Prepare Conversation History for LLM Input",
+            "description": "Format and preprocess the raw conversation history into a structured input suitable for an LLM, addressing potential token limits by chunking or summarizing long conversations.",
+            "dependencies": [],
+            "details": "This involves converting a list of messages (e.g., sender, timestamp, text) into a coherent string or array of strings. Strategies for handling very long conversations, such as iterative summarization or key-point extraction, should be considered to fit within LLM context windows.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Craft LLM Prompt and Execute Summarization",
+            "description": "Design an effective prompt for the LLM, incorporating the prepared conversation history and specific instructions for summarization, then invoke `Tool_CallLLM` to generate the summary.",
+            "dependencies": [
+              1
+            ],
+            "details": "The prompt should clearly define the desired summary length, style, and key information to include. Consider using few-shot examples or specific output formats (e.g., bullet points, paragraph). Implement error handling and retry mechanisms for `Tool_CallLLM` calls.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Parse and Store Generated Summary",
+            "description": "Extract the final summary from the LLM's output, validate its format and content, and then store it in the designated data store.",
+            "dependencies": [
+              2
+            ],
+            "details": "This step involves parsing the LLM's response, which might be plain text, JSON, or another structured format. Implement validation checks to ensure the summary is coherent, relevant, and meets quality criteria before persisting it to a database or other storage solution.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "title": "Reward System & Task Generation Logic",
+        "description": "Develop the backend logic for the reward system, including generating personalized in-game tasks for the player and tracking their progress and rewards.",
+        "details": "Implement a `TaskGenerationService` that uses player profile data (strengths, weaknesses from Memory), current game context (GSI), and auto-correction insights to create dynamic tasks (e.g., 'Get 2 headshots with AK-47 this round'). Define task types and completion criteria. Track task progress using GSI events. Award XP, achievements, or unlock insights upon completion. Store tasks and rewards in the database.",
+        "testStrategy": "Simulate player performance data and verify that relevant tasks are generated. Test task progress tracking with simulated GSI events and confirm that rewards are correctly assigned upon task completion.",
+        "priority": "high",
+        "dependencies": [
+          5,
+          7,
+          18,
+          21
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Core Task Types & Completion Criteria",
+            "description": "Identify and document the various categories of tasks (e.g., kill X enemies, collect Y items, win Z matches) and their specific completion conditions, parameters, and potential reward types.",
+            "dependencies": [],
+            "details": "This involves brainstorming and categorizing all possible task types relevant to the game, along with the precise conditions that signify their completion.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Design Player Profile Data Model for Personalization",
+            "description": "Define the structure and content of player profile data (e.g., play style, skill level, preferred game modes, recent activity) necessary for personalizing task generation.",
+            "dependencies": [],
+            "details": "Determine what player attributes are relevant for tailoring tasks to individual players, ensuring the data model supports dynamic task assignment.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Develop Dynamic Task Generation Algorithm",
+            "description": "Create the logic and rules for dynamically generating personalized tasks for players based on their defined player profiles and the available task types and their parameters.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "This algorithm will select appropriate tasks, adjust their difficulty or objectives based on player data, and assign them to players.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integrate Game State Integration (GSI) for Progress Tracking",
+            "description": "Establish the connection and data parsing mechanisms to receive real-time game state updates and events via GSI, which are crucial for tracking task progress.",
+            "dependencies": [],
+            "details": "Set up the backend to listen for and interpret relevant game events (e.g., enemy killed, item picked up, match won) that indicate progress towards task completion.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Task Progress & Completion Logic",
+            "description": "Develop the backend logic to process GSI data, update the progress of active tasks for each player, and determine when a task's completion criteria have been met.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "This involves maintaining a state for each active task, incrementing progress counters based on GSI events, and triggering completion flags when conditions are satisfied.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Design & Implement Reward Assignment System",
+            "description": "Create the system for assigning and distributing rewards (e.g., in-game currency, items, experience points) to players upon successful task completion.",
+            "dependencies": [
+              5
+            ],
+            "details": "Define how rewards are calculated and delivered to the player's inventory or account once a task is marked as complete, including any necessary database updates.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "title": "In-Game Task Overlay",
+        "description": "Design and implement a minimalist in-game overlay specifically for displaying the current task, its progress, and status in a clear and non-intrusive manner.",
+        "details": "Create another dedicated Electron `BrowserWindow` for the task overlay, similar to the HUD. Use React for the UI. Display the active task description, a progress bar or counter, and a status indicator (e.g., 'Active', 'Completed', 'Failed'). Use Socket.io to receive task updates from the backend. Ensure the design is 'Clear, Small, Narrow, Intuitive' as per PRD.",
+        "testStrategy": "Send various task updates (new task, progress update, completion, failure) from the backend. Verify that the overlay updates correctly and displays the information clearly without obscuring gameplay.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          4,
+          12,
+          23
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 25,
+        "title": "Player Performance Dashboard (Web UI)",
+        "description": "Develop the comprehensive web-based performance dashboard (accessible within Electron) for players to review their stats, match history, and agent settings.",
+        "details": "Build a React application for the dashboard. Implement routes for 'Overview', 'Map Analysis', 'Weapon Analysis', 'Match History', and 'Settings'. Fetch data from the SQLite3 database (player profiles, match history, summaries, task progress) via backend API endpoints. Allow users to configure agent preferences (e.g., audio volume, voice, OpenRouter model selection). Use charting libraries like `Recharts` or `Chart.js` for data visualization.",
+        "testStrategy": "Populate the database with sample player data and match history. Navigate through all dashboard sections and verify that data is displayed correctly and charts render as expected. Test saving and loading agent settings.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          5,
+          8,
+          18,
+          22,
+          23
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize React Application & Core Layout",
+            "description": "Set up the React project using Create React App or Vite, configure basic project structure, and establish the main dashboard layout (e.g., header, sidebar, main content area).",
+            "dependencies": [],
+            "details": "This includes setting up ESLint, Prettier, and basic CSS/styling framework if applicable.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Client-Side Routing",
+            "description": "Integrate React Router DOM to manage navigation between different sections of the dashboard (e.g., Player Overview, Detailed Stats, Agent Settings).",
+            "dependencies": [
+              1
+            ],
+            "details": "Define routes for each major dashboard section and create placeholder components for each route.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Develop API Integration Layer",
+            "description": "Create services or custom hooks responsible for fetching player performance data and agent settings from the backend API. Define data structures and handle API responses.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement Axios or Fetch API calls, handle authentication tokens if required, and define data models for player stats and agent configurations.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Design & Implement Data Visualization Components",
+            "description": "Utilize a charting library (e.g., Chart.js, Recharts, Nivo) to create interactive graphs and charts for displaying various player performance metrics.",
+            "dependencies": [
+              3
+            ],
+            "details": "Develop reusable chart components for different data types (e.g., line charts for trends, bar charts for comparisons, pie charts for distributions).",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Build Player Performance Dashboard Sections",
+            "description": "Develop the UI for the main dashboard views (e.g., 'Player Overview', 'Detailed Stats') by integrating fetched data with the designed data visualization components.",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Populate dashboard sections with actual player data, ensuring responsiveness and user-friendly layouts.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Agent Settings UI",
+            "description": "Create the user interface for managing agent-specific configurations and preferences, including input forms, validation, and integration with the API for saving settings.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Develop forms for updating agent profile, notification preferences, or data display options. Ensure data persistence via API calls.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Implement Global State Management, Error Handling & Loading States",
+            "description": "Set up a state management solution (e.g., Redux, Context API, Zustand) for global application state, and implement robust error handling and loading indicators across all data-driven components.",
+            "dependencies": [
+              3,
+              5,
+              6
+            ],
+            "details": "Centralize data fetching states, display appropriate loading spinners during API calls, and show user-friendly error messages for failed requests.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-06T15:00:50.734Z",
+      "updated": "2025-07-06T18:05:08.923Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

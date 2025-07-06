@@ -5,6 +5,7 @@ import { PlayersPage } from "./pages/Players/PlayersPage";
 import { TeamsPage } from "./pages/Teams/TeamsPage";
 import { AppProviders } from "./context/AppProviders";
 import { Layout } from "./pages/Layout";
+import { AgentOverlay } from "./pages/AgentOverlay";
 
 const AuthenticatedRoutes = () => (
   <AppProviders>
@@ -17,6 +18,8 @@ const AuthenticatedRoutes = () => (
           <Route path="teams" element={<TeamsPage />} />
           <Route path="dashboard" element={<Dashboard />} />
         </Route>
+        {/* Agent AI Overlay - Full screen overlay without Layout */}
+        <Route path="/agent-overlay" element={<AgentOverlay />} />
       </Routes>
     </MemoryRouter>
   </AppProviders>

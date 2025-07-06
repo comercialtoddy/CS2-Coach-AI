@@ -2,7 +2,13 @@ interface Window {
   electron: {
     startServer: (callback: (message: string) => void) => void;
     sendFrameAction: (payload: FrameWindowAction) => void;
+    // Game HUD overlay
     startOverlay: () => void;
+    // Agent AI Overlay
+    startAgentOverlay: () => void;
+    stopAgentOverlay: () => void;
+    updateAgentStatus: (status: AgentStatus) => void;
+    onAgentStatusUpdate: (callback: (status: AgentStatus) => void) => void;
     openExternalLink: (url: string) => void;
     openHudsDirectory: () => void;
   };
@@ -209,3 +215,13 @@ type Knife =
   | "knife_ursus" //
   | "knife_widowmaker" //
   | "knife_canis"; //
+
+// Agent AI Overlay Status Types
+interface AgentStatus {
+  state: "analyzing" | "awaiting" | "feedback" | "idle" | "error";
+  message?: string;
+  isAudioPlaying?: boolean;
+  audioMessage?: string;
+  timestamp?: number;
+  action?: string;
+}

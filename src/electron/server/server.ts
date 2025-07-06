@@ -4,14 +4,20 @@ import http from "http";
 import { initializeSocket } from "./sockets/socket.js";
 import { readGameData } from "./sockets/GSI.js";
 import {
-  playerRoutes,
-  teamRoutes,
-  matchRoutes,
+  playersRoutes as playerRoutes,
+  teamsRoutes as teamRoutes,
+  matchesRoutes as matchRoutes,
   coachRoutes,
   settingsRoutes,
+  trackerGGRoutes,
+  piperTTSRoutes,
+  agentOverlayDemoRoutes as agentDemoRoutes,
+  openRouterRoutes,
+  dataRetrievalRoutes,
 } from "./routes/index.js";
 import { BrowserWindow } from "electron";
 import { ipcWebContentsSend } from "../helpers/util.js";
+import { registerCoreDataRetrievalTools } from "./ai/tools/registerCoreDataRetrievalTools.js";
 import { getHudPath, getUploadsPath } from "../helpers/index.js";
 import path from "path";
 
@@ -42,9 +48,22 @@ export const startServer = (mainWindow: BrowserWindow) => {
   expressApp.use(matchRoutes);
   expressApp.use(coachRoutes);
   expressApp.use(settingsRoutes);
+  expressApp.use("/tracker-gg", trackerGGRoutes);
+  expressApp.use("/piper-tts", piperTTSRoutes);
+  expressApp.use("/agent-demo", agentDemoRoutes);
+  expressApp.use("/openrouter", openRouterRoutes);
+  expressApp.use("/data-retrieval", dataRetrievalRoutes);
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`Server listening on port ${port}`);
+    
+    // Initialize Core Data Retrieval Tools
+    try {
+      await registerCoreDataRetrievalTools();
+    } catch (error) {
+      console.error('Failed to initialize Core Data Retrieval Tools:', error);
+      // Continue server startup even if tools fail to register
+    }
   });
 
   ipcWebContentsSend(

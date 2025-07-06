@@ -1,5 +1,10 @@
-export * from "./matchRoutes.js";
-export * from "./playerRoutes.js";
-export * from "./teamRoutes.js";
-export * from "./coachRoutes.js";
-export * from "./settingsRoutes.js";
+export { default as playersRoutes } from "./playerRoutes.js";
+export { default as teamsRoutes } from "./teamRoutes.js";
+export { default as matchesRoutes } from "./matchRoutes.js";
+export { default as coachRoutes } from "./coachRoutes.js";
+export { default as settingsRoutes } from "./settingsRoutes.js";
+export { default as trackerGGRoutes } from "./trackerGGRoutes.js";
+export { default as piperTTSRoutes } from "./piperTTSRoutes.js";
+export { default as agentOverlayDemoRoutes } from "./agentOverlayDemoRoutes.js";
+export { default as openRouterRoutes } from "./openRouterRoutes.js";
+export { default as dataRetrievalRoutes } from "./dataRetrievalRoutes.js";

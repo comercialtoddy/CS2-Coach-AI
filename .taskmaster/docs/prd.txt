@@ -1,0 +1,401 @@
+# Ideia: Agente AI Coach para Counter-Strike 2 (CS2)
+
+## Visão Geral
+
+Este documento detalha a concepção de um Agente AI Coach para Counter-Strike 2 (CS2), projetado para auxiliar jogadores a aprimorar suas habilidades e estratégias. O agente será uma aplicação desktop construída com Electron, utilizando React e TypeScript para o frontend, e NodeJS com Express para o backend. A comunicação em tempo real será gerenciada por Socket.io, e os dados persistidos em um banco de dados SQLite3.
+
+## Arquitetura Conceitual
+
+O Agente AI Coach será composto por módulos interconectados, cada um responsável por uma funcionalidade específica. A arquitetura visa modularidade, escalabilidade e a capacidade de auto-correção e aprendizado contínuo.
+
+### Componentes Principais:
+
+1.  **Interface do Usuário (Frontend - Electron, React, TypeScript):**
+    *   Painel de administração para configuração do agente, visualização de resumos e acesso a funcionalidades avançadas.
+    *   HUD (Head-Up Display) para feedback em tempo real durante o jogo.
+
+2.  **Serviço de Backend (NodeJS, Express, Socket.io):**
+    *   API para comunicação entre o frontend e os módulos de IA.
+    *   Servidor Socket.io para comunicação em tempo real com o GSI do CS2 e o HUD.
+    *   Gerenciamento de dados e interação com o banco de dados SQLite3.
+
+3.  **Módulo de Processamento de IA (NodeJS/TypeScript):**
+    *   **Motor de Auto-Correção:** Analisa o desempenho do jogador e identifica áreas de melhoria, sugerindo ajustes em tempo real ou pós-jogo.
+    *   **Módulo de Memorização:** Armazena e recupera informações relevantes sobre o jogador, oponentes, mapas e estratégias.
+    *   **Módulo de Análise de Jogo:** Processa dados do GSI e da API Tracker.GG para fornecer insights.
+
+4.  **Módulo de Comunicação (NodeJS/TypeScript):**
+    *   **Conversão de Texto para Áudio:** Transforma as respostas do agente em áudio para feedback auditivo.
+    *   **Resumos de Conversa:** Gera resumos concisos das interações do agente com o jogador.
+
+5.  **Módulo de Captura de Tela (Electron/NodeJS):**
+    *   Captura de tela para análise visual de situações de jogo ou para documentação.
+
+6.  **Banco de Dados (SQLite3):**
+    *   Armazenamento de perfis de jogadores, histórico de partidas, estatísticas, padrões de comportamento e informações memorizadas.
+
+## Fluxo de Dados (Exemplo)
+
+1.  O GSI do CS2 envia dados de jogo em tempo real para o backend via Socket.io.
+2.  O Módulo de Análise de Jogo processa esses dados, combinando-os com informações da API Tracker.GG e dados memorizados.
+3.  O Motor de Auto-Correção identifica uma oportunidade de melhoria (ex: posicionamento incorreto).
+4.  O Módulo de Comunicação gera uma sugestão em texto e a converte para áudio.
+5.  A sugestão em áudio é enviada para o HUD do jogador via Socket.io.
+6.  O Módulo de Memorização atualiza seus registros com o novo aprendizado.
+7.  Periodicamente, o Módulo de Resumos de Conversa gera um resumo das interações para o painel de administração.
+
+
+
+## Funcionalidades Principais
+
+### 1. Auto-Correção (Self-Correction)
+
+O Agente AI será capaz de analisar seu próprio desempenho e as interações com o jogador para identificar e corrigir falhas em suas sugestões ou análises. Isso será alcançado através de:
+
+*   **Feedback Loop Contínuo:** O agente monitorará a eficácia de suas recomendações em tempo real, observando se o jogador implementou a sugestão e qual foi o resultado.
+*   **Aprendizado por Reforço:** Utilizará algoritmos de aprendizado por reforço para ajustar seus modelos de decisão com base no sucesso ou falha das intervenções.
+*   **Análise de Discrepâncias:** Comparará o comportamento ideal (baseado em dados de jogadores profissionais ou simulações) com o comportamento do jogador e suas próprias sugestões, ajustando-se para minimizar a diferença.
+*   **Adaptação Contextual:** A auto-correção levará em conta o contexto da partida (ex: placar, economia, tempo restante) para refinar suas estratégias de feedback.
+
+### 2. Memorização (Memory)
+
+A capacidade de memorização do agente permitirá que ele construa um perfil detalhado de cada jogador e adapte suas interações ao longo do tempo. Isso inclui:
+
+*   **Memória de Curto Prazo:** Armazenamento de informações da sessão de jogo atual, como eventos recentes, decisões do jogador e feedback fornecido.
+*   **Memória de Longo Prazo:** Persistência de dados em SQLite3, incluindo:
+    *   **Padrões de Jogo do Usuário:** Estilos de jogo preferidos, pontos fortes e fracos, erros recorrentes.
+    *   **Histórico de Interações:** Registro de todas as sugestões dadas, como o jogador reagiu e o impacto.
+    *   **Conhecimento de Mapas e Estratégias:** Informações sobre pontos de interesse, rotas comuns, táticas eficazes para cada mapa.
+    *   **Perfis de Oponentes:** Dados coletados via Tracker.GG sobre oponentes frequentes (se disponível e permitido pela API).
+*   **Contextualização:** A memória será usada para contextualizar as sugestões, evitando repetir conselhos e construindo sobre o conhecimento prévio do jogador.
+
+### 3. Captura de Tela (Screenshot Capture)
+
+Para auxiliar na análise visual e na comunicação, o agente poderá capturar telas do jogo. Isso será útil para:
+
+*   **Análise Pós-Rodada:** Capturar momentos-chave da rodada (ex: posicionamento, mira, uso de utilitários) para análise detalhada e feedback visual.
+*   **Demonstração de Conceitos:** O agente poderá capturar uma tela e desenhar sobre ela (ex: setas, círculos) para ilustrar um ponto específico ou uma rota.
+*   **Documentação de Erros:** Registrar visualmente situações onde o jogador cometeu um erro crítico para revisão posterior.
+*   **Compartilhamento:** Permitir que o jogador salve e compartilhe capturas de tela com anotações do agente.
+
+### 4. Conversão de Texto em Áudio (Text-to-Speech)
+
+Para fornecer feedback imediato e não intrusivo durante o jogo, as respostas do agente serão convertidas em áudio. As características incluem:
+
+*   **Voz Personalizável:** Opções para o usuário escolher entre diferentes vozes (masculina/feminina) e talvez tons.
+*   **Priorização de Feedback:** O agente priorizará o feedback auditivo para informações críticas que exigem atenção imediata do jogador.
+*   **Controle de Volume e Interrupção:** O usuário poderá ajustar o volume do agente e ter a opção de silenciá-lo temporariamente ou permanentemente.
+*   **Integração com HUD:** O áudio será reproduzido através do sistema de áudio do usuário, possivelmente com indicadores visuais no HUD.
+
+### 5. Resumos da Conversa (Conversation Summaries)
+
+O agente manterá um registro das interações com o jogador e será capaz de gerar resumos concisos. Isso é benéfico para:
+
+*   **Revisão Pós-Jogo:** O jogador poderá revisar os principais pontos de feedback, sugestões e aprendizados de uma sessão de jogo.
+*   **Acompanhamento do Progresso:** Os resumos ajudarão a visualizar o progresso do jogador ao longo do tempo, destacando áreas de melhoria contínua.
+*   **Relatórios Personalizados:** O agente poderá gerar relatórios semanais ou mensais com estatísticas, tendências e recomendações personalizadas.
+*   **Painel de Administração:** Os resumos serão acessíveis através do painel de administração, permitindo uma visão geral rápida das interações.
+
+
+
+## Integrações e APIs
+
+### 1. Game State Integration (GSI) do CS2
+
+O GSI é uma funcionalidade nativa do Counter-Strike 2 que permite que aplicações externas recebam dados em tempo real sobre o estado do jogo. O Agente AI fará uso extensivo do GSI para:
+
+*   **Dados de Jogo em Tempo Real:** Acesso a informações como:
+    *   **Informações do Jogador:** Saúde, armadura, dinheiro, armas, munição, status (vivo/morto, plantando/desarmando).
+    *   **Informações da Partida:** Placar, tempo restante da rodada, status da bomba, equipes, jogadores vivos/mortos.
+    *   **Eventos do Jogo:** Mortes, headshots, plantas de bomba, desarmes, uso de utilitários.
+    *   **Posicionamento (Limitado):** Embora o GSI não forneça a posição exata de todos os jogadores no mapa, ele pode indicar a área geral ou se o jogador está em uma zona específica (ex: 'bomb site A').
+*   **Feedback Imediato:** O GSI permitirá que o agente reaja a eventos do jogo quase instantaneamente, fornecendo feedback contextualizado (ex: 'Você está exposto!', 'Boa jogada com a flash!').
+*   **Análise de Padrões:** Os dados do GSI serão usados para identificar padrões de comportamento do jogador e dos oponentes, auxiliando na auto-correção e memorização.
+
+### 2. API Tracker.GG
+
+A API Tracker.GG fornece acesso a estatísticas detalhadas de jogadores e partidas de CS2. A integração com esta API complementará os dados do GSI, permitindo ao agente:
+
+*   **Estatísticas Pós-Jogo:** Obter dados abrangentes de partidas anteriores, como K/D, ADR (Average Damage per Round), HS% (Headshot Percentage), vitórias/derrotas, etc.
+*   **Análise de Desempenho:** Comparar o desempenho do jogador com a média, identificar tendências e áreas que precisam de melhoria com base em dados históricos.
+*   **Perfis de Oponentes:** Se a API permitir e o jogador optar por compartilhar, o agente poderá acessar estatísticas de oponentes em potencial, ajudando a prever estratégias e pontos fracos.
+*   **Contexto de Habilidade:** Entender o nível de habilidade geral do jogador e dos oponentes para ajustar a complexidade e o tipo de feedback fornecido.
+*   **Validação de Dados:** Usar os dados da Tracker.GG para validar e enriquecer as análises feitas com base no GSI.
+
+## System Prompt
+
+```
+You are an AI Coach Agent specialized in Counter-Strike 2 (CS2), designed to help players of all levels improve their performance and game understanding. Your primary function is to provide constructive feedback, strategic insights, and game analysis in real-time and post-match.
+
+**Your Persona:**
+*   **Experienced & Knowledgeable:** You possess vast knowledge of CS2 game mechanics, strategies, maps, economy, and advanced tactics.
+*   **Patient & Encouraging:** Your tone is always positive, motivating, and focused on player learning and development.
+*   **Objective & Analytical:** Your analyses are based on concrete data (GSI, Tracker.GG) and impartial observations.
+*   **Adaptable:** You adjust your communication style and feedback complexity based on the player's skill level and learning style.
+
+**Your Objective:**
+*   Identify player strengths and weaknesses.
+*   Offer actionable suggestions for improvement in real-time (via audio) and post-match (via summaries and reports).
+*   Explain the 'why' behind suggestions, fostering player understanding.
+*   Help the player develop a strategic and decision-making mindset.
+*   Monitor player progress over time and adapt your recommendations.
+
+**Constraints & Guidelines:**
+*   **CS2 Focus:** All interactions must be strictly related to Counter-Strike 2.
+*   **Non-Judgmental:** Avoid critical or derogatory language. Focus on solutions and improvements.
+*   **Privacy:** Respect player privacy. Do not request personal information and use data solely for coaching purposes.
+*   **Clarity & Conciseness:** Your responses must be clear, direct, and easy to understand, especially for audio feedback. **Only provide valuable, TIER 1 professional coach 'calls'. Avoid unnecessary chatter.**
+*   **Context:** Always consider the current match context (score, economy, teammates' and opponents' situation, **team side CT/TR**) when providing feedback.
+*   **Self-Correction:** Monitor the effectiveness of your own suggestions. If a recommendation is unsuccessful or misinterpreted, adjust your approach for future interactions.
+*   **Memory:** Utilize interaction history and player profile to personalize feedback and avoid unnecessary repetitions.
+*   **GSI & Tracker.GG Usage:** Base your analyses and suggestions on data provided by Game State Integration and the Tracker.GG API, including **detailed information for the main player and team players.**
+*   **Screenshot & Clip Capture:** Use screenshot and **clip recording (manual and automatic)** functionality to illustrate visual points when necessary, but only with explicit player permission or for internal analysis.
+*   **Output Format:** Prioritize **high-quality audio feedback (via Piper TTS)** during gameplay and textual summaries/reports for post-match analysis. Audio responses must be concise and non-robotic.
+*   **Tool-Based Operation (TOOLS):** You will operate by calling specific tools to perform tasks, ensuring a **step-by-step (STEP FOR STEP)** processing. When providing feedback or analysis, you will indicate which tool(s) were used or should be used by the system to generate that insight. **Your output should be structured to be parsed by the system to execute these tools.**
+
+**Available Tools (for system parsing):**
+*   `Tool_GetGSIInfo(data_points: list)`: Retrieves specific GSI data (e.g., `player_health`, `team_side`, `round_time`).
+*   `Tool_GetTrackerGGStats(player_id: string, stat_type: string)`: Queries the Tracker.GG API for statistics (e.g., `player_main_kd`, `team_win_rate`).
+*   `Tool_AnalyzePositioning(player_data: dict, map_context: dict)`: Analyzes player positioning based on GSI data and map context.
+*   `Tool_SuggestEconomyBuy(player_money: int, team_money: dict, round_number: int)`: Suggests the best equipment purchase based on economy.
+*   `Tool_GenerateAudioFeedback(text: string)`: Converts text to audio for player feedback.
+*   `Tool_CaptureScreenshot(area: string)`: Captures a specific screen area.
+*   `Tool_RecordClip(duration: int, trigger: string)`: Initiates video clip recording (manual or automatic).
+*   `Tool_SummarizeConversation(conversation_history: list)`: Generates a summary of the conversation with the player.
+*   `Tool_UpdatePlayerProfile(player_id: string, new_data: dict)`: Updates the player's profile in long-term memory.
+*   `Tool_GenerateSuggestion(error_type: string, context_data: dict, player_history: dict)`: Generates a textual suggestion based on analysis.
+
+**Example of a TIER 1 Coach Call (Output Format):**
+```json
+{
+  "call": "Player Main, you're over-extending on A site. Fall back to default to hold the crossfire.",
+  "tools_used": [
+    {"name": "Tool_GetGSIInfo", "params": {"data_points": ["player_position", "team_side"]}},
+    {"name": "Tool_AnalyzePositioning", "params": {"player_data": "current_player_gsi", "map_context": "current_map_layout"}},
+    {"name": "Tool_GenerateAudioFeedback", "params": {"text": "Player Main, you're over-extending on A site. Fall back to default to hold the crossfire."}}
+  ]
+}
+```
+
+**No Code Generation:** You should not generate code or create projects. Your role is purely coaching and analysis.
+```
+
+
+### Novas Funcionalidades e Melhorias
+
+#### 1. Detecção de Lado (CT ou TR)
+
+O Agente AI será capaz de identificar o lado em que o jogador principal e sua equipe estão jogando (Counter-Terrorist - CT ou Terrorist - TR). Esta informação é crucial para contextualizar as análises e sugestões, pois as estratégias e o comportamento esperado variam significativamente entre os lados.
+
+*   **Fonte de Dados:** O GSI do CS2 fornece informações sobre o lado da equipe (`team.side`).
+*   **Aplicação:** O agente usará essa informação para adaptar o feedback (ex: "Como CT, você deveria estar segurando este ângulo", "Como TR, considere um rush B"), a análise de economia e a avaliação de desempenho.
+
+#### 2. Informações Detalhadas do Player Main
+
+Além das informações básicas já coletadas, o agente aprofundará a coleta de dados sobre o jogador principal para fornecer um coaching mais personalizado.
+
+*   **Dados GSI:** Saúde, armadura, dinheiro, armas, munição, status (vivo/morto, plantando/desarmando), kills, assists, deaths, pontuação, utilitários (granadas, molotovs, flashes).
+*   **Dados Tracker.GG:** Estatísticas históricas (K/D, ADR, HS%, taxa de vitória), mapas preferidos, desempenho com armas específicas, histórico de partidas.
+*   **Análise Comportamental:** Padrões de movimento, posicionamento, uso de utilitários, tempo de reação, precisão de mira, decisões de compra.
+
+#### 3. Informações dos Players de Equipe para Contexto do Jogo
+
+Para uma análise mais completa do contexto da partida, o agente coletará informações essenciais sobre os companheiros de equipe do jogador principal.
+
+*   **Dados GSI:** Status (vivo/morto), saúde, armas, dinheiro, utilitários de cada companheiro de equipe.
+*   **Posicionamento (Relativo):** Embora o GSI não forneça posições exatas, pode-se inferir a proximidade ou a área geral dos companheiros para entender a formação da equipe.
+*   **Aplicação:** Esta informação permitirá ao agente analisar a sinergia da equipe, identificar lacunas na cobertura, sugerir jogadas coordenadas (ex: "Seu companheiro está avançando, cubra-o") e avaliar o impacto das ações individuais no coletivo.
+
+
+
+#### 4. Overlay Mínimo no Canto Superior Direito
+
+Um overlay discreto será exibido no canto superior direito da tela do jogo, fornecendo informações essenciais sem poluir o HUD nativo do CS2. Este overlay será:
+
+*   **Minimalista:** Apenas as informações mais relevantes serão exibidas, evitando redundância com o HUD do jogo.
+*   **Informações Básicas:** Poderá incluir:
+    *   Status do Agente (ex: "Analisando", "Aguardando", "Feedback").
+    *   Contador de clipes capturados na sessão.
+    *   Indicador de áudio (quando o agente estiver falando).
+*   **Animações de Etapas do Agente:** Strings curtas, claras e intuitivas acompanharão as animações, indicando o que o agente está fazendo (ex: "Processando GSI", "Analisando Posição", "Gerando Feedback"). Isso aumentará a transparência e a confiança do usuário no agente.
+
+#### 5. Dashboard de Desempenho para o Player Main
+
+Uma dashboard web (acessível via navegador ou dentro do aplicativo Electron) será desenvolvida para o jogador principal visualizar seu desempenho detalhado entre as partidas.
+
+*   **Visão Geral:** Resumo do desempenho geral, tendências de K/D, HS%, ADR ao longo do tempo.
+*   **Análise por Mapa:** Desempenho específico em cada mapa, incluindo pontos fortes e fracos.
+*   **Análise por Arma:** Eficiência com diferentes armas.
+*   **Recomendações Personalizadas:** Sugestões de treino com base nos dados analisados.
+*   **Histórico de Partidas:** Lista de partidas jogadas com acesso a resumos e clipes relevantes.
+*   **Configurações do Agente:** Permite ao usuário ajustar as preferências do agente, como tipo de feedback, volume de áudio, e a escolha do modelo de IA via OpenRouter.
+
+
+
+#### 6. Captura Manual e Automática de Clipes de até 30 Segundos
+
+O agente terá a capacidade de capturar clipes de vídeo curtos de momentos importantes do jogo.
+
+*   **Captura Manual:** O jogador poderá acionar a gravação de um clipe de até 30 segundos a qualquer momento através de um atalho de teclado configurável.
+*   **Captura Automática:** O agente identificará automaticamente momentos cruciais do jogo para gravar clipes, como:
+    *   Multi-kills (ex: Ace, Quadra Kill, Triple Kill).
+    *   Clutches (vitórias em situações de desvantagem numérica).
+    *   Jogadas de destaque (ex: headshots impressionantes, defuses rápidos, plantas de bomba bem-sucedidas).
+    *   Erros críticos (ex: quedas de altura, friendly fire, falha em desarmar a bomba).
+*   **Tecnologia:** Utilizará as APIs `desktopCapturer` do Electron para captura de tela e áudio, e bibliotecas Node.js como `ffmpeg` para processamento e salvamento dos clipes.
+
+#### 7. Player Pequeno no Canto Inferior Direito com Clipes e Capturas
+
+Um pequeno player de vídeo será exibido no canto inferior direito da tela, permitindo a visualização imediata dos clipes e capturas de tela.
+
+*   **Visualização Instantânea:** Após a captura de um clipe ou screenshot, ele aparecerá brevemente no player para revisão rápida.
+*   **Navegação:** O jogador poderá navegar pelos clipes e capturas da sessão atual diretamente no overlay.
+*   **Contexto Visual:** Isso permitirá que o jogador revise rapidamente um momento específico do jogo, seja para entender um feedback do agente ou para celebrar uma boa jogada.
+
+
+
+#### 8. Estrutura de TOOLS para o Agente
+
+O Agente AI será construído com uma arquitetura modular baseada em "ferramentas" (TOOLS). Cada funcionalidade específica será encapsulada como uma ferramenta que o agente pode "chamar" ou "usar" conforme a necessidade. Isso proporciona flexibilidade, escalabilidade e facilita a manutenção e adição de novas funcionalidades.
+
+Exemplos de TOOLS:
+
+*   **`Tool_GetGSIInfo(data_points: list)`:** Obtém dados específicos do GSI (ex: `player_health`, `team_side`, `round_time`).
+*   **`Tool_GetTrackerGGStats(player_id: string, stat_type: string)`:** Consulta a API Tracker.GG para estatísticas (ex: `player_main_kd`, `team_win_rate`).
+*   **`Tool_AnalyzePositioning(player_data: dict, map_context: dict)`:** Analisa o posicionamento do jogador com base nos dados do GSI e contexto do mapa.
+*   **`Tool_SuggestEconomyBuy(player_money: int, team_money: dict, round_number: int)`:** Sugere a melhor compra de equipamentos com base na economia.
+*   **`Tool_GenerateAudioFeedback(text: string)`:** Converte texto em áudio para feedback ao jogador.
+*   **`Tool_CaptureScreenshot(area: string)`:** Captura uma área específica da tela.
+*   **`Tool_RecordClip(duration: int, trigger: string)`:** Inicia a gravação de um clipe de vídeo (manual ou automático).
+*   **`Tool_SummarizeConversation(conversation_history: list)`:** Gera um resumo da conversa com o jogador.
+*   **`Tool_UpdatePlayerProfile(player_id: string, new_data: dict)`:** Atualiza o perfil do jogador na memória de longo prazo.
+
+#### 9. Processamento em STEP FOR STEP
+
+O Agente AI operará em um modelo de processamento passo a passo (Step-by-Step), onde cada decisão ou ação é o resultado de uma sequência lógica de etapas. Isso garante transparência, depuração mais fácil e a capacidade de auto-correção em cada fase.
+
+Exemplo de Fluxo (identificação de um erro de posicionamento):
+
+1.  **Step 1: `Observar GSI`**
+    *   **Ação:** `Tool_GetGSIInfo(['player_position', 'player_health', 'team_side'])`
+    *   **Resultado:** Dados de posição do jogador, saúde, lado da equipe.
+
+2.  **Step 2: `Analisar Contexto`**
+    *   **Ação:** `Tool_AnalyzePositioning(player_data, map_context)`
+    *   **Resultado:** Identificação de um posicionamento subótimo para o lado CT em um determinado local.
+
+3.  **Step 3: `Consultar Memória`**
+    *   **Ação:** `Tool_GetPlayerProfile(player_main_id, 'common_errors')`
+    *   **Resultado:** Verifica se o jogador já cometeu esse erro antes e como reagiu a feedbacks anteriores.
+
+4.  **Step 4: `Gerar Sugestão`**
+    *   **Ação:** `Tool_GenerateSuggestion(error_type='positioning', context_data=current_gsi_data, player_history=player_profile)`
+    *   **Resultado:** Texto da sugestão: "Seu posicionamento atual te deixa exposto ao meio. Considere recuar para a caixa."
+
+5.  **Step 5: `Converter para Áudio`**
+    *   **Ação:** `Tool_GenerateAudioFeedback(suggestion_text)`
+    *   **Resultado:** Arquivo de áudio da sugestão.
+
+6.  **Step 6: `Entregar Feedback`**
+    *   **Ação:** Enviar áudio para o jogador via Socket.io para o HUD.
+    *   **Resultado:** Feedback auditivo entregue.
+
+7.  **Step 7: `Atualizar Memória`**
+    *   **Ação:** `Tool_UpdatePlayerProfile(player_main_id, {'last_feedback': suggestion_text, 'feedback_timestamp': current_time})`
+    *   **Resultado:** Perfil do jogador atualizado com o feedback fornecido.
+
+
+
+#### 10. Conversão de Texto para Áudio de Alta Qualidade (LIB Gratuita)
+
+Para garantir que as respostas do agente sejam naturais e não robóticas, será utilizada uma biblioteca de Text-to-Speech (TTS) de alta qualidade e gratuita. Após pesquisa, a biblioteca **Piper TTS** (https://github.com/rhasspy/piper) se destaca como uma excelente opção de código aberto, com vozes neurais de alta qualidade que podem ser executadas localmente, garantindo baixa latência e privacidade.
+
+*   **Características do Piper TTS:**
+    *   **Vozes Naturais:** Oferece uma variedade de vozes que soam muito mais humanas do que as vozes sintéticas tradicionais.
+    *   **Execução Local:** Pode ser executado diretamente na máquina do usuário, eliminando a necessidade de chamadas de API externas para cada conversão de áudio, o que melhora a privacidade e a velocidade.
+    *   **Gratuito e Open Source:** Sem custos de licenciamento ou uso, ideal para um projeto de código aberto.
+    *   **Suporte a Múltiplos Idiomas:** Inclui suporte para português, o que é essencial para o projeto.
+
+#### 11. Integração com OpenRouter para Provedor de Modelos de IA
+
+Para permitir flexibilidade na escolha dos modelos de IA e a capacidade de o usuário alternar entre eles, o Agente AI se integrará ao **OpenRouter** (https://openrouter.ai/). O OpenRouter atua como um gateway unificado para centenas de modelos de IA de diversos provedores (Anthropic, Google, Meta, Mistral, etc.), oferecendo uma API consistente.
+
+*   **Benefícios da Integração com OpenRouter:**
+    *   **Modelos Dinâmicos:** O agente poderá acessar e utilizar diferentes modelos de linguagem (LLMs) dinamicamente, sem a necessidade de integrar cada API individualmente.
+    *   **Escolha do Usuário:** O usuário poderá selecionar o modelo de IA preferido através da Dashboard, permitindo experimentar diferentes qualidades de resposta e custos (se aplicável).
+    *   **Alta Disponibilidade:** O OpenRouter oferece maior disponibilidade ao rotear as requisições para provedores alternativos caso um esteja inoperante.
+    *   **Otimização de Custos:** Permite ao usuário escolher modelos mais econômicos para tarefas menos críticas ou modelos de ponta para análises mais complexas.
+    *   **Futuro-Proof:** Facilita a integração de novos modelos de IA à medida que surgem, sem grandes alterações na arquitetura do agente.
+
+*   **Implementação:** O backend (NodeJS/Express) fará as chamadas para a API do OpenRouter, passando as requisições do agente e recebendo as respostas dos LLMs selecionados. A chave de API do OpenRouter será gerenciada de forma segura e configurável pelo usuário na Dashboard.
+
+
+
+#### 12. Sistema de Recompensas com Tarefas de Partida
+
+Para aumentar o engajamento e motivar o Player Main a melhorar continuamente, o Agente AI implementará um sistema de recompensas baseado em tarefas de partida. O objetivo é transformar o aprendizado em um desafio divertido e gratificante.
+
+*   **Geração de Tarefas:** O agente, utilizando sua análise de desempenho e memória, gerará tarefas personalizadas para o jogador. Exemplos:
+    *   "Nesta rodada, tente conseguir um headshot com a AK-47."
+    *   "Concentre-se em segurar o bomb site B sem ser flanqueado."
+    *   "Use sua flashbang para cegar pelo menos dois inimigos."
+    *   "Mantenha um K/D positivo nesta metade do jogo."
+*   **Progressão:** As tarefas serão adaptadas ao nível de habilidade do jogador e se tornarão progressivamente mais desafiadoras à medida que o jogador melhora.
+*   **Recompensas:** Ao completar as tarefas, o jogador poderá receber:
+    *   **Pontos de Experiência (XP):** Para subir de nível dentro do sistema do agente.
+    *   **Conquistas/Badges:** Reconhecimento por marcos alcançados.
+    *   **Insights Aprofundados:** Desbloquear análises mais detalhadas ou dicas exclusivas do agente.
+    *   **Personalização:** Opções de personalização para o HUD ou dashboard do agente.
+*   **Feedback Imediato:** O agente fornecerá feedback em tempo real sobre o progresso da tarefa (ex: "Faltam 2 headshots para a tarefa!") e a conclusão da mesma.
+
+#### 13. Overlay Minimalista para Tarefas (Canto Central Direito)
+
+Um overlay dedicado às tarefas será posicionado no canto central direito da tela, projetado para ser discreto e não intrusivo, mas altamente informativo.
+
+*   **Design:**
+    *   **Clear (Claro):** Texto legível e ícones intuitivos.
+    *   **Pequeno:** Ocupará um espaço mínimo na tela.
+    *   **Estreito:** Formato vertical para se integrar bem à interface do jogo.
+    *   **Intuitivo:** Fácil de entender o status da tarefa rapidamente.
+*   **Conteúdo:**
+    *   **Tarefa Atual:** Exibirá a tarefa ativa no momento.
+    *   **Progresso:** Uma barra de progresso ou contador para indicar o quão perto o jogador está de completar a tarefa.
+    *   **Status:** Ícones ou cores para indicar se a tarefa está ativa, em progresso, concluída ou falhou.
+*   **Animações:** Animações sutis para indicar o progresso ou a conclusão de uma tarefa, chamando a atenção do jogador sem distrair excessivamente.
+*   **Interatividade:** Possibilidade de o jogador interagir minimamente com o overlay (ex: ocultar/mostrar, pular tarefa - com penalidade).
+
+
+
+
+#### 12. Sistema de Recompensas com Tarefas de Partida
+
+Para aumentar o engajamento e motivar o Player Main a melhorar continuamente, o Agente AI implementará um sistema de recompensas baseado em tarefas de partida. O objetivo é transformar o aprendizado em um desafio divertido e gratificante.
+
+*   **Geração de Tarefas:** O agente, utilizando sua análise de desempenho e memória, gerará tarefas personalizadas para o jogador. Exemplos:
+    *   "Nesta rodada, tente conseguir um headshot com a AK-47."
+    *   "Concentre-se em segurar o bomb site B sem ser flanqueado."
+    *   "Use sua flashbang para cegar pelo menos dois inimigos."
+    *   "Mantenha um K/D positivo nesta metade do jogo."
+*   **Progressão:** As tarefas serão adaptadas ao nível de habilidade do jogador e se tornarão progressivamente mais desafiadoras à medida que o jogador melhora.
+*   **Recompensas:** Ao completar as tarefas, o jogador poderá receber:
+    *   **Pontos de Experiência (XP):** Para subir de nível dentro do sistema do agente.
+    *   **Conquistas/Badges:** Reconhecimento por marcos alcançados.
+    *   **Insights Aprofundados:** Desbloquear análises mais detalhadas ou dicas exclusivas do agente.
+    *   **Personalização:** Opções de personalização para o HUD ou dashboard do agente.
+*   **Feedback Imediato:** O agente fornecerá feedback em tempo real sobre o progresso da tarefa (ex: "Faltam 2 headshots para a tarefa!") e a conclusão da mesma.
+
+#### 13. Overlay Minimalista para Tarefas (Canto Central Direito)
+
+Um overlay dedicado às tarefas será posicionado no canto central direito da tela, projetado para ser discreto e não intrusivo, mas altamente informativo.
+
+*   **Design:**
+    *   **Clear (Claro):** Texto legível e ícones intuitivos.
+    *   **Pequeno:** Ocupará um espaço mínimo na tela.
+    *   **Estreito:** Formato vertical para se integrar bem à interface do jogo.
+    *   **Intuitivo:** Fácil de entender o status da tarefa rapidamente.
+*   **Conteúdo:**
+    *   **Tarefa Atual:** Exibirá a tarefa ativa no momento.
+    *   **Progresso:** Uma barra de progresso ou contador para indicar o quão perto o jogador está de completar a tarefa.
+    *   **Status:** Ícones ou cores para indicar se a tarefa está ativa, em progresso, concluída ou falhou.
+*   **Animações:** Animações sutis para indicar o progresso ou a conclusão de uma tarefa, chamando a atenção do jogador sem distrair excessivamente.
+*   **Interatividade:** Possibilidade de o jogador interagir minimamente com o overlay (ex: ocultar/mostrar, pular tarefa - com penalidade).

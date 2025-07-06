@@ -1,0 +1,213 @@
+{
+	"meta": {
+		"generatedAt": "2025-07-06T15:01:43.908Z",
+		"tasksAnalyzed": 25,
+		"totalTasks": 25,
+		"analysisCount": 25,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Project Initialization & Core Setup",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down the 'Project Initialization & Core Setup' task into detailed steps covering monorepo structure, Electron, React, Node.js/Express, TypeScript configuration, and development/build scripts.",
+			"reasoning": "This task involves integrating multiple distinct technologies (Electron, React, Node.js, Express, TypeScript) within a monorepo, which requires careful configuration of build processes, dependencies, and inter-component communication. It's foundational and prone to initial setup complexities."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Electron Main Process & IPC Setup",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail the subtasks for 'Electron Main Process & IPC Setup', including creating and managing main and overlay BrowserWindows, establishing secure IPC channels, and implementing basic IPC handlers.",
+			"reasoning": "Setting up multiple Electron windows, especially transparent and always-on-top overlays, along with robust and secure Inter-Process Communication (IPC) channels, requires careful implementation and debugging."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Backend Server & API Foundation",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Outline the steps for 'Backend Server & API Foundation', focusing on Express.js server initialization, basic route definition, middleware setup, and port configuration.",
+			"reasoning": "This task involves standard Express.js server setup. While critical, the foundational aspects are relatively straightforward compared to complex integrations or AI logic."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Socket.io Real-time Communication Setup",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "List the subtasks for 'Socket.io Real-time Communication Setup', covering server-side integration with Express, client-side connection in React, basic event handling (emit/on), and reconnection logic.",
+			"reasoning": "Integrating real-time communication via Socket.io requires coordination between frontend and backend, handling connection states, and ensuring reliable message passing."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "SQLite3 Database & ORM Setup",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down 'SQLite3 Database & ORM Setup' into steps for choosing and integrating an ORM (Sequelize/Drizzle), defining initial database schemas (PlayerProfile, MatchHistory, MemoryEntry), and performing basic CRUD operations.",
+			"reasoning": "This task involves selecting and integrating an ORM, designing initial database schemas, and setting up migration capabilities, which are significant database-related efforts."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "CS2 GSI Listener & Configuration",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Detail the subtasks for 'CS2 GSI Listener & Configuration', including creating the Express GSI endpoint, generating the `gamestate_integration_ai_coach.cfg` file, and verifying data reception.",
+			"reasoning": "This task requires specific configuration within the CS2 game files and setting up a dedicated HTTP endpoint to receive game state data, which can involve network and file system considerations."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "GSI Data Parsing & Initial Player/Team Data Extraction",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Outline the steps for 'GSI Data Parsing & Initial Player/Team Data Extraction', focusing on defining a normalized internal data model, implementing parsing logic for key player/team/round data, and incorporating schema validation.",
+			"reasoning": "Parsing complex, nested JSON data from GSI and transforming it into a consistent, normalized internal data model, especially with robust schema validation, is a detailed and error-prone process."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Tracker.GG API Integration",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down 'Tracker.GG API Integration' into steps for obtaining an API key, implementing an HTTP client, making specific API calls (e.g., player profiles), handling rate limits, and caching data.",
+			"reasoning": "Integrating with an external API involves managing authentication, handling various API endpoints, parsing responses, and implementing strategies for rate limits and data caching."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Core AI Tooling Framework Implementation",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Detail the subtasks for 'Core AI Tooling Framework Implementation', including defining a common tool interface, implementing a ToolManager for registration and dispatch, and ensuring extensibility.",
+			"reasoning": "Designing a flexible and robust tooling framework is a critical architectural component for the AI, requiring careful consideration of interfaces, management, and future expandability."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Implement Core Data Retrieval Tools",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Outline the implementation steps for 'Core Data Retrieval Tools', specifically for `Tool_GetGSIInfo`, `Tool_GetTrackerGGStats`, and `Tool_UpdatePlayerProfile`, including their integration with existing data sources.",
+			"reasoning": "This task involves implementing specific AI tools that abstract interactions with GSI, Tracker.GG, and the local database, requiring precise data flow and error handling for each."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Piper TTS Integration for Audio Generation",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down 'Piper TTS Integration for Audio Generation' into steps for setting up Piper TTS (model download, executable path), executing it as a child process, handling text-to-audio conversion, and optimizing for low latency.",
+			"reasoning": "Integrating an external executable like Piper TTS as a child process, managing its input/output, handling potential errors, and ensuring low latency for real-time audio feedback is technically challenging."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Initial In-Game HUD Overlay",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Detail the subtasks for 'Initial In-Game HUD Overlay', covering the creation of a dedicated Electron BrowserWindow (transparent, frameless, always-on-top), React UI for status display, and Socket.io integration for real-time updates.",
+			"reasoning": "Creating a specialized Electron overlay with specific window properties and dynamically updating its UI via real-time communication requires careful implementation to ensure a non-intrusive and functional display."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Screenshot Capture Module",
+			"complexityScore": 6,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Outline the steps for 'Screenshot Capture Module', focusing on using Electron's `desktopCapturer` API, capturing specific screen areas, saving images, and integrating it as a callable tool.",
+			"reasoning": "Implementing screen capture involves interacting with OS-level APIs via Electron, which can have platform-specific considerations and requires careful handling of image data."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Video Clip Recording Module",
+			"complexityScore": 9,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Break down 'Video Clip Recording Module' into detailed steps for integrating `ffmpeg` (via `fluent-ffmpeg`), capturing screen and audio streams, implementing recording start/stop logic, optimizing encoding for performance, and saving clips.",
+			"reasoning": "Video recording is a highly complex task involving real-time stream capture (screen and audio), efficient encoding with `ffmpeg`, and managing system resources to minimize performance impact during gameplay."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Clip/Screenshot Player Overlay",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail the subtasks for 'Clip/Screenshot Player Overlay', including setting up a dedicated Electron BrowserWindow, implementing a React media player (video/image), logic for auto-display/fade-out, and navigation controls.",
+			"reasoning": "This task involves creating another dynamic Electron overlay for media playback, requiring careful UI/UX design for a non-intrusive experience and robust handling of video and image display."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "OpenRouter Integration for LLM Access",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Outline the steps for 'OpenRouter Integration for LLM Access', covering API key management, making chat completion requests, parsing LLM responses, and abstracting this into a `Tool_CallLLM`.",
+			"reasoning": "Integrating with an external LLM API is a standard but critical task, requiring secure API key handling, robust request/response management, and proper abstraction for AI tool usage."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "AI Step-by-Step Processing Orchestration",
+			"complexityScore": 9,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Break down 'AI Step-by-Step Processing Orchestration' into detailed steps for designing the central orchestrator, implementing state management, defining decision logic for tool chaining based on GSI updates, and integrating the system prompt.",
+			"reasoning": "This is the core intelligence of the AI, involving complex decision-making logic, dynamic tool orchestration, and sophisticated state management based on real-time game data, making it highly complex."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Memory Module Implementation",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Detail the subtasks for 'Memory Module Implementation', including designing the `MemoryService`, managing short-term (in-memory) and long-term (SQLite) storage, defining schemas for player profiles and interaction history, and implementing efficient querying.",
+			"reasoning": "Implementing a comprehensive memory module requires designing data structures for different memory types, integrating with the database for persistence, and ensuring efficient retrieval for contextual AI reasoning."
+		},
+		{
+			"taskId": 19,
+			"taskTitle": "Game Analysis Module - Positioning",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Outline the steps for 'Game Analysis Module - Positioning', focusing on defining rules/heuristics for optimal positioning, interpreting GSI player/map data, and developing logic to assess and suggest improvements.",
+			"reasoning": "Analyzing player positioning in a game like CS2 requires deep domain knowledge, complex rule-based logic, and potentially spatial reasoning to provide accurate and actionable feedback."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "Game Analysis Module - Economy",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down 'Game Analysis Module - Economy' into steps for defining CS2 economy principles, interpreting GSI money/round data, and developing logic to suggest optimal equipment purchases.",
+			"reasoning": "Implementing an economy analysis module requires a solid understanding of CS2's economic mechanics and developing rule-based logic to provide intelligent buy recommendations."
+		},
+		{
+			"taskId": 21,
+			"taskTitle": "Auto-Correction Engine Logic",
+			"complexityScore": 9,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Detail the subtasks for 'Auto-Correction Engine Logic', including designing the feedback loop, monitoring suggestion effectiveness via GSI, inferring outcomes, updating memory, and implementing adaptive coaching adjustments.",
+			"reasoning": "Developing an auto-correction engine involves creating a sophisticated feedback loop, analyzing player behavior post-suggestion, and implementing adaptive learning mechanisms, which is a highly advanced AI feature."
+		},
+		{
+			"taskId": 22,
+			"taskTitle": "Conversation Summarization Module",
+			"complexityScore": 6,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Outline the steps for 'Conversation Summarization Module', focusing on preparing conversation history for the LLM, crafting effective prompts for `Tool_CallLLM`, and parsing/storing the generated summaries.",
+			"reasoning": "This task leverages LLM capabilities for summarization, requiring effective prompt engineering and handling of LLM outputs to generate concise and relevant summaries."
+		},
+		{
+			"taskId": 23,
+			"taskTitle": "Reward System & Task Generation Logic",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down 'Reward System & Task Generation Logic' into steps for designing dynamic task generation based on player profiles, defining task types and completion criteria, tracking progress via GSI, and implementing reward assignment.",
+			"reasoning": "Implementing a dynamic reward system with personalized task generation and real-time progress tracking based on game events is a complex backend logic task."
+		},
+		{
+			"taskId": 24,
+			"taskTitle": "In-Game Task Overlay",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Detail the subtasks for 'In-Game Task Overlay', including setting up a dedicated Electron BrowserWindow, designing a minimalist React UI for task display and progress, and integrating Socket.io for real-time updates.",
+			"reasoning": "Similar to the HUD, this task involves creating another specialized Electron overlay with dynamic content, requiring careful UI/UX design to be clear, small, and non-intrusive during gameplay."
+		},
+		{
+			"taskId": 25,
+			"taskTitle": "Player Performance Dashboard (Web UI)",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Outline the steps for 'Player Performance Dashboard (Web UI)', covering React application development, routing for multiple sections, API integration for data fetching, data visualization with charting libraries, and implementing agent settings.",
+			"reasoning": "Developing a comprehensive web-based dashboard with multiple views, data fetching from a backend, interactive data visualizations, and user settings is a significant frontend development effort."
+		}
+	]
+}

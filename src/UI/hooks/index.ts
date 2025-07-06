@@ -3,3 +3,4 @@ export * from "./useTeams";
 export * from "./useMatches";
 export * from "./useThemes";
 export * from "./useDrawer";
+export * from "./useAgentSocket";
