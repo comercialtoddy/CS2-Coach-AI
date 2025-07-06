@@ -1,0 +1,153 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# OpenHud Project Context & Structure
+
+## Project Overview
+
+OpenHud is an Electron-based desktop application for managing CS:GO/CS2 HUD (Heads-Up Display) customizations. It provides a comprehensive interface for managing players, teams, matches, and HUD configurations with real-time game state integration.
+
+## Core Architecture
+
+### **Technology Stack**
+- **Desktop Framework**: Electron (main + renderer processes)
+- **Frontend**: React 18 + TypeScript + Vite
+- **Backend**: Node.js Express-like server with REST API
+- **Database**: SQLite with custom TypeScript wrapper
+- **Styling**: Tailwind CSS + PostCSS
+- **State Management**: React Context API + Custom Hooks
+- **Real-time**: WebSockets for Game State Integration (GSI)
+
+### **Application Structure**
+
+#### **Electron Layer** (`src/electron/`)
+- **Main Process**: [main.ts](mdc:src/electron/main.ts) - Application entry point, window management
+- **Preload**: [preload.cts](mdc:src/electron/preload.cts) - Secure IPC bridge between main and renderer
+- **Window Management**: [hudWindow.ts](mdc:src/electron/hudWindow.ts) - HUD overlay window creation
+- **System Integration**: [tray.ts](mdc:src/electron/tray.ts) - System tray functionality
+- **Database**: [database.ts](mdc:src/electron/database/database.ts) - SQLite database wrapper
+
+#### **Backend Server** (`src/electron/server/`)
+- **Entry Point**: [server.ts](mdc:src/electron/server/server.ts) - Express server setup
+- **Controllers**: REST API endpoints for CRUD operations
+  - [playersController.ts](mdc:src/electron/server/controllers/playersController.ts) - Player management
+  - [teamsController.ts](mdc:src/electron/server/controllers/teamsController.ts) - Team management  
+  - [matchesController.ts](mdc:src/electron/server/controllers/matchesController.ts) - Match management
+  - [settingsController.ts](mdc:src/electron/server/controllers/settingsController.ts) - Application settings
+- **Services**: Business logic layer
+  - [playersServices.ts](mdc:src/electron/server/services/playersServices.ts) - Player operations
+  - [teamsServices.ts](mdc:src/electron/server/services/teamsServices.ts) - Team operations
+  - [matchesServices.ts](mdc:src/electron/server/services/matchesServices.ts) - Match operations
+- **Routes**: API route definitions in [routes/](mdc:src/electron/server/routes) directory
+- **WebSocket**: [GSI.ts](mdc:src/electron/server/sockets/GSI.ts) - CS:GO/CS2 Game State Integration
+
+#### **Frontend Application** (`src/UI/`)
+- **Entry Point**: [main.tsx](mdc:src/UI/main.tsx) - React application bootstrap
+- **Root Component**: [App.tsx](mdc:src/UI/App.tsx) - Main application component
+- **Layout**: [Layout.tsx](mdc:src/UI/pages/Layout.tsx) - Application shell with routing
+
+#### **Page Structure** (`src/UI/pages/`)
+- **Dashboard**: [Dashboard.tsx](mdc:src/UI/pages/Dashboard/Dashboard.tsx) - Main overview page
+- **Players**: [PlayersPage.tsx](mdc:src/UI/pages/Players/PlayersPage.tsx) - Player management interface
+- **Teams**: [TeamsPage.tsx](mdc:src/UI/pages/Teams/TeamsPage.tsx) - Team management interface
+- **Matches**: [MatchPage.tsx](mdc:src/UI/pages/Matches/MatchPage.tsx) - Match management interface
+- **Settings**: [Settings.tsx](mdc:src/UI/pages/Settings/Settings.tsx) - Application configuration
+- **Sidebar**: [Sidebar.tsx](mdc:src/UI/pages/Sidebar/Sidebar.tsx) - Navigation sidebar
+
+#### **State Management** (`src/UI/context/`)
+- **App Providers**: [AppProviders.tsx](mdc:src/UI/context/AppProviders.tsx) - Context provider wrapper
+- **Domain Contexts**: 
+  - [PlayersContext.tsx](mdc:src/UI/context/PlayersContext.tsx) - Player state management
+  - [TeamsContext.tsx](mdc:src/UI/context/TeamsContext.tsx) - Team state management
+  - [MatchesContext.tsx](mdc:src/UI/context/MatchesContext.tsx) - Match state management
+  - [ThemesContext.tsx](mdc:src/UI/context/ThemesContext.tsx) - Theme/appearance state
+
+#### **Custom Hooks** (`src/UI/hooks/`)
+- **Data Hooks**: 
+  - [usePlayers.ts](mdc:src/UI/hooks/usePlayers.ts) - Player data operations
+  - [useTeams.ts](mdc:src/UI/hooks/useTeams.ts) - Team data operations
+  - [useMatches.ts](mdc:src/UI/hooks/useMatches.ts) - Match data operations
+- **UI Hooks**: [useDrawer.ts](mdc:src/UI/hooks/useDrawer.ts) - Drawer/modal state management
+
+#### **API Layer** (`src/UI/api/`)
+- **Main API**: [api.ts](mdc:src/UI/api/api.ts) - HTTP client and API utilities
+- **WebSocket**: [socket.ts](mdc:src/UI/api/socket.ts) - WebSocket client for real-time updates
+- **External APIs**: [supabase.ts](mdc:src/UI/api/supabase.ts) - Supabase integration (if used)
+
+#### **Reusable Components** (`src/UI/components/`)
+- **Form Components**: [TextInput.tsx](mdc:src/UI/components/TextInput.tsx), [PrimaryButton.tsx](mdc:src/UI/components/PrimaryButton.tsx)
+- **UI Components**: [Dialog.tsx](mdc:src/UI/components/Dialog.tsx), [Drawer.tsx](mdc:src/UI/components/Drawer.tsx)
+- **Layout Components**: [Container.tsx](mdc:src/UI/components/Container.tsx)
+
+## Key Development Patterns
+
+### **Data Flow Architecture**
+1. **Frontend → Backend**: React components → Custom hooks → API layer → Express controllers
+2. **Backend → Database**: Controllers → Services → Database layer
+3. **Real-time Updates**: Game State Integration → WebSocket → Frontend state updates
+
+### **File Naming Conventions**
+- **Components**: PascalCase (e.g., `PlayerCard.tsx`)
+- **Pages**: PascalCase with descriptive names (e.g., `PlayersPage.tsx`)
+- **Hooks**: camelCase with "use" prefix (e.g., `usePlayers.ts`)
+- **Services**: camelCase with "Services" suffix (e.g., `playersServices.ts`)
+- **Controllers**: camelCase with "Controller" suffix (e.g., `playersController.ts`)
+
+### **State Management Pattern**
+- **Context + Hooks**: Each domain (Players, Teams, Matches) has its own context and hook
+- **Global State**: App-wide state managed through [AppProviders.tsx](mdc:src/UI/context/AppProviders.tsx)
+- **Local State**: Component-specific state using React's built-in hooks
+
+### **API Design Pattern**
+- **RESTful Endpoints**: Standard CRUD operations for each entity
+- **Service Layer**: Business logic separated from controllers
+- **Error Handling**: Consistent error responses across all endpoints
+
+## Integration Points
+
+### **CS:GO/CS2 Game Integration**
+- **Game State Integration**: [gamestate_integration_openhud.cfg](mdc:src/assets/gamestate_integration_openhud.cfg) - GSI configuration
+- **HUD Assets**: [defaultHud/](mdc:src/assets/defaultHud) - Default HUD templates and assets
+- **Observer Config**: [Observe.cfg](mdc:src/assets/Observe.cfg) - Game observer mode configuration
+
+### **External Dependencies**
+- **Electron**: Desktop application framework
+- **React Router**: Client-side routing
+- **Tailwind CSS**: Utility-first CSS framework
+- **TypeScript**: Type safety across the entire application
+
+## Development Guidelines
+
+### **When Adding New Features**
+1. **Backend**: Create service → controller → route → test
+2. **Frontend**: Create context → hook → component → page
+3. **Database**: Update schema → migration → service layer
+4. **API**: Document endpoints → update types → test integration
+
+### **Code Organization**
+- **Separation of Concerns**: UI components, business logic, and data access are clearly separated
+- **Reusability**: Common components and utilities are shared across the application
+- **Type Safety**: TypeScript interfaces and types are defined in [types.ts](mdc:src/UI/api/types.ts)
+
+### **Testing Strategy**
+- **Unit Tests**: Component and service testing (e.g., [tray.test.ts](mdc:src/electron/tray.test.ts))
+- **E2E Tests**: End-to-end testing with Playwright ([example.spec.ts](mdc:e2e/example.spec.ts))
+
+## Asset Management
+
+### **HUD System**
+- **Default HUD**: Complete HUD package in [defaultHud/](mdc:src/assets/defaultHud)
+- **HUD Configuration**: [hud.json](mdc:src/assets/defaultHud/hud.json) - HUD layout configuration
+- **Panel Configuration**: [panel.json](mdc:src/assets/defaultHud/panel.json) - Panel settings
+- **Keybinds**: [keybinds.json](mdc:src/assets/defaultHud/keybinds.json) - Custom keybind configurations
+
+### **Static Assets**
+- **Icons**: Application icons and UI elements
+- **Fonts**: Custom fonts (Montserrat, Louis George Cafe, etc.)
+- **Images**: Player silhouettes, team logos, UI graphics
+- **Media**: Background videos and promotional materials
+
+This structure ensures maintainability, scalability, and clear separation of concerns while providing a robust foundation for CS:GO/CS2 HUD management.
+
