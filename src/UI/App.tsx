@@ -6,6 +6,7 @@ import { TeamsPage } from "./pages/Teams/TeamsPage";
 import { AppProviders } from "./context/AppProviders";
 import { Layout } from "./pages/Layout";
 import { AgentOverlay } from "./pages/AgentOverlay";
+import { PerformanceDashboard } from "./pages/Performance";
 
 const AppRoutes = () => {
   return (
@@ -18,6 +19,7 @@ const AppRoutes = () => {
         <Route path="players" element={<PlayersPage />} />
         <Route path="teams" element={<TeamsPage />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="performance/*" element={<PerformanceDashboard />} />
       </Route>
     </Routes>
   );

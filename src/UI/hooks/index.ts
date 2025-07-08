@@ -1,6 +1,7 @@
-export * from "./usePlayers";
-export * from "./useTeams";
-export * from "./useMatches";
-export * from "./useThemes";
-export * from "./useDrawer";
-export * from "./useAgentSocket";
+export { useDrawer } from "./useDrawer";
+export { useMatches } from "./useMatches";
+export { usePlayers } from "./usePlayers";
+export { useTeams } from "./useTeams";
+export { useThemes } from "./useThemes";
+export { useAgentSocket } from "./useAgentSocket";
+export { usePerformance } from "./usePerformance";

@@ -25,6 +25,16 @@ contextBridge.exposeInMainWorld("api", {
   updateTaskProgress: (progress: any) => ipcRenderer.send("update-task-progress", progress),
   updateTaskStatus: (status: any) => ipcRenderer.send("update-task-status", status),
 
+  // Media player control
+  openMediaPlayer: () => ipcRenderer.send("open-media-player"),
+  closeMediaPlayer: () => ipcRenderer.send("close-media-player"),
+  showMediaPlayer: () => ipcRenderer.send("show-media-player"),
+  hideMediaPlayer: () => ipcRenderer.send("hide-media-player"),
+  updateMedia: (data: { type: 'image' | 'video'; path: string; timestamp: number }) => 
+    ipcRenderer.send("update-media", data),
+  setMediaPlayerInteractive: (interactive: boolean) => 
+    ipcRenderer.send("set-media-player-interactive", interactive),
+
   // Event listeners
   on: (channel: string, callback: Function) => {
     const validChannels = [
@@ -32,7 +42,8 @@ contextBridge.exposeInMainWorld("api", {
       'update-progress',
       'update-status',
       'animate-in',
-      'animate-out'
+      'animate-out',
+      'update-media'
     ];
     if (validChannels.includes(channel)) {
       // Deliberately strip event as it includes `sender` 
@@ -45,7 +56,8 @@ contextBridge.exposeInMainWorld("api", {
       'update-progress',
       'update-status',
       'animate-in',
-      'animate-out'
+      'animate-out',
+      'update-media'
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.off(channel, (_event, ...args) => callback(...args));
