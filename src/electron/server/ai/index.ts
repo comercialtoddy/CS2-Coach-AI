@@ -184,7 +184,14 @@ export function createSimpleTool<TInput = any, TOutput = any>(
   return {
     name,
     description,
-    execute
+    execute,
+    metadata: {
+      version: '1.0.0',
+      category: ToolCategory.UTILITY,
+      tags: [],
+    },
+    inputSchema: {},
+    outputExample: {} as TOutput
   };
 }
 

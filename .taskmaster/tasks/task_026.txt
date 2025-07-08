@@ -1,0 +1,73 @@
+# Task ID: 26
+# Title: Criação da Documentação Abrangente do Projeto
+# Status: pending
+# Dependencies: 1, 2, 3, 6, 7, 12, 13, 15, 24, 25
+# Priority: high
+# Description: Criar uma documentação abrangente e bem-estruturada para o projeto, cobrindo a arquitetura, guias de instalação, documentação da API, guias de usuário e diretrizes de contribuição.
+# Details:
+A documentação deve ser criada, preferencialmente utilizando uma ferramenta como Docusaurus ou MkDocs, e armazenada em um diretório `/docs` no repositório. A estrutura deve incluir: 1. **Visão Geral e Arquitetura do Projeto:** Descrever a estrutura do monorepo (Electron, React, Node.js), o fluxo de comunicação (IPC, Socket.io) e a função de cada componente principal, como o GSI, os overlays e o backend. 2. **Guia de Instalação e Configuração:** Fornecer um passo a passo detalhado para novos desenvolvedores clonarem o repositório, instalarem todas as dependências e configurarem o ambiente, incluindo o arquivo de configuração do GSI para o CS2. 3. **Documentação para Desenvolvedores:** Detalhar os endpoints da API do backend (Task 3, 25), a estrutura dos dados do GSI (Task 7), e a arquitetura dos componentes React, especialmente os overlays (Tasks 12, 15, 24) e o painel de desempenho (Task 25). 4. **Guia do Usuário:** Explicar como um usuário final deve instalar e utilizar a aplicação, o que cada overlay significa e como navegar e interpretar os dados no painel de desempenho. 5. **Diretrizes de Contribuição:** Definir o fluxo de trabalho com Git (ex: GitFlow), padrões de código, e o processo para submeter pull requests.
+
+# Test Strategy:
+Verificar a documentação seguindo estes passos: 1. Pedir a um novo membro da equipe que siga o guia de instalação em uma máquina limpa para garantir que todos os passos estão corretos e completos. 2. Revisar cada seção da documentação para garantir que ela corresponde à implementação atual do código. 3. Usar uma ferramenta como Postman ou cURL para testar os endpoints da API conforme descrito na documentação. 4. Navegar pela aplicação seguindo o Guia do Usuário para confirmar que todas as funcionalidades descritas estão precisas. 5. Realizar uma revisão geral para corrigir erros de digitação, gramática e garantir clareza e consistência em todo o documento.
+
+# Subtasks:
+## 1. Configurar Ferramenta de Documentação (Docusaurus/MkDocs) [done]
+### Dependencies: None
+### Description: Escolher, instalar e configurar a ferramenta de documentação (Docusaurus ou MkDocs) dentro de um diretório `/docs` no repositório do projeto, estabelecendo a estrutura básica e o tema.
+### Details:
+A configuração inicial deve incluir a página de índice, a estrutura de navegação principal e um tema base. O objetivo é ter um esqueleto funcional do site de documentação, pronto para receber o conteúdo.
+
+## 2. Redigir Visão Geral e Arquitetura do Projeto [done]
+### Dependencies: 26.1
+### Description: Criar a seção de documentação que descreve a visão geral do projeto, sua arquitetura de monorepo (Electron, React, Node.js) e o fluxo de comunicação entre os componentes (IPC, Socket.io).
+### Details:
+O documento deve incluir um diagrama de arquitetura de alto nível. É preciso detalhar a responsabilidade de cada pacote no monorepo e explicar como o GSI, o backend e o frontend se comunicam.
+
+## 3. Elaborar Guia de Instalação para Desenvolvedores [done]
+### Dependencies: 26.1
+### Description: Escrever um guia passo a passo detalhado para que novos desenvolvedores possam clonar o repositório, instalar todas as dependências e configurar o ambiente de desenvolvimento local.
+### Details:
+O guia deve listar os pré-requisitos (Node.js, etc.), os comandos para instalação de dependências (incluindo workspaces) e as instruções para iniciar a aplicação. Uma parte crucial é detalhar a criação e configuração do arquivo `.cfg` do GSI para o CS2.
+
+## 4. Documentar Endpoints da API do Backend [done]
+### Dependencies: 26.1
+### Description: Criar documentação de referência para todos os endpoints da API do backend, detalhando rotas, métodos, parâmetros, payloads e exemplos de requisição/resposta.
+### Details:
+Para cada endpoint, especificar o verbo HTTP, o caminho, os parâmetros (query, body), e os possíveis códigos de status de resposta com seus schemas. Incluir exemplos de código (ex: cURL, Fetch API) para facilitar o uso. Referenciar as Tasks 3 e 25 do projeto.
+
+## 5. Documentar Estrutura de Dados do GSI [done]
+### Dependencies: 26.1
+### Description: Detalhar a estrutura do payload de dados enviado pelo Game State Integration (GSI) do CS2 e explicar como esses dados são recebidos e processados pelo backend.
+### Details:
+Apresentar um exemplo completo do objeto JSON do GSI. Descrever cada campo relevante (ex: `player`, `map`, `round`) e explicar como o servidor Node.js os processa antes de retransmitir via Socket.io. Referenciar a Task 7 do projeto.
+
+## 6. Documentar Arquitetura dos Componentes React [done]
+### Dependencies: 26.1
+### Description: Descrever a arquitetura dos componentes React, com foco nos overlays de jogo e no painel de desempenho, incluindo hierarquia, gerenciamento de estado e fluxo de dados.
+### Details:
+Criar diagramas de componentes para ilustrar a estrutura. Explicar como os dados do Socket.io são consumidos e distribuídos através de hooks e contextos. Documentar os `props` dos componentes reutilizáveis. Referenciar as Tasks 12, 15, 24 e 25.
+
+## 7. Criar Guia de Instalação para o Usuário Final [done]
+### Dependencies: 26.1
+### Description: Desenvolver um guia simples e visual para que um usuário não-técnico possa baixar, instalar e configurar a aplicação para uso.
+### Details:
+O guia deve incluir screenshots e instruções passo a passo para baixar a versão mais recente (release), executar o instalador e, crucialmente, copiar o arquivo de configuração do GSI para a pasta correta do CS2.
+
+## 8. Redigir Guia de Uso da Aplicação para o Usuário [done]
+### Dependencies: 26.1, 26.7
+### Description: Explicar todas as funcionalidades da aplicação do ponto de vista do usuário, detalhando o que cada overlay exibe e como navegar e interpretar os dados no painel de desempenho.
+### Details:
+Utilizar screenshots e GIFs para demonstrar as funcionalidades em ação. Explicar o significado de cada métrica e gráfico disponível, ajudando o usuário a extrair valor da ferramenta.
+
+## 9. Definir e Documentar Diretrizes de Contribuição [done]
+### Dependencies: 26.1
+### Description: Estabelecer e documentar as regras e o processo para contribuir com o projeto, incluindo o fluxo de trabalho com Git, padrões de código e o processo de submissão de pull requests.
+### Details:
+Especificar o modelo de branching (ex: GitFlow), os padrões de formatação de código (ESLint/Prettier) e como executar os linters. Fornecer um template para Pull Requests que exija uma descrição clara das mudanças.
+
+## 10. Revisar, Finalizar e Publicar Documentação [done]
+### Dependencies: 26.2, 26.3, 26.4, 26.5, 26.6, 26.7, 26.8, 26.9
+### Description: Realizar uma revisão completa de toda a documentação para garantir consistência, clareza e correção. Após a aprovação, configurar a publicação e o deploy contínuo.
+### Details:
+Revisar a gramática, ortografia e formatação de todas as páginas. Verificar todos os links. Configurar um pipeline de CI/CD (ex: GitHub Actions) para publicar a documentação no GitHub Pages automaticamente a cada merge na branch principal.
+

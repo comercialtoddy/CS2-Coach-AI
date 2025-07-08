@@ -1,8 +1,8 @@
 import express from "express";
-import { teamRoutes } from "./teamRoutes.js";
 import { playerRoutes } from "./playerRoutes.js";
-import { coachRoutes } from "./coachRoutes.js";
+import { teamRoutes } from "./teamRoutes.js";
 import { matchRoutes } from "./matchRoutes.js";
+import { coachRoutes } from "./coachRoutes.js";
 import { settingsRoutes } from "./settingsRoutes.js";
 import { trackerGGRoutes } from "./trackerGGRoutes.js";
 import piperTTSRoutes from "./piperTTSRoutes.js";
@@ -12,6 +12,7 @@ import { dataRetrievalRoutes } from "./dataRetrievalRoutes.js";
 import taskGenerationRoutes from "./taskGenerationRoutes.js";
 import taskProgressRoutes from "./taskProgressRoutes.js";
 import rewardAssignmentRoutes from "./rewardAssignmentRoutes.js";
+import { performanceRoutes } from './performanceRoutes.js';
 
 const router = express.Router();
 
@@ -29,12 +30,12 @@ router.use("/tasks", taskGenerationRoutes);
 router.use("/progress", taskProgressRoutes);
 router.use("/rewards", rewardAssignmentRoutes);
 
-export default router;
 export {
-  teamRoutes,
+  router,
   playerRoutes,
-  coachRoutes,
+  teamRoutes,
   matchRoutes,
+  coachRoutes,
   settingsRoutes,
   trackerGGRoutes,
   piperTTSRoutes,
@@ -43,5 +44,6 @@ export {
   dataRetrievalRoutes,
   taskGenerationRoutes,
   taskProgressRoutes,
-  rewardAssignmentRoutes
+  rewardAssignmentRoutes,
+  performanceRoutes
 };

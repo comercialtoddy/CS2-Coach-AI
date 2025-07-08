@@ -1,0 +1,43 @@
+# Task ID: 2
+# Title: Electron Main Process & IPC Setup
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Set up the Electron main process to create and manage browser windows, including the main application window and potential in-game overlays. Establish Inter-Process Communication (IPC) channels between the main process and renderer processes.
+# Details:
+Configure `main.js` to create `BrowserWindow` instances for the main dashboard and the in-game HUD. Use `ipcMain` and `ipcRenderer` for secure communication. For overlays, consider `BrowserWindow` with `transparent: true`, `frame: false`, `alwaysOnTop: true`, and `webPreferences.backgroundThrottling: false`. Implement basic IPC handlers for window control (e.g., minimize, close).
+
+# Test Strategy:
+Launch the Electron application and verify that the main window appears correctly. Test basic IPC communication by sending a message from the renderer to the main process and logging it.
+
+# Subtasks:
+## 1. Setup Main BrowserWindow [done]
+### Dependencies: None
+### Description: Create and configure the primary Electron BrowserWindow, defining its initial dimensions, resizability, and loading the main application HTML file.
+### Details:
+This involves setting up the initial window properties and loading the main application entry point.
+
+## 2. Develop Overlay BrowserWindow Logic [done]
+### Dependencies: 2.1
+### Description: Implement the creation and management of a secondary, transparent, frameless, and always-on-top BrowserWindow to serve as an overlay for specific UI elements.
+### Details:
+Focus on properties like `transparent: true`, `frame: false`, and `alwaysOnTop: true` for the overlay window.
+
+## 3. Define Secure IPC Channels [done]
+### Dependencies: 2.1
+### Description: Establish secure Inter-Process Communication (IPC) channels using `ipcMain` and `contextBridge` to enable safe and controlled communication between the main and renderer processes.
+### Details:
+This includes defining the channel names and setting up the `contextBridge` API for exposing specific functions to the renderer.
+
+## 4. Implement Core IPC Handlers [done]
+### Dependencies: 2.3
+### Description: Develop basic `ipcMain` handlers in the main process to respond to common requests from renderer processes, such as window controls (minimize, maximize, close) or simple data fetches.
+### Details:
+Create functions that `ipcMain.handle` will call when a renderer process sends a message on a defined channel.
+
+## 5. Integrate IPC with Window Management [done]
+### Dependencies: 2.2, 2.4
+### Description: Connect the established IPC channels and handlers to the window management logic, allowing renderer processes to control the main and overlay windows (e.g., toggle overlay visibility, close application).
+### Details:
+Ensure that IPC calls from the renderer can correctly trigger actions on both the main and overlay BrowserWindows.
+

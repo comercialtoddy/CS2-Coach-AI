@@ -82,7 +82,7 @@ export class FFmpegUtil {
   /**
    * Get available formats
    */
-  private getAvailableFormats(): Promise<string[]> {
+  public getAvailableFormats(): Promise<string[]> {
     return new Promise((resolve) => {
       ffmpeg.getAvailableFormats((err, formats) => {
         if (err) {

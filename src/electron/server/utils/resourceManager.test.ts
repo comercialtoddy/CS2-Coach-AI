@@ -1,4 +1,4 @@
-import { ResourceManager, ResourceManagerEvent } from './resourceManager';
+import { ResourceManager, ResourceManagerEvent } from './resourceManager.js';
 
 /**
  * Test resource manager functionality
@@ -26,16 +26,16 @@ async function testResourceManager() {
   console.log('2. Testing resource monitoring...');
   
   // Set up event listeners
-  resourceManager.on(ResourceManagerEvent.RESOURCE_WARNING, (data) => {
-    console.log(`   Resource warning: ${data.resource} at ${data.usage.toFixed(1)}%`);
+  resourceManager.on(ResourceManagerEvent.RESOURCE_WARNING, (data: { type: string; usage: number }) => {
+    console.log('✅ Resource warning event received:', data);
   });
 
-  resourceManager.on(ResourceManagerEvent.RESOURCE_CRITICAL, (data) => {
-    console.log(`   Resource critical: ${data.resource} at ${data.usage.toFixed(1)}%`);
+  resourceManager.on(ResourceManagerEvent.RESOURCE_CRITICAL, (data: { type: string; usage: number }) => {
+    console.log('✅ Resource critical event received:', data);
   });
 
-  resourceManager.on(ResourceManagerEvent.PROCESS_ERROR, (data) => {
-    console.log(`   Process error: PID ${data.pid} (${data.name}) - ${data.error}`);
+  resourceManager.on(ResourceManagerEvent.PROCESS_ERROR, (data: { error: Error }) => {
+    console.log('✅ Process error event received:', data);
   });
 
   // Start monitoring

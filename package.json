@@ -1,15 +1,15 @@
 {
-  "name": "openhud",
+  "name": "cs2-coach-ai",
   "private": true,
   "version": "3.0.7",
   "type": "module",
   "main": "dist-electron/main.js",
   "author": {
-    "name": "JohnTimmermann",
-    "email": "johnwtimmermann@yahoo.com"
+    "name": "toddyamakawa",
+    "email": "toddyamakawa@gmail.com"
   },
-  "description": "OpenHud - CS2 Admin Panel / HUD",
-  "repository": "https://github.com/JohnTimmermann/OpenHud",
+  "description": "CS2 Coach AI - An AI-powered coaching assistant for Counter-Strike 2",
+  "repository": "https://github.com/toddyamakawa/cs2-coach-ai",
   "scripts": {
     "dev": "npm-run-all --parallel dev:react dev:electron",
     "dev:react": "vite",
@@ -17,7 +17,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "transpile:electron": "tsc --project src/electron/tsconfig.json",
+    "transpile:electron": "tsc --project src/electron/tsconfig.json && tsc --project src/electron/tsconfig.preload.json",
     "dist:mac": "npm run transpile:electron && npm run build && electron-builder --mac --arm64",
     "dist:win": "npm run transpile:electron && npm run build && electron-builder --win --x64",
     "dist:linux": "npm run transpile:electron && npm run build && electron-builder --linux --x64",
@@ -57,6 +57,7 @@
     "@tailwindcss/forms": "^0.5.9",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.12",

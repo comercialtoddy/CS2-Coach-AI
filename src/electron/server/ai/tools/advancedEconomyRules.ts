@@ -1,5 +1,5 @@
-import { GSIDataModel } from '../orchestrator/GSIDataModel';
-import { BuyStrategyType, EQUIPMENT_COSTS, BuyRecommendation, getBuyRecommendations } from './economyRules';
+import { CSGO } from 'csgogsi';
+import { BuyStrategyType, EQUIPMENT_COSTS, BuyRecommendation, getBuyRecommendations } from './economyRules.js';
 
 // Player roles and their preferred weapons
 export enum PlayerRole {
@@ -59,21 +59,21 @@ const DEFAULT_PREFERENCES: Record<PlayerRole, PlayerPreferences> = {
 /**
  * Estimate opponent team's economy based on their equipment and previous rounds
  */
-function estimateOpponentEconomy(gsiData: GSIDataModel, team: 'CT' | 'T'): {
+function estimateOpponentEconomy(gsiData: CSGO, team: 'CT' | 'T'): {
   averageValue: number;
   canFullBuy: boolean;
   probableStrategy: BuyStrategyType;
 } {
   const opponentTeam = team === 'CT' ? 'T' : 'CT';
-  const opponents = Object.values(gsiData.allplayers || {}).filter(p => p.team === opponentTeam);
+  const opponents = (gsiData.players || []).filter((p: any) => p.team === opponentTeam);
 
   // Calculate average equipment value
-  const totalValue = opponents.reduce((sum, player) => sum + (player.state?.equip_value || 0), 0);
-  const averageValue = opponents.length > 0 ? totalValue / opponents.length : 0;
+  const totalValue = opponents.reduce((sum: number, player: any) => sum + (player.state?.equip_value || 0), 0);
+  const averageValue = opponents.length > 0 ? Number(totalValue) / opponents.length : 0;
 
   // Determine if they can full buy next round
-  const totalMoney = opponents.reduce((sum, player) => sum + (player.state?.money || 0), 0);
-  const averageMoney = opponents.length > 0 ? totalMoney / opponents.length : 0;
+  const totalMoney = opponents.reduce((sum: number, player: any) => sum + (player.state?.money || 0), 0);
+  const averageMoney = opponents.length > 0 ? Number(totalMoney) / opponents.length : 0;
   const canFullBuy = averageMoney >= (opponentTeam === 'CT' ? 5100 : 4700); // Minimum full buy thresholds
 
   // Estimate their probable strategy
@@ -192,7 +192,7 @@ export function getAdvancedBuyRecommendations(
   strategy: BuyStrategyType,
   isCT: boolean,
   playerRole: PlayerRole,
-  gsiData: GSIDataModel
+  gsiData: CSGO
 ): BuyRecommendation {
   // Get base recommendation
   const baseRecommendation = getBuyRecommendations(money, strategy, isCT);

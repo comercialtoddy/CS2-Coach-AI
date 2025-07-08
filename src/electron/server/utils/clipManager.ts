@@ -38,7 +38,7 @@ export class ClipManager {
   private constructor() {
     // Set up directories
     this.clipsDir = path.join(app.getPath('userData'), 'clips');
-    this.tempDir = path.join(app.getPath('temp'), 'openhud-clips');
+    this.tempDir = path.join(app.getPath('temp'), 'cs2-coach-ai-clips');
     this.metadataFile = path.join(this.clipsDir, 'metadata.json');
 
     // Create directories if they don't exist

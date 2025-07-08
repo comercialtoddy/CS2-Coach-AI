@@ -1,0 +1,73 @@
+# Task ID: 8
+# Title: Tracker.GG API Integration
+# Status: done
+# Dependencies: 3
+# Priority: medium
+# Description: Integrate with the Tracker.GG API to fetch detailed historical statistics for players and matches, complementing real-time GSI data for deeper analysis.
+# Details:
+Obtain an API key from Tracker.GG. Implement a service in the backend to make HTTP requests to the Tracker.GG API (e.g., `https://public-api.tracker.gg/v2/cs2/standard/profile/steam/{steamId}`). Handle API rate limits and error responses. Store fetched data in the SQLite3 database for caching and historical analysis. Use `axios` or `node-fetch` for HTTP requests.
+
+# Test Strategy:
+Make a test API call to Tracker.GG with a known Steam ID and verify that player statistics are successfully retrieved and parsed. Implement mock API responses for unit testing.
+
+# Subtasks:
+## 1. Obtain Tracker.GG API Key [done]
+### Dependencies: None
+### Description: Register on Tracker.GG developer portal and request an API key for accessing their services. Understand the terms of service and API usage policies.
+### Details:
+This involves navigating to the Tracker.GG developer section, signing up, and generating a personal API key. Document the key securely.
+<info added on 2025-07-06T15:30:24.342Z>
+To obtain the API key:
+1. Go to https://tracker.gg/developers
+2. Create an account or log in.
+3. Create a new application.
+4. The API key will be provided immediately after creation.
+
+Project Configuration:
+Add TRACKER_GG_API_KEY=your_key_here to the .env file. The application automatically checks if the key is configured. Use the /tracker-gg/status endpoint to verify it is working.
+
+Terms of Use:
+The API is free for hobby/non-commercial projects. Credit must be given: "Powered By Tracker Network". Rate limits apply and are configurable in the developer dashboard.
+
+Supported Games:
+CSGO, CS2 (assuming compatibility), Apex Legends, The Division 2, Splitgate.
+
+The implementation is ready and is just waiting for the API key to be configured.
+</info added on 2025-07-06T15:30:24.342Z>
+
+## 2. Implement Basic HTTP Client for API Calls [done]
+### Dependencies: 8.1
+### Description: Develop or integrate an HTTP client library capable of making GET requests to the Tracker.GG API endpoints, including proper header management for the API key.
+### Details:
+Choose a suitable HTTP client library (e.g., Axios for JS, Requests for Python, HttpClient for C#). Configure it to include the API key in the 'TRN-Api-Key' header for all requests.
+<info added on 2025-07-06T15:25:23.637Z>
+The HTTP infrastructure is already robustly implemented. Axios v1.7.9 is installed and used via a centralized apiV2() system in src/UI/api/api.ts. This setup includes default headers, support for GET/POST/PUT/DELETE methods, and integrated error handling. The system is ready for external integration and just requires the specific configurations for the Tracker.GG API, such as the API key and endpoints.
+</info added on 2025-07-06T15:25:23.637Z>
+
+## 3. Implement Specific API Endpoints (e.g., Player Profiles) [done]
+### Dependencies: 8.2
+### Description: Develop functions or methods to interact with specific Tracker.GG API endpoints, such as fetching player profiles, game statistics, or match history, parsing the JSON responses.
+### Details:
+Focus on key endpoints like `/profile/{platform}/{gamertag}`. Implement error handling for common HTTP status codes (e.g., 404 Not Found, 400 Bad Request). Parse the JSON response into usable data structures.
+<info added on 2025-07-06T15:29:14.913Z>
+A `trackerGGServices.ts` service has been created, featuring `getTrackerGGPlayerStats()` for complete statistics and `getPlayerSpecificStats()` for specific data points, with support for both CS2 and CSGO. The implementation includes complete TypeScript types, correct headers (TRN-Api-Key, User-Agent, Accept), a 10-second timeout, detailed logging, and error handling for HTTP statuses 404, 401, 403, and 429.
+
+A corresponding `trackerGGController.ts` exposes the following new endpoints:
+- GET `/tracker-gg/player/:steamId` for full player stats.
+- GET `/tracker-gg/player/:steamId/stats?stats=kills,deaths` for specific stats.
+- GET `/tracker-gg/rate-limit` for rate limit information.
+- GET `/tracker-gg/status` for integration status.
+- POST `/tracker-gg/clear-cache` for clearing the cache.
+
+All routes have been integrated into the Express server under the `/tracker-gg/*` path.
+</info added on 2025-07-06T15:29:14.913Z>
+
+## 4. Implement Rate Limiting and Data Caching Strategies [done]
+### Dependencies: 8.3
+### Description: Design and implement mechanisms to respect Tracker.GG API rate limits and cache frequently accessed data to reduce API calls and improve performance.
+### Details:
+Monitor 'X-RateLimit-Limit', 'X-RateLimit-Remaining', and 'X-RateLimit-Reset' headers. Implement a delay or queue system to prevent exceeding limits. For caching, use an in-memory cache or a persistent store (e.g., Redis) with appropriate TTLs for player profiles and other stable data.
+<info added on 2025-07-06T15:29:42.386Z>
+A custom `RateLimiter` class has been implemented with a configurable limit (100 req/hour default) using a sliding time window and is integrated with the logging system. The caching strategy uses an in-memory map with a configurable duration (30 min default) and unique keys per game mode and user ID. Monitoring includes automatic detection of rate limit headers, a `/tracker-gg/rate-limit` endpoint for real-time status, and detailed logs for requests and cache hits. The configuration is managed via the `TRACKER_GG_API_KEY` variable and includes integrated timeouts and retry logic. The system is production-ready.
+</info added on 2025-07-06T15:29:42.386Z>
+

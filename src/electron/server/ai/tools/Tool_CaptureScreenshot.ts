@@ -75,7 +75,7 @@ export class Tool_CaptureScreenshot implements ITool<CaptureScreenshotInput, Cap
   private readonly tempDir: string;
 
   constructor() {
-    this.tempDir = path.join(app.getPath('temp'), 'openhud-screenshots');
+    this.tempDir = path.join(app.getPath('temp'), 'cs2-coach-ai-screenshots');
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }

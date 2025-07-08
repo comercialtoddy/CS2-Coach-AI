@@ -69,22 +69,36 @@ contextBridge.exposeInMainWorld(
   'electron',
   {
     // IPC communication
-    sendFrameAction: (action: string) => {
-      ipcRenderer.send('sendFrameAction', action);
+    ipcSend: (channel: string, data: any) => {
+      ipcRenderer.send(channel, data);
     },
-    openExternalLink: (url: string) => {
-      ipcRenderer.send('openExternalLink', url);
+    ipcReceive: (channel: string, func: Function) => {
+      ipcRenderer.on(channel, (event, ...args) => func(...args));
     },
-    // Screenshot functionality
-    captureScreenshot: async (options?: {
-      displayId?: string;
-      region?: { x: number; y: number; width: number; height: number };
-      outputPath?: string;
-    }) => {
-      return ipcRenderer.invoke('captureScreenshot', options);
+    ipcRemove: (channel: string) => {
+      ipcRenderer.removeAllListeners(channel);
     },
-    selectScreenshotRegion: async () => {
-      return ipcRenderer.invoke('selectScreenshotRegion');
-    }
+    ipcInvoke: (channel: string, data: any) => {
+      return ipcRenderer.invoke(channel, data);
+    },
+    // Window Controls
+    minimizeWindow: () => ipcRenderer.send("minimize-window"),
+    maximizeWindow: () => ipcRenderer.send("maximize-window"),
+    closeWindow: () => ipcRenderer.send("close-window"),
+
+    // Agent Overlay
+    openAgentOverlay: () => ipcRenderer.send("open-agent-overlay"),
+    closeAgentOverlay: () => ipcRenderer.send("close-agent-overlay"),
+
+    // Task Overlay
+    openTaskOverlay: () => ipcRenderer.send("open-task-overlay"),
+    closeTaskOverlay: () => ipcRenderer.send("close-task-overlay"),
+
+    // Media Player
+    openMediaPlayer: () => ipcRenderer.send("open-media-player"),
+    closeMediaPlayer: () => ipcRenderer.send("close-media-player"),
+
+    // External Links
+    openExternalLink: (url: string) => ipcRenderer.send("open-external-link", url),
   }
 ); 

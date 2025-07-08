@@ -15,6 +15,14 @@ export const AppFrame = () => {
     }
     setMaximized(!maximized);
   };
+
+  const openGitHub = () => {
+    window.open(
+      "https://github.com/toddyamakawa/cs2-coach-ai",
+      "_blank"
+    );
+  };
+
   return (
     <div
       id="AppFrame"
@@ -28,11 +36,7 @@ export const AppFrame = () => {
           <VscDebugConsole className="size-5" />
         </button>
         <button
-          onClick={() =>
-            window.electron.openExternalLink(
-              "https://github.com/JohnTimmermann/OpenHud",
-            )
-          }
+          onClick={openGitHub}
           className="noDrag text-text-secondary transition-colors hover:text-secondary-light"
           rel="noreferrer"
         >

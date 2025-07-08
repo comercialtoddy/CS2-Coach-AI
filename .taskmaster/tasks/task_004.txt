@@ -1,0 +1,37 @@
+# Task ID: 4
+# Title: Socket.io Real-time Communication Setup
+# Status: done
+# Dependencies: 3
+# Priority: high
+# Description: Integrate Socket.io into both the Node.js backend and the Electron frontend to enable real-time, bidirectional communication, crucial for GSI data streaming and in-game feedback.
+# Details:
+On the backend, initialize `socket.io` with the Express server. On the frontend (React), use the `socket.io-client` library to establish a connection. Implement basic `emit` and `on` handlers for a test message (e.g., 'ping-pong'). Ensure proper error handling and reconnection logic. Recommended: `socket.io` v4.x, `socket.io-client` v4.x.
+
+# Test Strategy:
+Verify that the frontend can connect to the backend via Socket.io. Implement a simple 'ping-pong' test where the frontend sends a 'ping' and the backend responds with 'pong', confirming real-time communication.
+
+# Subtasks:
+## 1. Server-Side Socket.io Integration with Express [done]
+### Dependencies: None
+### Description: Set up the Socket.io server, integrate it with the existing Express application, and define the main connection handler for incoming client connections.
+### Details:
+Install 'socket.io', bind it to the HTTP server instance, and create a basic 'connection' event listener.
+
+## 2. Client-Side Socket.io Connection in React [done]
+### Dependencies: 4.1
+### Description: Install the Socket.io client library in the React application, establish a connection to the server, and manage the socket instance within a React component (e.g., using useEffect or context).
+### Details:
+Install 'socket.io-client', create a socket instance pointing to the server URL, and ensure it connects on component mount.
+
+## 3. Implement Basic Real-time Event Handling (Emit/On) [done]
+### Dependencies: 4.1, 4.2
+### Description: Develop a simple event exchange mechanism, demonstrating 'socket.emit' from one side (e.g., client) and 'socket.on' on the other (e.g., server) for a basic real-time message or data transfer.
+### Details:
+Define a custom event name (e.g., 'chatMessage'), implement emitting this event from the client, and listening for it on the server (and vice-versa for a response).
+
+## 4. Configure Socket.io Reconnection Logic [done]
+### Dependencies: 4.2
+### Description: Ensure robust connection handling by configuring Socket.io's automatic reconnection attempts on the client-side and handling 'connect' and 'disconnect' events to update UI or state accordingly.
+### Details:
+Leverage Socket.io's default reconnection options and add listeners for 'connect', 'disconnect', and 'reconnect' events to provide user feedback or re-fetch data.
+

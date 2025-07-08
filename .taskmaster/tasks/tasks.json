@@ -1780,11 +1780,219 @@
             "testStrategy": ""
           }
         ]
+      },
+      {
+        "id": 26,
+        "title": "Criação da Documentação Abrangente do Projeto",
+        "description": "Criar uma documentação abrangente e bem-estruturada para o projeto, cobrindo a arquitetura, guias de instalação, documentação da API, guias de usuário e diretrizes de contribuição.",
+        "details": "A documentação deve ser criada, preferencialmente utilizando uma ferramenta como Docusaurus ou MkDocs, e armazenada em um diretório `/docs` no repositório. A estrutura deve incluir: 1. **Visão Geral e Arquitetura do Projeto:** Descrever a estrutura do monorepo (Electron, React, Node.js), o fluxo de comunicação (IPC, Socket.io) e a função de cada componente principal, como o GSI, os overlays e o backend. 2. **Guia de Instalação e Configuração:** Fornecer um passo a passo detalhado para novos desenvolvedores clonarem o repositório, instalarem todas as dependências e configurarem o ambiente, incluindo o arquivo de configuração do GSI para o CS2. 3. **Documentação para Desenvolvedores:** Detalhar os endpoints da API do backend (Task 3, 25), a estrutura dos dados do GSI (Task 7), e a arquitetura dos componentes React, especialmente os overlays (Tasks 12, 15, 24) e o painel de desempenho (Task 25). 4. **Guia do Usuário:** Explicar como um usuário final deve instalar e utilizar a aplicação, o que cada overlay significa e como navegar e interpretar os dados no painel de desempenho. 5. **Diretrizes de Contribuição:** Definir o fluxo de trabalho com Git (ex: GitFlow), padrões de código, e o processo para submeter pull requests.",
+        "testStrategy": "Verificar a documentação seguindo estes passos: 1. Pedir a um novo membro da equipe que siga o guia de instalação em uma máquina limpa para garantir que todos os passos estão corretos e completos. 2. Revisar cada seção da documentação para garantir que ela corresponde à implementação atual do código. 3. Usar uma ferramenta como Postman ou cURL para testar os endpoints da API conforme descrito na documentação. 4. Navegar pela aplicação seguindo o Guia do Usuário para confirmar que todas as funcionalidades descritas estão precisas. 5. Realizar uma revisão geral para corrigir erros de digitação, gramática e garantir clareza e consistência em todo o documento.",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2,
+          3,
+          6,
+          7,
+          12,
+          13,
+          15,
+          24,
+          25
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configurar Ferramenta de Documentação (Docusaurus/MkDocs)",
+            "description": "Escolher, instalar e configurar a ferramenta de documentação (Docusaurus ou MkDocs) dentro de um diretório `/docs` no repositório do projeto, estabelecendo a estrutura básica e o tema.",
+            "dependencies": [],
+            "details": "A configuração inicial deve incluir a página de índice, a estrutura de navegação principal e um tema base. O objetivo é ter um esqueleto funcional do site de documentação, pronto para receber o conteúdo.",
+            "status": "done",
+            "testStrategy": "Verificar se o servidor de desenvolvimento da ferramenta de documentação (`npm run start` ou similar) inicia sem erros e se a estrutura básica do site é renderizada corretamente no navegador."
+          },
+          {
+            "id": 2,
+            "title": "Redigir Visão Geral e Arquitetura do Projeto",
+            "description": "Criar a seção de documentação que descreve a visão geral do projeto, sua arquitetura de monorepo (Electron, React, Node.js) e o fluxo de comunicação entre os componentes (IPC, Socket.io).",
+            "dependencies": [
+              1
+            ],
+            "details": "O documento deve incluir um diagrama de arquitetura de alto nível. É preciso detalhar a responsabilidade de cada pacote no monorepo e explicar como o GSI, o backend e o frontend se comunicam.",
+            "status": "done",
+            "testStrategy": "Revisão por pares para garantir que a descrição da arquitetura seja clara, precisa e compreensível para um novo desenvolvedor que se junte ao projeto."
+          },
+          {
+            "id": 3,
+            "title": "Elaborar Guia de Instalação para Desenvolvedores",
+            "description": "Escrever um guia passo a passo detalhado para que novos desenvolvedores possam clonar o repositório, instalar todas as dependências e configurar o ambiente de desenvolvimento local.",
+            "dependencies": [
+              1
+            ],
+            "details": "O guia deve listar os pré-requisitos (Node.js, etc.), os comandos para instalação de dependências (incluindo workspaces) e as instruções para iniciar a aplicação. Uma parte crucial é detalhar a criação e configuração do arquivo `.cfg` do GSI para o CS2.",
+            "status": "done",
+            "testStrategy": "Um desenvolvedor que não esteve envolvido na criação do guia deve ser capaz de seguir os passos e ter o ambiente de desenvolvimento totalmente funcional sem assistência externa."
+          },
+          {
+            "id": 4,
+            "title": "Documentar Endpoints da API do Backend",
+            "description": "Criar documentação de referência para todos os endpoints da API do backend, detalhando rotas, métodos, parâmetros, payloads e exemplos de requisição/resposta.",
+            "dependencies": [
+              1
+            ],
+            "details": "Para cada endpoint, especificar o verbo HTTP, o caminho, os parâmetros (query, body), e os possíveis códigos de status de resposta com seus schemas. Incluir exemplos de código (ex: cURL, Fetch API) para facilitar o uso. Referenciar as Tasks 3 e 25 do projeto.",
+            "status": "done",
+            "testStrategy": "Validar a documentação contra a implementação real da API. Usar uma ferramenta como o Postman para testar os exemplos fornecidos e garantir que eles funcionam como descrito."
+          },
+          {
+            "id": 5,
+            "title": "Documentar Estrutura de Dados do GSI",
+            "description": "Detalhar a estrutura do payload de dados enviado pelo Game State Integration (GSI) do CS2 e explicar como esses dados são recebidos e processados pelo backend.",
+            "dependencies": [
+              1
+            ],
+            "details": "Apresentar um exemplo completo do objeto JSON do GSI. Descrever cada campo relevante (ex: `player`, `map`, `round`) e explicar como o servidor Node.js os processa antes de retransmitir via Socket.io. Referenciar a Task 7 do projeto.",
+            "status": "done",
+            "testStrategy": "Comparar a estrutura de dados documentada com os dados reais recebidos do GSI durante uma partida de CS2 para garantir a precisão e a completude dos campos."
+          },
+          {
+            "id": 6,
+            "title": "Documentar Arquitetura dos Componentes React",
+            "description": "Descrever a arquitetura dos componentes React, com foco nos overlays de jogo e no painel de desempenho, incluindo hierarquia, gerenciamento de estado e fluxo de dados.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar diagramas de componentes para ilustrar a estrutura. Explicar como os dados do Socket.io são consumidos e distribuídos através de hooks e contextos. Documentar os `props` dos componentes reutilizáveis. Referenciar as Tasks 12, 15, 24 e 25.",
+            "status": "done",
+            "testStrategy": "Revisão cruzada entre o código-fonte e a documentação para garantir que a arquitetura descrita corresponda fielmente à implementação atual."
+          },
+          {
+            "id": 7,
+            "title": "Criar Guia de Instalação para o Usuário Final",
+            "description": "Desenvolver um guia simples e visual para que um usuário não-técnico possa baixar, instalar e configurar a aplicação para uso.",
+            "dependencies": [
+              1
+            ],
+            "details": "O guia deve incluir screenshots e instruções passo a passo para baixar a versão mais recente (release), executar o instalador e, crucialmente, copiar o arquivo de configuração do GSI para a pasta correta do CS2.",
+            "status": "done",
+            "testStrategy": "Pedir a um usuário beta, sem conhecimento prévio do projeto, que siga o guia. Coletar feedback para identificar e corrigir quaisquer pontos de confusão."
+          },
+          {
+            "id": 8,
+            "title": "Redigir Guia de Uso da Aplicação para o Usuário",
+            "description": "Explicar todas as funcionalidades da aplicação do ponto de vista do usuário, detalhando o que cada overlay exibe e como navegar e interpretar os dados no painel de desempenho.",
+            "dependencies": [
+              1,
+              7
+            ],
+            "details": "Utilizar screenshots e GIFs para demonstrar as funcionalidades em ação. Explicar o significado de cada métrica e gráfico disponível, ajudando o usuário a extrair valor da ferramenta.",
+            "status": "done",
+            "testStrategy": "Revisão por um usuário final para validar se as explicações são claras, se todas as funcionalidades estão cobertas e se as imagens correspondem à interface atual da aplicação."
+          },
+          {
+            "id": 9,
+            "title": "Definir e Documentar Diretrizes de Contribuição",
+            "description": "Estabelecer e documentar as regras e o processo para contribuir com o projeto, incluindo o fluxo de trabalho com Git, padrões de código e o processo de submissão de pull requests.",
+            "dependencies": [
+              1
+            ],
+            "details": "Especificar o modelo de branching (ex: GitFlow), os padrões de formatação de código (ESLint/Prettier) e como executar os linters. Fornecer um template para Pull Requests que exija uma descrição clara das mudanças.",
+            "status": "done",
+            "testStrategy": "Revisão pelas pessoas desenvolvedoras do projeto para garantir que as diretrizes sejam claras, práticas e incentivem contribuições de qualidade."
+          },
+          {
+            "id": 10,
+            "title": "Revisar, Finalizar e Publicar Documentação",
+            "description": "Realizar uma revisão completa de toda a documentação para garantir consistência, clareza e correção. Após a aprovação, configurar a publicação e o deploy contínuo.",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "details": "Revisar a gramática, ortografia e formatação de todas as páginas. Verificar todos os links. Configurar um pipeline de CI/CD (ex: GitHub Actions) para publicar a documentação no GitHub Pages automaticamente a cada merge na branch principal.",
+            "status": "done",
+            "testStrategy": "Verificar se o site de documentação publicado está acessível publicamente, se todos os links funcionam e se o conteúdo é renderizado corretamente em diferentes navegadores."
+          }
+        ]
+      },
+      {
+        "id": 27,
+        "title": "Rebranding do Projeto para CS2 Coach AI e Redesign da UI",
+        "description": "Realizar o rebranding completo do projeto de OpenHud para 'CS2 Coach AI by Toddyclipsgg', atualizando todas as referências de nome e ativos de marca, e substituindo a UI existente por uma nova interface minimalista focada no agente de IA.",
+        "details": "Esta tarefa envolve duas atividades principais: rebranding e redesenho da UI. Primeiro, realize uma busca e substituição em toda a base de código para alterar todas as ocorrências de 'OpenHud' para 'CS2 Coach AI'. Isso inclui nomes de variáveis, comentários, arquivos de configuração e `package.json`. Em seguida, substitua todos os ativos visuais (logos, ícones, etc.) nos diretórios de front-end por novos ativos alinhados com a marca 'CS2 Coach AI by Toddyclipsgg'. A segunda parte é remover os componentes de UI legados do OpenHud, especificamente os overlays criados nas tarefas 12 e 15. Crie um novo conjunto de componentes React para uma interface de usuário moderna, limpa e minimalista, que servirá como o principal overlay do agente de IA, integrando as funcionalidades dos overlays de HUD (Tarefa 12) e de tarefas (Tarefa 24) em uma experiência unificada. A nova UI deve continuar a usar Socket.io para atualizações de estado em tempo real do backend.",
+        "testStrategy": "1. Faça uma busca global por 'OpenHud' em todo o projeto para garantir que nenhuma referência antiga permaneça. 2. Inicie a aplicação e verifique visualmente todos os elementos da interface do usuário, incluindo a janela principal, o ícone da bandeja do sistema e os overlays no jogo, para confirmar que o novo nome e os novos logotipos são exibidos corretamente. 3. Execute um teste de regressão completo para garantir que todas as funcionalidades existentes, como a captura de GSI, o processamento de dados e a comunicação com o backend, permaneçam intactas. 4. Teste especificamente o novo overlay de IA, enviando vários estados do agente (por exemplo, 'Analisando', 'Feedback', 'Nova Tarefa') do backend e verificando se a UI os exibe de forma clara e correta sem interferir no jogo. 5. Compile e empacote a aplicação para verificar se o executável final e o instalador usam o novo nome e ícone do projeto.",
+        "status": "done",
+        "dependencies": [
+          1,
+          3,
+          12,
+          15,
+          24
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Busca e Substituição de 'OpenHud' por 'CS2 Coach AI' na Base de Código",
+            "description": "Atualizar todas as referências textuais, nomes de variáveis, comentários e configurações de 'OpenHud' para 'CS2 Coach AI' em toda a base de código do projeto.",
+            "dependencies": [],
+            "details": "Realizar uma busca e substituição global em todos os arquivos do projeto. Focar em arquivos de código-fonte (.js, .ts, .tsx), arquivos de configuração (package.json, vite.config.js), e documentação interna. O objetivo é erradicar completamente o nome antigo do projeto para alinhar com a nova marca.",
+            "status": "done",
+            "testStrategy": "Após a substituição, compilar e executar o projeto para garantir que nenhuma referência quebrada foi introduzida. Inspecionar manualmente o `package.json` e os logs de inicialização para confirmar a mudança de nome."
+          },
+          {
+            "id": 2,
+            "title": "Substituição de Ativos Visuais da Marca",
+            "description": "Substituir todos os logos, ícones, favicons e outros ativos visuais do 'OpenHud' pelos novos ativos da marca 'CS2 Coach AI by Toddyclipsgg'.",
+            "dependencies": [],
+            "details": "Localizar os diretórios de ativos no front-end (ex: `src/assets`, `public`) e substituir todos os arquivos de imagem (.svg, .png, .ico) pelos novos. Garantir que o logo principal, o ícone da aplicação e o favicon sejam atualizados.",
+            "status": "done",
+            "testStrategy": "Iniciar a aplicação e verificar visualmente se todos os elementos da marca, como logos na UI e o favicon no navegador, foram atualizados corretamente."
+          },
+          {
+            "id": 3,
+            "title": "Remoção dos Componentes de UI Legados",
+            "description": "Excluir os componentes React e estilos CSS/SCSS associados aos overlays legados do OpenHud, especificamente os criados nas tarefas 12 e 15.",
+            "dependencies": [
+              1
+            ],
+            "details": "Identificar e remover os arquivos de componentes, folhas de estilo e quaisquer importações relacionadas aos antigos overlays de HUD e de tarefas. O objetivo é limpar a base de código para preparar a implementação da nova interface, evitando conflitos e código morto.",
+            "status": "done",
+            "testStrategy": "Garantir que a aplicação ainda compila após a remoção dos componentes. A UI principal pode ficar vazia ou quebrada, mas não devem ocorrer erros de compilação por referências órfãs."
+          },
+          {
+            "id": 4,
+            "title": "Desenvolvimento dos Novos Componentes React para a Interface Minimalista",
+            "description": "Criar um novo conjunto de componentes React que formarão a nova interface de usuário minimalista, servindo como o overlay principal do agente de IA.",
+            "dependencies": [
+              3
+            ],
+            "details": "Implementar novos componentes React para exibir de forma unificada as funcionalidades que antes pertenciam aos overlays de HUD (Tarefa 12) e de tarefas (Tarefa 24). O design deve ser limpo, moderno e focado na clareza das informações do agente de IA.",
+            "status": "done",
+            "testStrategy": "Desenvolver e testar os componentes de forma isolada usando uma ferramenta como o Storybook. Verificar se os componentes são renderizados corretamente com dados de exemplo e se o estilo corresponde ao novo design."
+          },
+          {
+            "id": 5,
+            "title": "Integração da Nova UI com o Backend via Socket.io",
+            "description": "Conectar os novos componentes React ao backend para receber e exibir atualizações de estado do jogo e do agente de IA em tempo real, utilizando a conexão Socket.io existente.",
+            "dependencies": [
+              4
+            ],
+            "details": "Implementar a lógica de cliente para escutar os eventos do Socket.io e atualizar o estado dos novos componentes React com os dados recebidos. Garantir que a nova interface unificada reflita com precisão e em tempo real as informações do backend.",
+            "status": "done",
+            "testStrategy": "Executar o sistema completo (front-end e back-end). Simular eventos de jogo no backend e verificar se a nova UI reage e exibe as informações corretas em tempo real, confirmando a integração bem-sucedida."
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-07-06T15:00:50.734Z",
-      "updated": "2025-07-08T03:23:11.573Z",
+      "updated": "2025-07-08T04:25:38.575Z",
       "description": "Tasks for master context"
     }
   }

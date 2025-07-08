@@ -1,4 +1,28 @@
-import { FFmpegUtil } from './ffmpeg';
+import { FFmpegUtil } from './ffmpeg.js';
+
+describe('FFmpegUtil', () => {
+  let ffmpegUtil: FFmpegUtil;
+
+  beforeAll(() => {
+    ffmpegUtil = FFmpegUtil.getInstance();
+  });
+
+  test('should check FFmpeg installation', async () => {
+    const result = await ffmpegUtil.checkFFmpeg();
+    console.log('✅ FFmpeg installation check:', result);
+    expect(result.installed).toBe(true);
+  });
+
+  test('should get available encoders', async () => {
+    const encoders = await ffmpegUtil.getAvailableEncoders();
+    console.log('✅ Available encoders:', {
+      video: encoders.video.length,
+      audio: encoders.audio.length
+    });
+    expect(encoders.video.length).toBeGreaterThan(0);
+    expect(encoders.audio.length).toBeGreaterThan(0);
+  });
+});
 
 /**
  * Test FFmpeg functionality

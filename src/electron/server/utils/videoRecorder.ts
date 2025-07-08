@@ -30,12 +30,12 @@ interface VideoRecorderResult {
   error?: string;
 }
 
-interface Display {
+export interface Display {
   id: string;
   name: string;
 }
 
-interface AudioDevice {
+export interface AudioDevice {
   id: string;
   name: string;
   isInput: boolean;
@@ -338,5 +338,19 @@ export class VideoRecorder {
     // Apply new settings
     const newOptions = this.encodingOptimizer.getCommandOptions(currentSettings);
     this.currentCommand.outputOptions(newOptions);
+  }
+
+  /**
+   * Get available displays
+   */
+  public async getDisplays(): Promise<Display[]> {
+    return this.screenCapture.getDisplays();
+  }
+
+  /**
+   * Get available audio devices
+   */
+  public async getAudioDevices(): Promise<AudioDevice[]> {
+    return this.audioCapture.listDevices();
   }
 } 

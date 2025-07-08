@@ -1,4 +1,4 @@
-import { VideoRecorder } from './videoRecorder';
+import { VideoRecorder, Display, AudioDevice } from './videoRecorder.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -12,18 +12,18 @@ async function testVideoRecorder() {
 
   // Get available displays
   console.log('1. Getting available displays...');
-  const displays = await videoRecorder.screenCapture.getDisplays();
+  const displays = await videoRecorder.getDisplays();
   console.log('✅ Available displays:', displays.length);
-  displays.forEach(display => {
+  displays.forEach((display: Display) => {
     console.log(`   - ${display.name} (${display.id})`);
   });
   console.log('');
 
   // Get available audio devices
   console.log('2. Getting available audio devices...');
-  const audioDevices = await videoRecorder.audioCapture.listDevices();
+  const audioDevices = await videoRecorder.getAudioDevices();
   console.log('✅ Available audio devices:', audioDevices.length);
-  audioDevices.forEach(device => {
+  audioDevices.forEach((device: AudioDevice) => {
     console.log(`   - ${device.name} (${device.id})`);
   });
   console.log('');
@@ -91,4 +91,50 @@ async function testVideoRecorder() {
 // Run the test
 testVideoRecorder().catch(error => {
   console.error('❌ Test failed:', error);
+});
+
+describe('VideoRecorder', () => {
+  let videoRecorder: VideoRecorder;
+
+  beforeAll(() => {
+    videoRecorder = VideoRecorder.getInstance();
+  });
+
+  test('should list displays', async () => {
+    const displays = await videoRecorder.getDisplays();
+    console.log('✅ Available displays:', displays.length);
+    displays.forEach((display: Display) => {
+      console.log(`   - ${display.name} (${display.id})`);
+    });
+    expect(displays.length).toBeGreaterThan(0);
+  });
+
+  test('should list audio devices', async () => {
+    const audioDevices = await videoRecorder.getAudioDevices();
+    console.log('✅ Available audio devices:', audioDevices.length);
+    audioDevices.forEach((device: AudioDevice) => {
+      console.log(`   - ${device.name} (${device.id})`);
+    });
+    expect(audioDevices.length).toBeGreaterThan(0);
+  });
+
+  test('should check if recording is in progress', () => {
+    const isRecording = videoRecorder.isRecordingInProgress();
+    console.log('✅ Recording status:', isRecording);
+    expect(isRecording).toBe(false);
+  });
+
+  test('should start and stop recording', async () => {
+    const result = await videoRecorder.startRecording();
+    console.log('✅ Recording started:', result);
+    expect(result.success).toBe(true);
+
+    videoRecorder.stopRecording();
+    const isRecording = videoRecorder.isRecordingInProgress();
+    expect(isRecording).toBe(false);
+  });
+
+  afterAll(async () => {
+    await videoRecorder.cleanup();
+  });
 }); 

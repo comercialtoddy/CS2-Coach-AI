@@ -1,0 +1,31 @@
+# Task ID: 3
+# Title: Backend Server & API Foundation
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Develop the foundational Express.js backend server to handle API requests from the Electron frontend and serve as the central hub for AI modules and data management.
+# Details:
+Create an `index.ts` or `app.ts` file for the Express server. Define basic routes (e.g., `/api/status`). Implement middleware for JSON parsing (`express.json()`) and CORS if necessary for development. Ensure the server starts on a configurable port (e.g., 3001).
+
+# Test Strategy:
+Start the backend server and use a tool like Postman or `curl` to send a GET request to a basic endpoint (e.g., `/api/status`) and verify a successful response.
+
+# Subtasks:
+## 1. Initialize Express Server & Configure Port [done]
+### Dependencies: None
+### Description: Set up the foundational Express.js application, define the listening port, and ensure the server starts correctly.
+### Details:
+Install Express.js, create a main server file (e.g., `server.js`), initialize the Express app instance, define a port (e.g., 3000 or from environment variables), and add the `app.listen()` call to start the server.
+
+## 2. Define Basic API Routes [done]
+### Dependencies: 3.1
+### Description: Create initial API endpoints to test server responsiveness and demonstrate basic routing capabilities.
+### Details:
+Implement a simple GET route, such as `/` or `/api/status`, that returns a basic JSON response (e.g., `{ message: 'Server is running' }`) to confirm the server and routing are functional.
+
+## 3. Implement Essential Middleware [done]
+### Dependencies: 3.1
+### Description: Integrate core middleware for handling request bodies and enabling cross-origin requests if needed for frontend interaction.
+### Details:
+Add `app.use(express.json());` to parse incoming JSON request bodies. Optionally, include `app.use(express.urlencoded({ extended: true }));` for URL-encoded data and consider `cors` middleware if cross-origin requests will be made from a separate frontend application.
+

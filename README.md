@@ -1,35 +1,68 @@
-# OpenHud - An open source CS2 Custom Hud.
+# CS2 Coach AI by Toddyclipsgg
 
-Join the community [Discord](https://discord.gg/HApB9HyaWM)!
+An intelligent AI coaching assistant for Counter-Strike 2 (CS2) that provides real-time feedback, analysis, and personalized coaching to help you improve your gameplay.
 
-- Tech: Electron, React, Typescript, NodeJS, Express, Socketio, SQLite3
-- Styling: TailwindCSS (admin panel) / Sass (hud)
+## Features
+
+- **Real-time AI Coaching**: Get instant feedback on your positioning, economy management, and tactical decisions during matches.
+- **Game State Integration**: Full integration with CS2's GSI system for accurate, real-time game state analysis.
+- **Voice Feedback**: Natural-sounding voice feedback using Piper TTS for non-intrusive coaching.
+- **Performance Analysis**: Comprehensive analysis of your gameplay using both real-time GSI data and historical statistics from Tracker.GG.
+- **Minimalist Interface**: Clean, modern UI that provides essential information without cluttering your screen.
+- **Task System**: Dynamic task generation based on your gameplay to help you focus on specific areas of improvement.
+
+## Installation
+
+1. Download the latest release from the [releases page](https://github.com/toddyamakawa/cs2-coach-ai/releases).
+2. Run the installer for your platform (Windows/Mac/Linux).
+3. Copy the `gamestate_integration_cs2coach.cfg` file from the installation directory to your CS2 config folder.
+4. Launch CS2 in Windowed Fullscreen mode.
+5. Start CS2 Coach AI and begin receiving intelligent coaching!
+
+## Development
+
+### Prerequisites
+
+- Node.js v20.x or later
+- npm v10.x or later
+- CS2 installed and configured for GSI
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/toddyamakawa/cs2-coach-ai.git
+cd cs2-coach-ai
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+### Building
+
+```bash
+# Build for production
+npm run build
+
+# Create platform-specific installers
+npm run dist:win   # Windows
+npm run dist:mac   # macOS
+npm run dist:linux # Linux
+```
+
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting pull requests.
 
 ## License
 
-This software is licensed under a custom license that allows free use and modification — including in monetized streams and videos — but **forbids resale** of the program or modified versions.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-If you redistribute modified versions, you must provide proper credit and disclose what changes were made.
+## Acknowledgments
 
-See [LICENSE](./LICENSE) for full details.
-
-# Getting Started:
-
-- Download the latest .zip form the releases page and unzip it.
-- Copy the gamestate_integration_openhud.cfg file from the .zip /resources/src/assets to your CS config folder (the same folder you'd put an autoexec.cfg). (Will make it automatic in the future)
-- Launch openhud.exe and run CS2 in WindowedFullscreen mode.
-- You're done! Create your players, teams, and matches. Start CS2 and join a match (or demo) as a spectator.
-- For the Spectator overlay, click the overlay button in the side menu of the app.
-- For OBS overlay, create a Browser Source, delete all of the custom css, and use the url: http://localhost:1349/hud
-
-Hopefully it ends up looking very nice and lets a lot of people use it in their streams!
-
-# OpenHud React Hud based on [Lexogrine react hud](https://github.com/JohnTimmermann/OpenHud-React-Hud)
-
-![Custom CS2 Hud](https://i.imgur.com/OWexW9T.png)
-
-# Admin Panel
-
-![AdminPanel/Matches](https://i.imgur.com/8WwunXg.png)
-![AdminPanel/Players](https://i.imgur.com/3oKFgIJ.png)
-![AdminPanel/Teams](https://i.imgur.com/vIlKeM6.png)
+- [Piper TTS](https://github.com/rhasspy/piper) for high-quality text-to-speech
+- [Tracker.GG](https://tracker.gg) for player statistics
+- The CS2 community for feedback and support 

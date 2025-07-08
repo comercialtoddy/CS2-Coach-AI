@@ -1,0 +1,31 @@
+# Task ID: 22
+# Title: Conversation Summarization Module
+# Status: done
+# Dependencies: 9, 16, 18
+# Priority: medium
+# Description: Implement `Tool_SummarizeConversation` to generate concise summaries of the agent's interactions and feedback provided to the player during a session.
+# Details:
+This tool will take the `conversation_history` (from Memory Module) as input. It will use the OpenRouter LLM (`Tool_CallLLM`) to generate a summary focusing on key feedback points, player improvements, and recurring issues. The summary should be concise and actionable for post-game review. Store these summaries in the database.
+
+# Test Strategy:
+Provide a mock conversation history to the tool. Verify that the generated summary accurately reflects the key points of the conversation and is concise. Test with different lengths of conversation history.
+
+# Subtasks:
+## 1. Prepare Conversation History for LLM Input [done]
+### Dependencies: None
+### Description: Format and preprocess the raw conversation history into a structured input suitable for an LLM, addressing potential token limits by chunking or summarizing long conversations.
+### Details:
+This involves converting a list of messages (e.g., sender, timestamp, text) into a coherent string or array of strings. Strategies for handling very long conversations, such as iterative summarization or key-point extraction, should be considered to fit within LLM context windows.
+
+## 2. Craft LLM Prompt and Execute Summarization [done]
+### Dependencies: 22.1
+### Description: Design an effective prompt for the LLM, incorporating the prepared conversation history and specific instructions for summarization, then invoke `Tool_CallLLM` to generate the summary.
+### Details:
+The prompt should clearly define the desired summary length, style, and key information to include. Consider using few-shot examples or specific output formats (e.g., bullet points, paragraph). Implement error handling and retry mechanisms for `Tool_CallLLM` calls.
+
+## 3. Parse and Store Generated Summary [done]
+### Dependencies: 22.2
+### Description: Extract the final summary from the LLM's output, validate its format and content, and then store it in the designated data store.
+### Details:
+This step involves parsing the LLM's response, which might be plain text, JSON, or another structured format. Implement validation checks to ensure the summary is coherent, relevant, and meets quality criteria before persisting it to a database or other storage solution.
+

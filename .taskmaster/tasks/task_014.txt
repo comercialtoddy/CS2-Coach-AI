@@ -1,0 +1,167 @@
+# Task ID: 14
+# Title: Video Clip Recording Module
+# Status: done
+# Dependencies: 2, 13
+# Priority: high
+# Description: Develop the video clip recording module, enabling both manual and automatic capture of short video clips (up to 30 seconds) of gameplay moments.
+# Details:
+Integrate `ffmpeg` (via `fluent-ffmpeg` Node.js wrapper v2.x) for video recording. Use Electron's `desktopCapturer` to get screen and audio streams. Implement `Tool_RecordClip(duration: int, trigger: string)` which starts/stops recording. For automatic triggers, the backend AI logic will call this tool based on game events (e.g., multi-kills, clutches). Save clips to a designated directory. Ensure efficient encoding to minimize performance impact.
+
+# Test Strategy:
+Implement a manual trigger for clip recording. Record a 10-second clip and verify that the video file is created, playable, and includes both video and audio. Test automatic triggers with simulated game events.
+
+# Subtasks:
+## 1. FFmpeg and fluent-ffmpeg Integration [done]
+### Dependencies: None
+### Description: Set up the FFmpeg executable and integrate the `fluent-ffmpeg` Node.js wrapper into the project. Verify basic FFmpeg functionality and path configuration.
+### Details:
+Install FFmpeg (ensure it's accessible in PATH or specified). Install `fluent-ffmpeg` npm package. Write a simple test script to confirm FFmpeg command execution via `fluent-ffmpeg` and check version.
+<info added on 2025-07-08T02:13:48.583Z>
+Implementada a integração do FFmpeg e fluent-ffmpeg: 1. Instaladas as dependências necessárias: - Pacote fluent-ffmpeg - Definições de tipo TypeScript. 2. Criada a classe FFmpegUtil com as seguintes funcionalidades: - Padrão Singleton para gerenciamento consistente da instância - Verificação da instalação e detecção da versão do FFmpeg - Descoberta de codificadores e formatos disponíveis - Gerenciamento de diretório temporário - Criação de instância de comando - Funcionalidade de limpeza. 3. Criado script de teste para verificar: - Instalação e versão do FFmpeg - Codificadores disponíveis (vídeo e áudio) - Formatos disponíveis - Gerenciamento de diretório temporário. A implementação fornece uma base robusta para a funcionalidade de gravação de vídeo com tratamento de erros e gerenciamento de recursos adequados.
+</info added on 2025-07-08T02:13:48.583Z>
+
+## 2. Screen Stream Capture Implementation [done]
+### Dependencies: 14.1
+### Description: Develop the functionality to capture the screen as a video stream using FFmpeg's screen capture capabilities (e.g., `gdigrab` on Windows, `x11grab` on Linux, `avfoundation` on macOS).
+### Details:
+Research OS-specific FFmpeg input options for screen capture. Implement a test to capture a short screen recording to a temporary file. Address potential multi-monitor issues and frame rate settings.
+<info added on 2025-07-08T02:15:03.156Z>
+Funcionalidade de captura de stream de tela implementada:
+
+1. Criada a classe ScreenCapture com as seguintes características:
+   - Opções de captura de tela específicas da plataforma (Windows, macOS, Linux)
+   - Configurações de qualidade ajustáveis (baixa, média, alta)
+   - Controle de FPS
+   - Suporte a múltiplos monitores
+   - Funcionalidade de iniciar/parar gravação
+   - Tratamento de erros e validação
+
+2. Implementações específicas da plataforma:
+   - Windows: gdigrab com coordenadas de tela
+   - macOS: avfoundation com seleção de dispositivo
+   - Linux: x11grab com seleção de display
+   - Configurações adequadas de tamanho de vídeo e framerate
+
+3. Predefinições de qualidade:
+   - Baixa: preset ultrafast, CRF 28, perfil baseline
+   - Média: preset veryfast, CRF 23, perfil main
+   - Alta: preset medium, CRF 18, perfil high
+   - Todas com formato de pixel e configurações de nível adequados
+
+4. Criado script de teste para verificar:
+   - Detecção de display
+   - Gravação com diferentes configurações de qualidade
+   - Saída e verificação de arquivo
+   - Compatibilidade multiplataforma
+
+A implementação fornece uma funcionalidade robusta de captura de tela com otimizações específicas da plataforma e configurações de qualidade ajustáveis.
+</info added on 2025-07-08T02:15:03.156Z>
+
+## 3. Audio Stream Capture Implementation [done]
+### Dependencies: 14.1
+### Description: Implement the capture of system audio or a specific audio input device as an audio stream using FFmpeg.
+### Details:
+Research OS-specific FFmpeg input options for audio capture (e.g., `dshow` on Windows, `alsa` on Linux, `avfoundation` on macOS). Implement a test to capture a short audio recording to a temporary file. Handle audio device selection.
+<info added on 2025-07-08T02:16:27.765Z>
+Funcionalidade de captura de stream de áudio implementada:
+
+1. Criada a classe AudioCapture com as seguintes funcionalidades:
+   - Opções de captura de áudio específicas da plataforma (Windows, macOS, Linux)
+   - Descoberta e seleção de dispositivos de áudio
+   - Configurações de qualidade ajustáveis (baixa, média, alta)
+   - Funcionalidade de iniciar/parar gravação
+   - Tratamento de erros e validação
+
+2. Implementações específicas da plataforma:
+   - Windows: dshow com capturador de áudio virtual
+   - macOS: avfoundation com índice de dispositivo
+   - Linux: pulseaudio com dispositivo padrão
+   - Configurações adequadas de taxa de amostragem e buffer
+
+3. Predefinições de qualidade:
+   - Baixa: AAC 96k, 44.1kHz
+   - Média: AAC 128k, 44.1kHz
+   - Alta: AAC 256k, 48kHz
+   - Todas com saída estéreo
+
+4. Criado script de teste para verificar:
+   - Detecção de dispositivo de áudio
+   - Gravação com diferentes configurações de qualidade
+   - Saída e verificação de arquivo
+   - Compatibilidade multiplataforma
+
+A implementação fornece uma funcionalidade robusta de captura de áudio com otimizações específicas da plataforma e configurações de qualidade ajustáveis.
+</info added on 2025-07-08T02:16:27.765Z>
+
+## 4. Recording Start/Stop Logic and Stream Merging [done]
+### Dependencies: 14.2, 14.3
+### Description: Develop the core logic to initiate and terminate video recording, combining the captured screen and audio streams into a single output file using `fluent-ffmpeg`.
+### Details:
+Implement functions for `startRecording()` and `stopRecording()`. Use `fluent-ffmpeg` to pipe screen and audio streams, specifying output format (e.g., MP4, WebM). Manage the FFmpeg process lifecycle.
+<info added on 2025-07-08T02:19:34.721Z>
+Implementada a classe VideoRecorder com funcionalidades para captura combinada de tela e áudio, configurações de qualidade, limites de duração, tratamento de eventos (início/parada/erro), rastreamento de status e limpeza de recursos. A fusão de streams sincroniza as entradas de áudio e vídeo, utiliza a flag 'fast start' para otimizar a reprodução e inclui proteção contra sobrescrita.
+
+Foram definidos os seguintes presets de qualidade:
+- Baixo: preset ultrafast, CRF 28, AAC 96k
+- Médio: preset veryfast, CRF 23, AAC 128k
+- Alto: preset medium, CRF 18, AAC 256k
+
+Um script de teste foi criado para validar a detecção de dispositivos, gravação com diferentes qualidades, limites de duração e a gestão de recursos. A implementação fornece uma funcionalidade de gravação de vídeo robusta com sincronização de stream e gestão de recursos adequadas.
+</info added on 2025-07-08T02:19:34.721Z>
+
+## 5. Encoding Optimization for Performance [done]
+### Dependencies: 14.4
+### Description: Configure FFmpeg encoding parameters to balance video quality with performance, minimizing CPU and GPU impact during recording, especially for real-time gameplay.
+### Details:
+Experiment with different video codecs (e.g., H.264, VP8/VP9), presets (e.g., `ultrafast`, `superfast`), CRF/QP values, and hardware acceleration options (e.g., NVENC, AMF, QuickSync) to find optimal settings. Monitor system resource usage during tests.
+<info added on 2025-07-08T02:21:42.444Z>
+Implementada otimização de codificação para desempenho. Foi criada a classe EncodingOptimizer que deteta as capacidades do sistema (CPU, GPU, memória) e o suporte para aceleração por hardware (NVENC, QuickSync, AMF, VAAPI), com fallback para codificação via CPU. As definições são ajustadas dinamicamente com base nos recursos do sistema, requisitos de qualidade e impacto no desempenho. Um script de teste foi desenvolvido para verificar a deteção de capacidades, a geração de definições e a aceleração por hardware.
+</info added on 2025-07-08T02:21:42.444Z>
+
+## 6. Clip Saving and File Management [done]
+### Dependencies: 14.4, 14.5
+### Description: Implement robust logic for saving recorded video clips to a designated directory, including dynamic file naming conventions and handling potential file system issues.
+### Details:
+Define a default save path. Generate unique filenames (e.g., timestamp-based, or with game context). Implement error handling for file write operations. Consider a mechanism for managing old clips (e.g., deletion policy).
+<info added on 2025-07-08T02:23:49.541Z>
+Implementado o salvamento de clipes e o gerenciamento de arquivos:
+
+1. Criada a classe ClipManager com as seguintes funcionalidades:
+   - Limites de armazenamento e retenção configuráveis
+   - Rastreamento e persistência de metadados
+   - Limpeza automática de clipes antigos
+   - Rastreamento de contexto de jogo e gatilhos
+   - Monitoramento do uso de armazenamento
+   - Gerenciamento de arquivos temporários
+
+2. Funcionalidades de gerenciamento de arquivos:
+   - Geração de ID de clipe exclusivo
+   - Nomenclatura de arquivos baseada em timestamp
+   - Armazenamento de metadados em formato JSON
+   - Criação automática de diretórios
+   - Validação do tamanho do arquivo
+   - Limpeza de arquivos temporários
+
+3. Gerenciamento de armazenamento:
+   - Aplicação do limite máximo de armazenamento
+   - Aplicação do período de retenção
+   - Exclusão automática dos clipes mais antigos
+   - Rastreamento do uso de armazenamento
+   - Persistência de metadados
+
+4. Criado script de teste para verificar:
+   - Manipulação de configuração
+   - Salvamento de clipes e metadados
+   - Gerenciamento de armazenamento
+   - Operações de arquivo
+   - Funcionalidade de limpeza
+
+A implementação fornece um gerenciamento de clipes robusto com limpeza automática e otimização de armazenamento.
+</info added on 2025-07-08T02:23:49.541Z>
+
+## 7. Error Handling and Resource Management [done]
+### Dependencies: 14.4, 14.5, 14.6
+### Description: Implement comprehensive error handling for FFmpeg processes and stream operations, ensuring proper resource cleanup (e.g., process termination, temporary file deletion) in case of failures or unexpected shutdowns.
+### Details:
+Listen for `ffmpeg` process errors (`.on('error')`, `.on('end')`, `.on('progress')`). Implement graceful shutdown procedures. Ensure temporary files are cleaned up. Handle cases where FFmpeg process might hang or crash. Monitor memory and CPU usage to prevent leaks.
+

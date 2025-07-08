@@ -1,0 +1,264 @@
+# Task ID: 16
+# Title: OpenRouter Integration for LLM Access
+# Status: done
+# Dependencies: 3, 9
+# Priority: high
+# Description: Successfully integrated the backend with OpenRouter, providing a robust and flexible system for accessing various large language models (LLMs). This integration serves as the foundation for all AI coaching and LLM-powered functionalities within the project.
+# Details:
+The implementation is complete, providing a multi-layered, production-ready service for LLM access.
+
+**Core Components:**
+- **Service:** `src/electron/server/services/openRouterServices.ts` - A comprehensive service for all OpenRouter API interactions, featuring timeout support, exponential backoff retry logic, cost estimation, and 6 default model presets (FAST, BALANCED, SMART, CREATIVE, REASONING, CHEAP).
+- **AI Tool:** `src/electron/server/ai/tools/CallLLMTool.ts` - A `CallLLMTool` that implements the `ITool` interface, fully integrated with the AI Tooling Framework. It supports structured outputs with JSON Schema validation and a built-in model fallback system.
+- **REST Controller:** `src/electron/server/controllers/openRouterController.ts` - Exposes OpenRouter functionality via a comprehensive REST API.
+
+**REST API Endpoints (`/openrouter/*`):**
+- `GET /status`: Service status and configuration.
+- `GET /test`: API connectivity test.
+- `GET /models`: Available models list.
+- `GET /examples`: Usage examples and documentation.
+- `POST /call`: Simple LLM call interface.
+- `GET /tool/info`: Tool schema and metadata.
+- `POST /tool/call`: Enhanced tool-based LLM calls.
+- `POST /tool/register`: Register tool with ToolManager.
+- `POST /tool-manager/execute`: Execute via ToolManager.
+
+**Advanced Features Implemented:**
+- **Multiple Interface Levels:** Provides low-level (direct HTTP), mid-level (`callLLM()` function), and high-level (AI Tool framework) access points.
+- **Comprehensive Model Support:** Supports models from OpenAI (GPT-4o), Anthropic (Claude 3.5 Sonnet), DeepSeek, Meta, and Qwen, with automatic model fallbacks.
+- **Production-Ready:** Includes health checks, token usage tracking, cost estimation, extensive logging, rate limiting, and robust validation.
+
+# Test Strategy:
+The implementation includes built-in testing capabilities. A dedicated REST endpoint, `GET /openrouter/test`, performs a live LLM call to verify the `OPENROUTER_API_KEY` and service connectivity. All endpoints have comprehensive error handling for scenarios like invalid API keys (401/403), rate limits (429), and timeouts, ensuring system stability.
+
+# Subtasks:
+## 1. Secure OpenRouter API Key Management [done]
+### Dependencies: None
+### Description: Implement a secure method for storing and retrieving the OpenRouter API key, such as environment variables or a secrets manager, ensuring it is not hardcoded in the codebase.
+### Details:
+Research and select the most appropriate secure storage mechanism for API keys within the project's deployment environment.
+<info added on 2025-07-07T18:50:06.943Z>
+Implementado gerenciamento seguro de chaves de API do OpenRouter com os seguintes recursos:
+
+1. Armazenamento em Variável de Ambiente:
+   - A chave de API é armazenada na variável de ambiente OPENROUTER_API_KEY
+   - Sem valores sensíveis codificados diretamente no código-fonte
+   - Mensagens de erro claras quando a chave de API está ausente
+
+2. Validação Aprimorada da Chave de API:
+   - Validação de formato estrita (deve começar com 'sk-or-v1-' e ter 64+ caracteres)
+   - Detecção de caracteres suspeitos para prevenir ataques de injeção
+   - Verificações de nulo/vazio
+
+3. Implementação de Limite de Taxa (Rate Limiting):
+   - Limite de taxa em janela deslizante (50 requisições por minuto)
+   - Reinicialização automática da janela
+   - Contagem e rastreamento de requisições
+   - Informações claras sobre o status do limite de taxa
+
+4. Gerenciamento de Alteração de Chave de API:
+   - Sistema emissor de eventos para alterações na chave de API
+   - Mecanismo de inscrição para notificações de alteração de chave
+   - Funcionalidade de cancelamento de inscrição limpa
+
+5. Relatórios de Status Abrangentes:
+   - Verificações de status da configuração
+   - Informações sobre o limite de taxa
+   - Mensagens de erro detalhadas
+   - Funcionalidade para testar a conexão
+
+6. Tratamento de Erros:
+   - Tipos de erro específicos para diferentes cenários (401, 403, 429)
+   - Mensagens de erro detalhadas com informações acionáveis
+   - Notificações de limite de taxa excedido com tempo de espera
+
+7. Melhores Práticas de Segurança:
+   - Não registrar as chaves de API em logs
+   - Manuseio seguro de cabeçalhos
+   - Controles de tempo limite da requisição
+   - Backoff exponencial para novas tentativas
+
+A implementação segue os padrões estabelecidos do projeto para gerenciamento de chaves de API, adicionando recursos de segurança adicionais e utilitários amigáveis para desenvolvedores.
+</info added on 2025-07-07T18:50:06.943Z>
+
+## 2. Develop OpenRouter Chat Completion Client [done]
+### Dependencies: 16.1
+### Description: Create a dedicated client function or class responsible for constructing and sending chat completion requests to the OpenRouter API endpoint, including proper handling of authentication headers and request body formatting.
+### Details:
+Focus on the `POST /api/v1/chat/completions` endpoint. Implement retry logic and basic error handling for network issues.
+<info added on 2025-07-07T18:52:31.348Z>
+Cliente de conclusão de chat do OpenRouter implementado com as seguintes funcionalidades:
+
+1. Definições de Tipo Abrangentes:
+   - Interface ChatMessage para estrutura de mensagens
+   - ChatCompletionRequest para parâmetros de requisição
+   - ChatCompletionResponse para respostas da API
+   - ChatCompletionStreamResponse para respostas em streaming
+   - ChatCompletionOptions para parâmetros de função
+
+2. Configurações de Modelo Padrão:
+   - RÁPIDO: OpenAI GPT-3.5 Turbo
+   - EQUILIBRADO: Anthropic Claude 2.1
+   - INTELIGENTE: Anthropic Claude 3 Sonnet
+   - CRIATIVO: Meta Llama 2 70B
+   - RACIOCÍNIO: Google Gemini Pro
+   - ECONÔMICO: Mistral 7B Instruct
+
+3. Funcionalidades Essenciais de Conclusão de Chat:
+   - Suporte para respostas em streaming e não-streaming
+   - Controle de temperatura e tokens
+   - Capacidades de chamada de função
+   - Suporte a sequências de parada
+   - Penalidades de presença e frequência
+   - Amostragem Top-p
+
+4. Suporte a Streaming:
+   - Manuseio eficiente de stream com ReadableStream
+   - Gerenciamento adequado de buffer
+   - Agregação incremental de conteúdo
+   - Suporte a streaming de chamada de função
+   - Limpeza e tratamento de erros adequados
+
+5. Tratamento de Erros:
+   - Tipos de erro abrangentes
+   - Mensagens de erro detalhadas
+   - Tratamento de limites de taxa (rate limit)
+   - Gerenciamento de timeout
+   - Lógica de nova tentativa com backoff exponencial
+
+6. Abstração de Alto Nível:
+   - Interface simples callLLM para uso básico
+   - Suporte a fallback de modelo
+   - Controle de formato de resposta (texto/JSON)
+   - Suporte a prompt de sistema
+   - Rastreamento de uso
+
+A implementação fornece tanto acesso de baixo nível através de createChatCompletion quanto uma interface simplificada de alto nível através de callLLM, tornando-a flexível para diferentes casos de uso, mantendo um tratamento de erros robusto e segurança de tipos.
+</info added on 2025-07-07T18:52:31.348Z>
+
+## 3. Parse and Standardize LLM Responses [done]
+### Dependencies: 16.2
+### Description: Implement robust logic to parse the JSON responses received from the OpenRouter API, extract the generated text content, and handle various response scenarios including errors, empty responses, or different message formats. Standardize the output for consistent downstream consumption.
+### Details:
+Consider both streaming and non-streaming response formats. Define a clear internal data structure for parsed LLM outputs.
+<info added on 2025-07-07T18:54:18.610Z>
+Implementado o parse e a padronização abrangente de respostas com as seguintes características:
+
+1. Formato de Resposta Padronizado:
+   - Interface unificada para todas as respostas de LLM
+   - Tratamento de erros consistente
+   - Rastreamento detalhado de metadados
+   - Estatísticas de uso
+   - Suporte a chamadas de função
+   - Compatibilidade com streaming
+
+2. Validação da Resposta:
+   - Verificação de tipo estrita
+   - Validação de campos obrigatórios
+   - Verificação de formato
+   - Tratamento de nulos/indefinidos
+   - Recuperação de erros
+
+3. Parse de Chamada de Função:
+   - Parse de argumentos JSON
+   - Fallback para JSON inválido
+   - Validação de nome
+   - Preservação de argumentos brutos
+
+4. Rastreamento de Metadados:
+   - ID da requisição
+   - Timestamp de criação
+   - Motivo da finalização
+   - Tempo de execução
+   - Informações do provedor
+   - Contagem de tentativas
+
+5. Padronização de Erros:
+   - Categorização de códigos de erro
+   - Mensagens de erro detalhadas
+   - Preservação do stack trace
+   - Rastreamento da causa do erro
+   - Detalhes do erro bruto
+
+6. Suporte a Streaming:
+   - Validação de chunks
+   - Tratamento de respostas parciais
+   - Agregação de conteúdo delta
+   - Streaming de chamadas de função
+   - Recuperação de erros
+
+7. Integração:
+   - Atualizado o createChatCompletion
+   - Atualizado o callLLM
+   - Tratamento de erros consistente
+   - Rastreamento de desempenho
+   - Suporte a fallback de modelo
+
+A implementação garante um tratamento de resposta consistente em todas as interações com LLMs, com tratamento de erros robusto e rastreamento detalhado para depuração e monitoramento.
+</info added on 2025-07-07T18:54:18.610Z>
+
+## 4. Abstract LLM Access into `Tool_CallLLM` [done]
+### Dependencies: 16.1, 16.2, 16.3
+### Description: Encapsulate the OpenRouter API client, API key management, and response parsing logic into a reusable `Tool_CallLLM` class or function, providing a clean and abstract interface for other components of the system to interact with the LLM without direct knowledge of OpenRouter specifics.
+### Details:
+Define the input parameters (e.g., prompt, model, temperature) and the expected output format for the `Tool_CallLLM` interface.
+<info added on 2025-07-07T18:59:13.579Z>
+Implementada a classe Tool_CallLLM com as seguintes características:
+
+1. Interface com Tipagem Segura (Type-Safe):
+   - Tipo ModelId para validação do modelo
+   - Interface CallLLMInput para parâmetros de entrada
+   - Interface CallLLMOutput para respostas padronizadas
+   - Verificação rigorosa de tipos em todo o processo
+
+2. Parâmetros de Entrada:
+   - Prompt obrigatório
+   - Seleção de modelo opcional
+   - Controlo de temperatura
+   - Limites de tokens
+   - Prompts de sistema
+   - Controlo do formato da resposta
+   - Suporte a esquema JSON
+   - Modelos de fallback
+   - Configurações de timeout e tentativas
+
+3. Validação de Entrada:
+   - Validação abrangente de parâmetros
+   - Verificação do ID do modelo
+   - Verificação do intervalo de temperatura
+   - Validação do formato
+   - Validação do esquema
+   - Mensagens de erro detalhadas
+
+4. Integração da Ferramenta:
+   - Implementação da interface ITool
+   - Metadados da ferramenta
+   - Exemplos de entrada/saída
+   - Suporte a verificação de saúde (health check)
+   - Tratamento de erros
+
+5. Fluxo de Execução:
+   - Validação da entrada
+   - Conversão de parâmetros
+   - Execução da chamada ao LLM
+   - Padronização da resposta
+   - Tratamento de erros
+   - Monitorização de desempenho
+
+6. Monitorização de Saúde:
+   - Verificações de conectividade
+   - Disponibilidade do modelo
+   - Validação da resposta
+   - Relatório de erros
+   - Detalhes de estado
+
+7. Tratamento de Erros:
+   - Erros de validação de entrada
+   - Erros de execução
+   - Problemas de rede
+   - Tratamento de timeout
+   - Preservação do stack trace
+
+A implementação fornece uma interface robusta e com tipagem segura para realizar chamadas a LLMs através do OpenRouter, com validação abrangente, tratamento de erros e capacidades de monitorização.
+</info added on 2025-07-07T18:59:13.579Z>
+

@@ -2,7 +2,7 @@ import { FFmpegUtil } from './ffmpeg.js';
 import os from 'os';
 import { exec } from 'child_process';
 
-interface AudioDevice {
+export interface AudioDevice {
   id: string;
   name: string;
   isInput: boolean;

@@ -1,4 +1,5 @@
 import os from 'os';
+import { execSync } from 'child_process';
 
 interface EncodingPreset {
   video: {
@@ -86,7 +87,6 @@ export class EncodingOptimizer {
     if (platform === 'win32') {
       try {
         // Check for NVIDIA GPU (NVENC)
-        const { execSync } = require('child_process');
         const nvidiaSmiOutput = execSync('nvidia-smi -L', { encoding: 'utf8' });
         if (nvidiaSmiOutput) {
           capabilities.gpu = {
@@ -101,8 +101,9 @@ export class EncodingOptimizer {
         // No NVIDIA GPU found, try Intel QuickSync
         try {
           const intelGpu = execSync('wmic path win32_VideoController get name', { encoding: 'utf8' })
+            .toString()
             .split('\n')
-            .find(line => line.toLowerCase().includes('intel'));
+            .find((line: string) => line.toLowerCase().includes('intel'));
           if (intelGpu) {
             capabilities.gpu = {
               vendor: 'Intel',
@@ -116,8 +117,9 @@ export class EncodingOptimizer {
           // No Intel GPU found, try AMD
           try {
             const amdGpu = execSync('wmic path win32_VideoController get name', { encoding: 'utf8' })
+              .toString()
               .split('\n')
-              .find(line => line.toLowerCase().includes('amd') || line.toLowerCase().includes('radeon'));
+              .find((line: string) => line.toLowerCase().includes('amd') || line.toLowerCase().includes('radeon'));
             if (amdGpu) {
               capabilities.gpu = {
                 vendor: 'AMD',
@@ -135,7 +137,6 @@ export class EncodingOptimizer {
     } else if (platform === 'linux') {
       try {
         // Check for VAAPI support
-        const { execSync } = require('child_process');
         execSync('vainfo');
         capabilities.gpu = {
           vendor: 'Generic',

@@ -6,7 +6,7 @@ export function createMenu(mainWindow: BrowserWindow) {
     Menu.buildFromTemplate([
       {
         // MacOS makes first option a default name
-        label: process.platform === "darwin" ? undefined : "OpenHud",
+        label: process.platform === "darwin" ? undefined : "CS2 Coach AI",
         type: "submenu",
         submenu: [
           {

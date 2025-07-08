@@ -1,0 +1,229 @@
+# Task ID: 21
+# Title: Auto-Correction Engine Logic
+# Status: done
+# Dependencies: 17, 18
+# Priority: high
+# Description: Develop the auto-correction engine, enabling the AI agent to monitor the effectiveness of its own suggestions and adapt its coaching approach over time.
+# Details:
+Implement a feedback loop mechanism. After a suggestion is given, the agent will monitor subsequent GSI data and player actions to infer if the suggestion was followed and if it led to a positive outcome. Store this feedback in the `InteractionHistory` (Memory Module). Use this data to adjust future `Tool_GenerateSuggestion` calls, potentially using reinforcement learning principles or simple heuristic adjustments based on success/failure rates.
+
+# Test Strategy:
+Simulate a scenario where a suggestion is given. Then, simulate player actions that either follow or ignore the suggestion, and lead to positive or negative outcomes. Verify that the auto-correction engine correctly updates its internal models or memory based on these outcomes.
+
+# Subtasks:
+## 1. Design Auto-Correction Feedback Loop Architecture [done]
+### Dependencies: None
+### Description: Define the overall structure and components of the auto-correction engine's feedback loop, including data flow, decision points, and interaction with other systems.
+### Details:
+This involves conceptualizing how suggestions are made, how player responses are captured, and how the system learns from these interactions.
+<info added on 2025-07-07T17:32:35.354Z>
+Successfully designed and implemented the auto-correction feedback loop architecture with the following key components:
+
+1. Core Data Structures:
+- SuggestionTracker: Comprehensive tracking of suggestions, their context, and outcomes
+- FeedbackLoopConfig: Configurable parameters for monitoring and adaptation
+- AutoCorrectionEvent: Event system for feedback loop coordination
+
+2. Monitoring System:
+- Real-time GSI update processing
+- State change detection with significance scoring
+- Configurable monitoring windows based on suggestion type
+- Checkpoint system for tracking changes over time
+
+3. Outcome Analysis:
+- Sophisticated outcome inference based on suggestion type
+- Impact scoring (-1 to 1) for measuring effectiveness
+- Learning point extraction for continuous improvement
+- Semantic similarity checking for suggestion adherence
+
+4. Memory Integration:
+- Interaction history storage with MemoryService
+- High-importance memory entries for significant outcomes
+- Comprehensive metadata for future analysis
+- Structured learning points for adaptation
+
+5. Adaptation System:
+- Statistical tracking of suggestion effectiveness
+- Category-based adaptation tracking
+- Configurable adaptation thresholds
+- Intelligent approach adjustment suggestions
+
+The architecture provides a robust foundation for:
+- Real-time monitoring of suggestion effectiveness
+- Automated learning from outcomes
+- Data-driven adaptation of coaching approach
+- Comprehensive feedback loop for continuous improvement
+
+The implementation is enterprise-grade with proper error handling, event emission, and performance optimization.
+</info added on 2025-07-07T17:32:35.354Z>
+
+## 2. Integrate GSI for Suggestion Effectiveness Monitoring [done]
+### Dependencies: 21.1
+### Description: Implement the necessary Game State Integration (GSI) hooks and data collection mechanisms to monitor the effectiveness of auto-correction suggestions in real-time.
+### Details:
+Focus on capturing player actions immediately following a suggestion to determine if it was accepted, ignored, or led to a desired outcome.
+<info added on 2025-07-07T17:34:58.501Z>
+Successfully implemented the GSI monitoring service for suggestion effectiveness tracking with the following key features:
+
+1. Core Monitoring System:
+- Real-time GSI update processing
+- Configurable monitoring parameters (time windows, thresholds)
+- Checkpoint-based state tracking
+- Event-driven architecture for change notifications
+
+2. State Change Analysis:
+- Comprehensive state change detection
+- Multi-level change analysis (player, team, map, economy)
+- Significance scoring for changes
+- Intelligent change filtering and aggregation
+
+3. Outcome Inference:
+- Context-aware outcome determination
+- Player response analysis
+- Engagement and learning scoring
+- Adaptive monitoring windows based on suggestion type
+
+4. Integration Features:
+- Seamless GSI handler integration
+- Auto-correction engine coordination
+- Event-based communication
+- Robust error handling
+
+5. Performance Optimization:
+- Efficient state comparison
+- Smart checkpoint management
+- Resource-aware monitoring
+- Configurable thresholds and limits
+
+The implementation provides:
+- Real-time effectiveness monitoring
+- Detailed change tracking
+- Intelligent outcome inference
+- Robust integration with other components
+
+The service is enterprise-grade with proper error handling, event emission, and performance optimization.
+</info added on 2025-07-07T17:34:58.501Z>
+
+## 3. Develop Outcome Inference Algorithms [done]
+### Dependencies: 21.2
+### Description: Create and refine algorithms to infer the success or failure of auto-correction suggestions based on the monitored GSI data and player behavior.
+### Details:
+This includes defining metrics for success (e.g., player adopting the suggestion, improved performance) and failure (e.g., suggestion ignored, negative impact).
+<info added on 2025-07-07T17:39:37.431Z>
+The core outcome inference algorithms have been implemented, including comprehensive behavior pattern recognition, performance metrics calculation, and impact scoring. The following components still need to be completed: utility effectiveness calculation, enhanced emotional state inference, improved learning opportunity identification, and refined performance impact calculation.
+</info added on 2025-07-07T17:39:37.431Z>
+<info added on 2025-07-07T17:41:31.696Z>
+Completed the implementation of utility effectiveness calculation and performance impact calculation. Utility effectiveness now properly tracks: flash usage and effectiveness (flash assists, enemies flashed), smoke usage and map control impact, Molotov/Incendiary damage and area denial, and HE grenade damage. Performance impact calculation now includes: proper ADR calculation from round damage, utility damage tracking, equipment usage tracking through weapon inventory, and proxy metrics for unavailable GSI data. The implementation adapts to the available GSI data while maintaining the core functionality of the outcome inference system.
+</info added on 2025-07-07T17:41:31.696Z>
+<info added on 2025-07-07T17:44:28.691Z>
+Completed the implementation of the outcome inference algorithms with the following enhancements:
+1. Enhanced emotional state inference:
+   - Performance-based emotional indicators
+   - Team-based emotional indicators
+   - Situational stress indicators
+   - Historical emotional pattern analysis
+   - Contextual adjustments
+   - Emotion intensity progression
+2. Improved learning opportunity identification:
+   - Prioritized learning opportunities
+   - Multi-dimensional context analysis
+   - Situational factor integration
+   - Team play and communication analysis
+   - Tactical and strategic opportunities
+3. Added player attention and receptiveness analysis:
+   - Attention level calculation based on game state
+   - Receptiveness scoring based on emotional state
+   - Performance impact consideration
+   - Game phase and situation awareness
+The implementation provides a comprehensive system for inferring outcomes and adapting coaching behavior based on player state and game context.
+</info added on 2025-07-07T17:44:28.691Z>
+
+## 4. Implement Memory Update Mechanism [done]
+### Dependencies: 21.3
+### Description: Design and implement the system's memory component that stores learned patterns and updates its knowledge base based on inferred outcomes.
+### Details:
+This memory will inform future suggestion generation and adaptive coaching adjustments, potentially using techniques like reinforcement learning or statistical models.
+<info added on 2025-07-07T17:46:38.850Z>
+Implemented the memory update mechanism. This system includes:
+1. Coaching Insights Storage: Captures detailed coaching insights with outcomes, player responses, measured impact, emotional state, and situational context, along with validation data for continuous improvement.
+2. Player Profile Updates: Maintains a history of learning patterns, success/failure rates, and contextual information, with the history limited to the most recent entries.
+3. Session Data Management: Records interaction outcomes, player responses, and impact measurements in a chronological history.
+4. Game Knowledge Extraction: Identifies significant patterns to store best practices, anti-patterns, contextual conditions, and confidence levels.
+This implementation provides a comprehensive system for storing and updating memory, enabling the auto-correction engine to learn from past interactions and adapt its coaching approach.
+</info added on 2025-07-07T17:46:38.850Z>
+
+## 5. Implement Adaptive Coaching Adjustment Logic [done]
+### Dependencies: 21.4
+### Description: Develop the logic that allows the auto-correction engine to adapt its coaching style, frequency, and content based on the updated memory and player performance.
+### Details:
+This could involve adjusting the aggressiveness of suggestions, providing more detailed explanations, or focusing on specific areas of player weakness.
+<info added on 2025-07-07T17:48:23.564Z>
+Implemented the adaptive coaching adjustment logic with the following features:
+
+1. Adaptive Decision Making:
+   - Rule priority adjustment based on success rate
+   - Tool chain optimization from effective patterns
+   - Confidence level adaptation
+   - Dynamic cooldown periods
+   - Player-specific adjustments
+
+2. Player Profile Analysis:
+   - Learning style identification
+   - Response pattern analysis
+   - Skill level assessment
+   - Adaptability scoring
+   - Preference tracking
+
+3. Pattern Recognition:
+   - Context similarity matching
+   - Success rate tracking
+   - Pattern effectiveness scoring
+   - Essential tool preservation
+   - Pattern application tracking
+
+4. Adaptation Management:
+   - Change tracking and recording
+   - Adaptation history maintenance
+   - Success rate monitoring
+   - Reason documentation
+   - Adaptation thresholds
+
+The implementation provides a comprehensive system for adapting the coaching approach based on player performance, preferences, and historical success patterns.
+</info added on 2025-07-07T17:48:23.564Z>
+
+## 6. End-to-End Testing and Refinement of Auto-Correction Engine [done]
+### Dependencies: 21.5
+### Description: Conduct comprehensive testing of the entire auto-correction engine, from suggestion generation to feedback loop processing and adaptive adjustments, followed by iterative refinement.
+### Details:
+Perform user acceptance testing, performance testing, and A/B testing to validate effectiveness and identify areas for improvement in a live or simulated environment.
+<info added on 2025-07-07T17:50:06.775Z>
+Implemented comprehensive end-to-end testing for the auto-correction engine with the following test suites:
+
+1. Outcome Inference Tests:
+   - Positive outcome detection
+   - Negative outcome detection
+   - Player response analysis
+   - Impact measurement validation
+
+2. Memory Update Tests:
+   - Coaching insights storage
+   - Player profile updates
+   - Learning pattern tracking
+   - Memory importance handling
+
+3. Adaptive Coaching Tests:
+   - Performance-based adaptation
+   - Style maintenance for effectiveness
+   - Confidence level adjustments
+   - Priority modifications
+
+4. End-to-End Flow Tests:
+   - Complete feedback loop validation
+   - Failed suggestion handling
+   - Memory system integration
+   - Decision engine learning
+   - Adaptation verification
+
+The test suite provides thorough coverage of the auto-correction engine's functionality, ensuring reliable operation and proper adaptation based on outcomes.
+</info added on 2025-07-07T17:50:06.775Z>
+

@@ -1,44 +1,30 @@
-import { BrowserWindow } from "electron";
-import { getHudPath, getPreloadPath, getUIPath } from "./helpers/index.js";
-import { checkDirectories } from "./helpers/util.js";
+import { BrowserWindow, screen } from "electron";
+import { getPreloadPath, getHudPath } from "./helpers/index.js";
 import path from "path";
 
-export function createHudWindow() {
-  const hudWindow = new BrowserWindow({
-    fullscreen: true,
-    transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
-    focusable: true,
-    frame: false,
-    webPreferences: {
-      preload: getPreloadPath(),
-      backgroundThrottling: false,
-    },
-  });
-
-  checkDirectories();
-  hudWindow.loadFile(path.join(getHudPath(), "index.html"));
-  hudWindow.setIgnoreMouseEvents(true);
-
-  return hudWindow;
-}
-
 /**
- * Creates a dedicated Agent AI Overlay window for displaying AI agent status,
- * audio indicators, and real-time feedback information.
+ * Creates a dedicated Game HUD Overlay window for displaying game information
+ * like player stats, team info, and match details.
  * 
- * This overlay is separate from the game HUD and shows:
- * - Agent status: "Analyzing", "Awaiting", "Feedback"
- * - Audio indicator when TTS is playing
- * - Real-time updates via Socket.io
+ * This overlay shows:
+ * - Player stats
+ * - Team information
+ * - Match details
+ * - Real-time game state
  */
-export function createAgentOverlayWindow() {
-  const agentOverlay = new BrowserWindow({
-    width: 320,
-    height: 120,
-    x: 50,
-    y: 50,
+export function createHudWindow() {
+  // Get the primary display size
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+
+  console.log('Creating HUD window with dimensions:', { width, height });
+  console.log('Loading HUD from:', path.join(getHudPath(), 'index.html'));
+
+  const hudWindow = new BrowserWindow({
+    width,
+    height,
+    x: 0,
+    y: 0,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -55,30 +41,52 @@ export function createAgentOverlayWindow() {
       contextIsolation: true,
       backgroundThrottling: false,
       webSecurity: true,
+      devTools: true // Enable DevTools for debugging
     },
   });
 
-  const uiPath = getUIPath();
-  console.log('Loading UI from:', uiPath);
+  // Load the HUD HTML file
+  const hudPath = path.join(getHudPath(), 'index.html');
+  hudWindow.loadFile(hudPath);
+  
+  // Open DevTools for debugging
+  hudWindow.webContents.openDevTools({ mode: 'detach' });
 
-  if (uiPath.startsWith('http')) {
-    agentOverlay.loadURL(uiPath);
-  } else {
-    agentOverlay.loadFile(uiPath);
-  }
+  // Log any load errors
+  hudWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load HUD:', { errorCode, errorDescription });
+  });
+
+  // Log when the window is ready
+  hudWindow.webContents.on('did-finish-load', () => {
+    console.log('HUD window loaded successfully');
+  });
   
   // Set to ignore mouse events so users can interact with the game underneath
-  agentOverlay.setIgnoreMouseEvents(true);
+  hudWindow.setIgnoreMouseEvents(true);
   
   // Prevent the window from stealing focus
-  agentOverlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  hudWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   
   // Set window level to stay on top of games
-  agentOverlay.setAlwaysOnTop(true, 'screen-saver');
+  hudWindow.setAlwaysOnTop(true, 'screen-saver');
 
   // Ensure the window is always visible
-  agentOverlay.setSkipTaskbar(false);
-  agentOverlay.moveTop();
+  hudWindow.setSkipTaskbar(false);
+  hudWindow.moveTop();
 
-  return agentOverlay;
+  // Add window management event handlers
+  hudWindow.on('closed', () => {
+    console.log('HUD window closed');
+  });
+
+  hudWindow.on('show', () => {
+    console.log('HUD window shown');
+  });
+
+  hudWindow.on('hide', () => {
+    console.log('HUD window hidden');
+  });
+
+  return hudWindow;
 }

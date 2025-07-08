@@ -1,0 +1,37 @@
+# Task ID: 20
+# Title: Game Analysis Module - Economy
+# Status: done
+# Dependencies: 7, 9, 17
+# Priority: medium
+# Description: Implement `Tool_SuggestEconomyBuy` to provide intelligent recommendations for equipment purchases based on player money, team economy, and round number.
+# Details:
+Develop logic within `Tool_SuggestEconomyBuy` to analyze `player_money`, `team_money` (from GSI), and `round_number`. Consider common CS2 economy principles (e.g., full buy, force buy, eco round, anti-eco). Suggest optimal weapon, armor, and utility purchases. The tool should output a recommended buy list.
+
+# Test Strategy:
+Test the tool with various money amounts, round numbers, and team economies. Verify that the suggested buys align with standard CS2 economy strategies (e.g., full buy on round 3 after pistol win, eco on round 2 after pistol loss).
+
+# Subtasks:
+## 1. Define CS2 Economy Principles [done]
+### Dependencies: None
+### Description: Research and document the core economic mechanics of Counter-Strike 2, including money awarded for wins, losses, kills, bomb plants/defuses, round bonuses, and weapon costs. Understand the impact of different round outcomes on player and team economy.
+### Details:
+This subtask involves gathering information from official CS2 sources, community wikis, and expert analyses to create a comprehensive understanding of the game's economic system.
+
+## 2. Interpret GSI Data for Economy Analysis [done]
+### Dependencies: 20.1
+### Description: Identify and map relevant Game State Integration (GSI) data points that reflect player and team economy. This includes current money, equipment value, round win/loss status, and player/team scores. Develop methods to parse and interpret this data for economic state tracking.
+### Details:
+Focus on GSI fields such as 'player.money', 'player.weapons', 'player.current_equip_value', 'round.phase', 'round.win_team', and 'team.score' to extract necessary economic information.
+
+## 3. Develop Core Buy Recommendation Logic [done]
+### Dependencies: 20.1, 20.2
+### Description: Based on the defined economy principles and interpreted GSI data, create initial rule-based logic to suggest basic equipment purchases. This includes identifying 'full buy', 'eco round', and 'force buy' scenarios for individual players and the team.
+### Details:
+Implement algorithms that consider a player's current money, the team's overall economy, and the previous round's outcome to recommend a general buy strategy (e.g., 'buy rifle', 'save money').
+
+## 4. Implement Advanced Buy Strategy Logic [done]
+### Dependencies: 20.3
+### Description: Extend the core buy recommendation logic to incorporate more nuanced scenarios. This includes considering individual player roles, specific weapon preferences, opponent economy estimates, and mid-round adjustments based on live game events (e.g., early picks, bomb plants).
+### Details:
+Enhance the recommendation system to suggest specific weapon and utility purchases, account for team-wide economic synchronization, and provide dynamic advice as the round progresses.
+

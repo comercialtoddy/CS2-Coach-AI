@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    // require strict types (null-saftey)
+    "strict": true,
+    // tell TypeScript to generate CommonJS modules
+    "target": "ES2022",
+    "module": "CommonJS",
+    // define where to put compiled JavaScript
+    "outDir": "../../dist-electron",
+    // ignore errors from dependencies
+    "skipLibCheck": true,
+    // Add global types
+    "types": ["../../types", "jest", "node"],
+    // Allow importing JSON files
+    "resolveJsonModule": true,
+    // Generate source maps
+    "sourceMap": true,
+    // Enable all strict type checking options
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    // Additional checks
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": true,
+    // Module resolution
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    // Emit declarations instead of JavaScript for type files
+    "declaration": true,
+    "emitDeclarationOnly": false
+  },
+  "include": [
+    "./preload.cts"
+  ]
+} 

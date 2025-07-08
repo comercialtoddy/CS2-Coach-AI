@@ -1,4 +1,4 @@
-import { EncodingOptimizer } from './encodingOptimizer';
+import { EncodingOptimizer } from './encodingOptimizer.js';
 
 /**
  * Test encoding optimizer functionality

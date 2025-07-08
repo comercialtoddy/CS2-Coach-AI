@@ -4,15 +4,43 @@
   "compilerOptions": {
     // require strict types (null-saftey)
     "strict": true,
-    // tell TypeScript to generate ESM Syntax (import/export instead of require)
-    "target": "ESNext",
-    // tell TypeScript to requre ESM Syntax as input (including .js file imports)
-    "module": "NodeNext",
+    // tell TypeScript to generate ESM modules
+    "target": "ES2022",
+    "module": "Node16",
     // define where to put compiled JavaScript
     "outDir": "../../dist-electron",
     // ignore errors from dependencies
     "skipLibCheck": true,
     // Add global types
-    "types": ["../../types"]
-  }
+    "types": ["../../types", "jest", "node"],
+    // Allow importing JSON files
+    "resolveJsonModule": true,
+    // Generate source maps
+    "sourceMap": true,
+    // Enable all strict type checking options
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    // Additional checks
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": true,
+    // Module resolution
+    "moduleResolution": "node16",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    // Emit declarations instead of JavaScript for type files
+    "declaration": true,
+    "emitDeclarationOnly": false
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "!./preload.cts"
+  ]
 }

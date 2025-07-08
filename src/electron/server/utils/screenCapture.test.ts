@@ -1,4 +1,4 @@
-import { ScreenCapture } from './screenCapture';
+import { ScreenCapture } from './screenCapture.js';
 import fs from 'fs';
 
 /**
@@ -13,7 +13,7 @@ async function testScreenCapture() {
   console.log('1. Getting available displays...');
   const displays = await screenCapture.getDisplays();
   console.log('✅ Available displays:', displays.length);
-  displays.forEach(display => {
+  displays.forEach((display: { id: string; name: string }) => {
     console.log(`   - ${display.name} (${display.id})`);
   });
   console.log('');

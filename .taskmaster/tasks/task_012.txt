@@ -1,0 +1,118 @@
+# Task ID: 12
+# Title: Initial In-Game HUD Overlay
+# Status: done
+# Dependencies: 2, 4
+# Priority: high
+# Description: Develop a minimalist in-game HUD overlay using Electron's renderer process to display agent status, audio indicators, and potentially clip counters.
+# Details:
+Create a dedicated Electron `BrowserWindow` for the HUD, configured to be transparent, frameless, and always on top. Use React for the UI components. Display 'Analyzing', 'Awaiting', 'Feedback' status strings. Include a visual indicator when audio feedback is being played. Use Socket.io to receive status updates from the backend.
+
+# Test Strategy:
+Launch the HUD overlay. Send different status messages from the backend via Socket.io and verify that the HUD updates correctly. Test the audio indicator's visibility during audio playback.
+
+# Subtasks:
+## 1. Electron HUD Window Creation [done]
+### Dependencies: None
+### Description: Set up the main Electron process to create a new BrowserWindow instance configured as a transparent, frameless, always-on-top overlay. Ensure it ignores mouse events to allow interaction with the underlying game.
+### Details:
+This involves configuring `webPreferences`, `transparent`, `frame`, `alwaysOnTop`, and potentially `setIgnoreMouseEvents` for the BrowserWindow.
+<info added on 2025-07-06T16:36:23.473Z>
+Implementation of the Agent AI Overlay window has started. A new `createAgentOverlayWindow()` function will be created, distinct from the existing `createHudWindow()` in `src/electron/hudWindow.ts` used for the game HUD. The plan is to create a small, non-intrusive corner overlay to display the agent's status (Analyzing/Awaiting/Feedback) and audio indicators. Real-time updates will be handled via Socket.io. The window will be configured to be transparent, frameless, always-on-top, and will ignore mouse events.
+</info added on 2025-07-06T16:36:23.473Z>
+<info added on 2025-07-06T16:38:49.094Z>
+The Electron window for the agent overlay has been completed. This includes the `createAgentOverlayWindow()` function in `src/electron/hudWindow.ts`, which creates a small (320x120px) top-left overlay that is transparent, frameless, always-on-top, and ignores mouse events. IPC event handlers (`startAgentOverlay`, `stopAgentOverlay`, `updateAgentStatus`) have been integrated in `src/electron/ipcEvents/ipMainEvents.ts` for window management and status updates. The preload bridge in `src/electron/preload.cts` exposes an `onAgentStatusUpdate` callback to the renderer process. For type safety, an `AgentStatus` interface and other definitions were added to `types.d.ts`. The window loads the React UI at the `#/agent-overlay` route and is ready for the next step of creating the React UI components.
+</info added on 2025-07-06T16:38:49.094Z>
+
+## 2. React UI for Status Display [done]
+### Dependencies: 12.1
+### Description: Develop the initial React components and styling for displaying in-game status information (e.g., health, mana, cooldowns) within the Electron HUD window. This will serve as the visual layer.
+### Details:
+Create basic React components, define data structures for status, and implement initial rendering within the Electron's renderer process.
+<info added on 2025-07-06T16:42:30.846Z>
+Implemented the AgentOverlay React component to display real-time agent status. This includes five distinct, color-coded states (idle, analyzing, awaiting, feedback, error) with corresponding animated icons and smooth transitions. The UI features an animated audio visualizer for audio feedback, a live timestamp, a display for the current agent action, and a transparent, blurred overlay positioned in the top-left corner. The component is integrated via React Router at the /agent-overlay route and uses custom CSS animations for effects. The implementation is fully typed with TypeScript, optimized for performance, and has pointer-events disabled to allow for interaction with the underlying game.
+</info added on 2025-07-06T16:42:30.846Z>
+
+## 3. Socket.io Client Integration [done]
+### Dependencies: 12.2
+### Description: Integrate Socket.io client-side within the React application to establish a real-time connection with the backend. Implement listeners to receive status updates and dynamically render them in the UI.
+### Details:
+Install `socket.io-client`, set up connection logic in React components (e.g., using `useEffect`), and update component state based on received Socket.io events.
+<info added on 2025-07-06T16:44:32.209Z>
+Implemented Features:
+useAgentSocket Custom Hook (src/UI/hooks/useAgentSocket.ts)
+- Complete Socket.io client integration with TypeScript
+- Connects to localhost:1349 (same port as Express server)
+- Automatic reconnection with configurable attempts (5 retries)
+- Multiple transport support (websocket, polling)
+- Comprehensive error handling and logging
+
+Real-time Event Handling:
+- agent-status-update: Receives agent state changes from server
+- agent-audio-update: Handles TTS audio start/stop events
+- agent-error: Receives error messages from server
+- agent-command: Sends commands from client to server
+- agent-request-status: Requests current status from server
+
+Hook Functions & Callbacks:
+- sendAgentCommand(): Send commands to server
+- updateAgentStatus(): Update agent status from client
+- requestCurrentStatus(): Request current status on mount
+- notifyAudioEvent(): Notify audio start/end events
+- Connection state tracking (isConnected, error)
+
+AgentOverlay Integration:
+- Integrated useAgentSocket hook into AgentOverlay component
+- Real-time status updates from Socket.io
+- IPC fallback for direct Electron communication
+- Automatic status synchronization on mount
+- Connection status awareness
+
+Visual Connection Indicator:
+- Green dot: Socket.io connected and healthy
+- Yellow dot: Connecting/reconnecting (animated pulse)
+- Red dot: Connection error or disconnected
+- Tooltip with connection status details
+- Real-time timestamp display
+
+Error Handling & Resilience:
+- Graceful degradation when Socket.io unavailable
+- IPC fallback communication with Electron main process
+- Connection error display in UI
+- Automatic reconnection attempts
+- Proper cleanup on component unmount
+
+Technical Implementation:
+- Uses existing socket.io-client dependency
+- Full TypeScript support with proper interfaces
+- React hooks best practices (useCallback, useEffect)
+- Console logging for debugging
+- Timeout-based status requests to avoid race conditions
+</info added on 2025-07-06T16:44:32.209Z>
+
+## 4. Socket.io Server/Data Source Setup [done]
+### Dependencies: 12.3
+### Description: Set up a Socket.io server (either within the main Electron process or a separate Node.js server) to emit simulated or actual in-game status data. This will feed real-time updates to the HUD overlay.
+### Details:
+Install `socket.io`, create a server instance, and implement logic to periodically emit sample status data (e.g., 'healthUpdate', 'manaUpdate') to connected clients.
+<info added on 2025-07-06T16:49:12.886Z>
+Implemented Features:
+Enhanced Socket.io Server (src/electron/server/sockets/socket.ts) with agent-specific events, a global agent status store with persistent state management, real-time broadcasting to all connected clients, and a complete event handler system for agent communication.
+Agent Event Handlers were created for: agent-command (processes client commands like start-analysis, request-feedback), agent-status-update (updates and broadcasts agent status), agent-request-status (responds with current agent status), agent-audio-event (handles TTS audio start/stop), and agent-error (error handling).
+A command processing system was built with handlers for start-analysis, request-feedback, provide-feedback, reset, and simulate-tts, featuring automatic status transitions and integration with a TTS simulation.
+The AgentOverlayDemoService (src/electron/server/services/agentOverlayDemoService.ts) provides a complete demonstration with automated cycling, realistic scenarios, manual triggering, and integration with PiperTTS (with a fallback to simulated audio).
+A REST API Controller (src/electron/server/controllers/agentOverlayDemoController.ts) was added with endpoints to get status and help, start/stop the demo, trigger specific scenarios, manually update agent status, and simulate audio events.
+All new routes and services were integrated into the Express server under the /agent-demo prefix, with comprehensive documentation and error handling.
+
+Technical Implementation Details:
+Socket.io: Features event broadcasting, status persistence across connections, automatic client status synchronization, connection logging, and CORS support.
+Demo Service: Uses a singleton pattern, automated cycles with realistic timing, TTS integration with a fallback, and configurable scenarios.
+API: RESTful design, JSON responses with success/error handling, parameter validation, and complete documentation via a help endpoint.
+
+Testing & Usage:
+Full documentation is available at GET http://localhost:1349/agent-demo/help.
+The demonstration can be started via POST http://localhost:1349/agent-demo/start.
+The Socket.io client will automatically receive real-time updates for the overlay.
+
+Next Step: Test the complete Agent Overlay system end-to-end.
+</info added on 2025-07-06T16:49:12.886Z>
+

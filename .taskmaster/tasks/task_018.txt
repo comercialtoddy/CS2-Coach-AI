@@ -1,0 +1,49 @@
+# Task ID: 18
+# Title: Memory Module Implementation
+# Status: done
+# Dependencies: 5, 10
+# Priority: high
+# Description: Develop the memory module to store and retrieve short-term (current session) and long-term (persistent) information about the player, opponents, and game knowledge.
+# Details:
+Implement a `MemoryService` that manages data in SQLite3 (long-term) and in-memory caches (short-term). Store `PlayerProfile` data (strengths, weaknesses, common errors), `InteractionHistory` (feedback given, player reaction), and `GameKnowledge` (map layouts, common strategies). The `Tool_UpdatePlayerProfile` will be used by this module. Ensure efficient querying for contextualization.
+
+# Test Strategy:
+Test storing and retrieving short-term and long-term memory entries. Verify that player profiles are updated correctly after interactions and that historical data can be queried for analysis.
+
+# Subtasks:
+## 1. Design MemoryService Architecture [done]
+### Dependencies: None
+### Description: Define the high-level architecture, interfaces, and core components of the `MemoryService` to abstract memory operations and provide a unified access point for AI modules.
+### Details:
+This includes defining methods for storing, retrieving, updating, and deleting memory entries, without specifying the underlying storage mechanism yet.
+
+## 2. Define Short-Term Memory (In-Memory) Schemas [done]
+### Dependencies: 18.1
+### Description: Design the data structures (e.g., classes, dictionaries, or specific in-memory collections) for storing short-term player profiles and recent interaction history, focusing on fast access.
+### Details:
+Consider what data needs to be immediately accessible and how it will be structured in RAM. This might include session-specific data or recent conversational context.
+
+## 3. Define Long-Term Memory (SQLite) Schemas [done]
+### Dependencies: 18.1
+### Description: Design the database schemas (tables, columns, relationships, indices) for SQLite to persistently store comprehensive player profiles and historical interaction data.
+### Details:
+This involves creating SQL DDL statements for tables like 'Players', 'Interactions', 'Events', ensuring data integrity and efficient querying for historical context.
+
+## 4. Implement Short-Term Memory Management [done]
+### Dependencies: 18.2
+### Description: Develop the concrete implementation for managing short-term, in-memory data, including mechanisms for adding, updating, retrieving, and potentially expiring or promoting data to long-term memory.
+### Details:
+Focus on efficient in-memory operations and potential caching strategies. This will directly interact with the in-memory data structures defined in subtask 2.
+
+## 5. Implement Long-Term Memory Management & SQLite Integration [done]
+### Dependencies: 18.3
+### Description: Develop the concrete implementation for interacting with the SQLite database, including CRUD operations for player profiles and interaction history, mapping to the defined schemas.
+### Details:
+This involves writing the data access layer (DAO) or repository methods that execute SQL queries against the SQLite database for persistence and retrieval of long-term data.
+
+## 6. Implement Efficient Querying and Retrieval Mechanisms [done]
+### Dependencies: 18.4, 18.5
+### Description: Develop and optimize methods within the `MemoryService` to efficiently query and retrieve relevant information from both short-term and long-term memory stores for AI contextual reasoning.
+### Details:
+This includes implementing logic to prioritize short-term memory, fall back to long-term memory, and potentially combine results. Focus on performance for common query patterns.
+

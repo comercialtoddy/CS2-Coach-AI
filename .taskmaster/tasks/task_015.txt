@@ -1,0 +1,43 @@
+# Task ID: 15
+# Title: Clip/Screenshot Player Overlay
+# Status: done
+# Dependencies: 2, 12, 13, 14
+# Priority: medium
+# Description: Create a small, non-intrusive video player overlay in the corner of the screen to display recently captured clips and screenshots for quick review.
+# Details:
+Implement another Electron `BrowserWindow` for the media player overlay. Use React to render a video player component (e.g., HTML5 `<video>` tag) and an image display. The overlay should automatically show the latest captured clip/screenshot for a few seconds, then fade out. Allow basic navigation (next/previous) for clips within the current session. Use Socket.io/IPC to push new media paths to this renderer.
+
+# Test Strategy:
+Capture a screenshot and a clip. Verify that they briefly appear in the player overlay. Test navigation between multiple captured items within a session.
+
+# Subtasks:
+## 1. Create Electron Player Overlay Window [done]
+### Dependencies: None
+### Description: Establish a new Electron BrowserWindow instance specifically for displaying clips and screenshots, configured as an always-on-top, transparent, frameless overlay.
+### Details:
+Configure `webPreferences` for `nodeIntegration`, `contextIsolation`, and `preload` script. Set `transparent: true`, `frame: false`, `alwaysOnTop: true`. Define initial window dimensions and position.
+
+## 2. Develop React Media Player Component [done]
+### Dependencies: None
+### Description: Design and develop a React component capable of displaying both video (MP4, WebM) and image (PNG, JPG) files within the overlay, including basic playback controls for video.
+### Details:
+Use HTML5 `<video>` and `<img>` tags. Implement conditional rendering based on media type. Consider a simple play/pause for video.
+
+## 3. Integrate Media Player with Electron IPC [done]
+### Dependencies: 15.1, 15.2
+### Description: Establish Inter-Process Communication (IPC) between the main Electron process and the React renderer process to send media file paths to the player component for display.
+### Details:
+Use `ipcMain.on` and `ipcRenderer.send` / `ipcRenderer.on` to pass media file paths. Implement a mechanism in the React component to receive and load the media.
+
+## 4. Implement Auto-Display & Fade-Out Logic [done]
+### Dependencies: 15.3
+### Description: Develop the logic for the overlay to automatically appear when new media is available and fade out after a configurable duration or when playback completes (for video).
+### Details:
+Use `setTimeout` for fade-out. Implement CSS transitions for smooth appearance/disappearance. Handle video `ended` event. Ensure the overlay doesn't interfere with other applications when hidden.
+
+## 5. Add Navigation & Dismiss Controls [done]
+### Dependencies: 15.4
+### Description: Implement user interface controls within the overlay for navigating between multiple clips/screenshots (if applicable) and a clear button to manually dismiss the overlay.
+### Details:
+Include 'Next'/'Previous' buttons for a media queue. Add a 'Close' or 'Dismiss' button. Ensure controls are subtle and non-intrusive, possibly appearing on hover.
+

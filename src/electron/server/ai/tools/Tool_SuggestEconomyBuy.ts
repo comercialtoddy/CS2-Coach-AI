@@ -1,5 +1,5 @@
 import { ITool, ToolExecutionContext, ToolExecutionResult, ToolParameterSchema, ToolMetadata } from '../interfaces/ITool.js';
-import { GSIDataModel } from '../orchestrator/GSITypes.js';
+import { CSGO, Side } from 'csgogsi';
 import { BuyStrategyType, getRecommendedBuyStrategy } from './economyRules.js';
 import { PlayerRole, getAdvancedBuyRecommendations } from './advancedEconomyRules.js';
 
@@ -19,7 +19,7 @@ interface GSIWeapon {
 }
 
 interface EconomyBuyInput {
-  gsiData: GSIDataModel;
+  gsiData: CSGO;
   playerId: string;
   playerRole?: PlayerRole;
 }
@@ -134,43 +134,46 @@ export class Tool_SuggestEconomyBuy implements ITool<EconomyBuyInput, EconomyBuy
   /**
    * Get player's team from GSI data
    */
-  private getPlayerTeam(gsiData: GSIDataModel, playerId: string): 'CT' | 'T' | null {
-    const player = gsiData.allplayers?.[playerId];
+  private getPlayerTeam(gsiData: CSGO, playerId: string): Side | null {
+    const player = gsiData.players.find(p => p.steamid === playerId);
     if (!player) return null;
-    return player.team === 'CT' ? 'CT' : 'T';
+    return player.team.side;
   }
 
   /**
    * Get player's current money
    */
-  private getPlayerMoney(gsiData: GSIDataModel, playerId: string): number {
-    return gsiData.allplayers?.[playerId]?.state?.money || 0;
+  private getPlayerMoney(gsiData: CSGO, playerId: string): number {
+    const player = gsiData.players.find(p => p.steamid === playerId);
+    return player?.state?.money || 0;
   }
 
   /**
    * Calculate team's average money
    */
-  private getTeamAverageMoney(gsiData: GSIDataModel, team: 'CT' | 'T'): number {
-    const teamPlayers = Object.values(gsiData.allplayers || {}) as GSIPlayer[];
-    const filteredPlayers = teamPlayers.filter(p => p.team === team);
-    if (filteredPlayers.length === 0) return 0;
+  private getTeamAverageMoney(gsiData: CSGO, team: Side): number {
+    const teamPlayers = gsiData.players.filter(p => p.team.side === team);
+    if (teamPlayers.length === 0) return 0;
 
-    const totalMoney = filteredPlayers.reduce((sum, player) => sum + (player.state?.money || 0), 0);
-    return totalMoney / filteredPlayers.length;
+    const totalMoney = teamPlayers.reduce((sum, player) => sum + (player.state?.money || 0), 0);
+    return totalMoney / teamPlayers.length;
   }
 
   /**
    * Calculate current loss bonus
    */
-  private getLossBonus(gsiData: GSIDataModel, team: 'CT' | 'T'): number {
+  private getLossBonus(gsiData: CSGO, team: Side): number {
     // Get the last few rounds
-    const rounds = gsiData.map?.round_wins || [];
-    if (rounds.length === 0) return 0;
+    const rounds = gsiData.map?.round_wins || {};
+    if (Object.keys(rounds).length === 0) return 0;
 
     // Count consecutive losses
     let consecutiveLosses = 0;
-    for (let i = rounds.length - 1; i >= 0 && i > rounds.length - 6; i--) {
-      if (rounds[i] !== team) {
+    const roundKeys = Object.keys(rounds).sort((a, b) => Number(b) - Number(a));
+    for (let i = 0; i < roundKeys.length && i < 6; i++) {
+      const roundOutcome = rounds[roundKeys[i]];
+      const roundWinnerSide = roundOutcome.startsWith('ct_win') ? 'CT' : 'T';
+      if (roundWinnerSide !== team) {
         consecutiveLosses++;
       } else {
         break;
@@ -190,15 +193,16 @@ export class Tool_SuggestEconomyBuy implements ITool<EconomyBuyInput, EconomyBuy
   /**
    * Check if it's the first round of a half
    */
-  private isFirstRound(gsiData: GSIDataModel): boolean {
-    return (gsiData.map?.round || 1) === 1 || (gsiData.map?.round || 1) === 16;
+  private isFirstRound(gsiData: CSGO): boolean {
+    const round = gsiData.map?.round || 1;
+    return round === 1 || round === 16;
   }
 
   /**
    * Determine player's role based on their typical positions and equipment preferences
    */
-  private inferPlayerRole(gsiData: GSIDataModel, playerId: string): PlayerRole {
-    const player = gsiData.allplayers?.[playerId] as GSIPlayer | undefined;
+  private inferPlayerRole(gsiData: CSGO, playerId: string): PlayerRole {
+    const player = gsiData.players.find(p => p.steamid === playerId);
     if (!player) return PlayerRole.SUPPORT; // Default to SUPPORT if player not found
 
     // Check if player is the team leader (IGL)
@@ -206,12 +210,12 @@ export class Tool_SuggestEconomyBuy implements ITool<EconomyBuyInput, EconomyBuy
     if (isLeader) return PlayerRole.IGL;
 
     // Check recent weapon purchases to determine role
-    const weapons = player.weapons || {};
-    const hasAWP = Object.values(weapons).some((w: GSIWeapon) => w.name === 'weapon_awp');
+    const weapons = player.weapons || [];
+    const hasAWP = weapons.some(w => w.name === 'weapon_awp');
     if (hasAWP) return PlayerRole.AWP;
 
     // Check player's typical position
-    const position = player.position || '';
+    const position = player.position.join(',');
     const isLurk = position.toLowerCase().includes('lurk');
     if (isLurk) return PlayerRole.LURK;
 
@@ -338,11 +342,10 @@ export class Tool_SuggestEconomyBuy implements ITool<EconomyBuyInput, EconomyBuy
       );
 
       // Get opponent economy status
-      const opponentTeam = team === 'CT' ? 'T' : 'CT';
-      const opponents = Object.values(gsiData.allplayers || {}) as GSIPlayer[];
-      const filteredOpponents = opponents.filter(p => p.team === opponentTeam);
-      const opponentAvgEquipValue = filteredOpponents.reduce((sum, p) => sum + (p.state?.equip_value || 0), 0) / (filteredOpponents.length || 1);
-      const opponentAvgMoney = filteredOpponents.reduce((sum, p) => sum + (p.state?.money || 0), 0) / (filteredOpponents.length || 1);
+      const opponentTeam = team === 'CT' ? 'T' : 'CT' as Side;
+      const opponents = gsiData.players.filter(p => p.team.side === opponentTeam);
+      const opponentAvgEquipValue = opponents.reduce((sum, p) => sum + (p.state?.equip_value || 0), 0) / (opponents.length || 1);
+      const opponentAvgMoney = opponents.reduce((sum, p) => sum + (p.state?.money || 0), 0) / (opponents.length || 1);
 
       const opponentEconomyStatus = `Opponent average equipment: $${Math.round(opponentAvgEquipValue)}, Money: $${Math.round(opponentAvgMoney)}`;
 

@@ -66,7 +66,7 @@ function createMissingDir(directory: string) {
 // Ensure we have a userData folder and a Huds folder to store custom built huds
 export function checkDirectories() {
   const userData = app.getPath("userData");
-  const customHudDir = path.join(app.getPath("home"), "OpenHud-Huds");
+  const customHudDir = path.join(app.getPath("home"), "CS2CoachAI");
   const uploadsDir = path.join(userData, "uploads");
   const playerPicturesDir = path.join(uploadsDir, "player_pictures");
   const teamLogosDir = path.join(uploadsDir, "team_logos");
@@ -78,7 +78,7 @@ export function checkDirectories() {
   /* Check to see if the user has a custom hud loaded */
   const customHudData = path.join(
     app.getPath("home"),
-    "OpenHud-Huds/build/index.html",
+    "CS2CoachAI/build/index.html",
   );
 
   if (fs.existsSync(customHudData)) {
@@ -90,12 +90,12 @@ export function checkDirectories() {
 
 export function showNotification(body: string) {
   new Notification({
-    title: "OpenHud:",
+    title: "CS2 Coach AI:",
     body,
   }).show();
 }
 
 export function openHudsDirectory() {
-  const customHudDir = path.join(app.getPath("home"), "OpenHud-Huds");
+  const customHudDir = path.join(app.getPath("home"), "CS2CoachAI");
   shell.openPath(customHudDir); // ✅ Correct way to open the folder
 }

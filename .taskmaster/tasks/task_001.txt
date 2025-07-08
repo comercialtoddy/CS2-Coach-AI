@@ -1,0 +1,52 @@
+# Task ID: 1
+# Title: Project Initialization & Core Setup
+# Status: done
+# Dependencies: None
+# Priority: high
+# Description: Initialize the monorepo project structure with Electron, React, TypeScript, Node.js, and Express. Set up basic configurations for development and build processes.
+# Details:
+Use `create-electron-app` or manually set up a monorepo with separate `electron`, `backend`, and `frontend` packages. For the frontend, use `create-react-app` or Vite with TypeScript. For the backend, initialize a Node.js project with Express. Ensure `package.json` scripts are configured for starting all components. Recommended tools: Electron v29.x, React v18.x, TypeScript v5.x, Node.js v20.x, Express v4.x.
+
+# Test Strategy:
+Verify that all project components (Electron main, React renderer, Node.js backend) can be started independently and together without errors. Check `package.json` scripts for correct execution.
+
+# Subtasks:
+## 1. Initialize Monorepo Structure [done]
+### Dependencies: None
+### Description: Set up the foundational monorepo using a tool like Lerna, Nx, or Turborepo. Define the initial workspace structure and create placeholder directories for Electron, React, and Node.js/Express packages.
+### Details:
+Choose a monorepo tool (e.g., Turborepo for speed, Nx for comprehensive features). Initialize the monorepo, configure the root `package.json`, and create initial `apps` and/or `packages` directories.
+<info added on 2025-07-06T15:11:47.287Z>
+Analysis of the current project (OpenHud) concludes that a traditional monorepo is not necessary. The project is already well-structured as a single, modular entity. The current structure, which separates the Electron code (src/electron/), React UI (src/UI/), and Node.js/Express backend (src/electron/server/), is working effectively. This setup is supported by separate TypeScript configurations for each domain and existing development and build scripts. This simpler approach is more suitable for the project's size.
+</info added on 2025-07-06T15:11:47.287Z>
+
+## 2. Configure Base TypeScript for Monorepo [done]
+### Dependencies: 1.1
+### Description: Establish a shared TypeScript configuration (`tsconfig.base.json`) at the monorepo root. This configuration will be extended by individual packages to ensure consistent type checking and compilation settings across the project.
+### Details:
+Create `tsconfig.base.json` in the monorepo root. Define common compiler options (e.g., `target`, `module`, `strict`, `esModuleInterop`, `skipLibCheck`). Configure path aliases if necessary for inter-package imports.
+
+## 3. Set Up Electron Application Package [done]
+### Dependencies: 1.1, 1.2
+### Description: Create a dedicated package for the Electron application within the monorepo. Configure Electron's main process, preload scripts, and integrate TypeScript compilation for these components.
+### Details:
+Create an `electron-app` package. Install Electron and its dependencies. Set up `main.ts` and `preload.ts` files. Configure `tsconfig.json` for the Electron package, extending the base TS config. Ensure basic Electron window creation works.
+
+## 4. Set Up React Frontend Package [done]
+### Dependencies: 1.1, 1.2
+### Description: Establish a separate package for the React user interface. Configure React development environment, integrate TypeScript, and set up basic routing or component structure. Prepare it to be loaded by the Electron app.
+### Details:
+Create a `react-frontend` package. Initialize a React project (e.g., with Vite or Create React App). Configure `tsconfig.json` for the React package, extending the base TS config. Set up a development server for the React app.
+
+## 5. Set Up Node.js/Express Backend Package [done]
+### Dependencies: 1.1, 1.2
+### Description: Create a distinct package for the Node.js/Express backend service. Configure Express, set up basic API endpoints, and ensure TypeScript compilation for the backend code.
+### Details:
+Create a `backend-service` package. Install Node.js and Express. Set up an `index.ts` file for the Express server. Configure `tsconfig.json` for the backend package, extending the base TS config. Implement a simple 'hello world' API endpoint.
+
+## 6. Implement Unified Development & Build Scripts [done]
+### Dependencies: 1.3, 1.4, 1.5
+### Description: Create comprehensive scripts at the monorepo root to orchestrate development (concurrently running Electron, React dev server, and Node.js backend) and production builds for all components.
+### Details:
+Configure `package.json` scripts at the monorepo root. Use a tool like `concurrently` or the monorepo tool's built-in task runner (e.g., `turbo run dev`) to start all services simultaneously for development. Define build scripts for each package and a root build script to compile all components for production.
+

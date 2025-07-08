@@ -4,54 +4,81 @@ import axios from "axios";
 import { apiUrl } from "../../api/api";
 
 interface SettingsProps {
-  onClose: () => void;
+  onClose?: () => void;
+}
+
+interface SettingsData {
+  autoSwitch: boolean;
+  layout: string;
 }
 
 export const Settings = ({ onClose }: SettingsProps) => {
-  const [autoSwitch, setAutoSwitch] = useState(true);
-  const [layout, setLayout] = useState("vertical");
+  const [settings, setSettings] = useState<SettingsData | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     getSettings();
   }, []);
 
   const getSettings = async () => {
+    setIsLoading(true);
     try {
       const response = await axios.get(`${apiUrl}/settings`);
       if (response.data) {
-        setAutoSwitch(response.data.autoSwitch);
-        setLayout(response.data.layout);
+        setSettings({
+          autoSwitch: response.data.autoSwitch ?? false,
+          layout: response.data.layout ?? "vertical"
+        });
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
+      setErrorMessage("Error loading settings");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const saveSettings = async () => {
+    if (!settings) return;
+    
     setIsSubmitting(true);
     try {
-      await axios.put(`${apiUrl}/settings`, { autoSwitch, layout });
+      await axios.put(`${apiUrl}/settings`, settings);
       setIsSubmitting(false);
+      if (onClose) onClose();
     } catch (error) {
       setErrorMessage("Error saving settings: " + error);
       setIsSubmitting(false);
     }
-    setIsSubmitting(false);
-    onClose();
   };
 
   const handleToggle = () => {
-    setAutoSwitch(!autoSwitch);
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      autoSwitch: !settings.autoSwitch
+    });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6 overflow-y-auto">
+        <h2 className="border-b border-border pb-2 font-bold">Settings</h2>
+        <div className="flex items-center justify-center p-8">
+          <div className="text-text-secondary">Loading settings...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 overflow-y-auto">
       <h2 className="border-b border-border pb-2 font-bold">Settings</h2>
       <div className="container flex flex-col gap-6 overflow-y-auto">
         <div className="rounded-lg bg-background-secondary p-6 shadow-md">
-          <h2 className="mb-4 text-xl font-semibold">HUDs Directory</h2>
+          <h2 className="mb-4 text-xl font-semibold">CS2 Coach AI Directory</h2>
           <ButtonContained onClick={() => window.electron.openHudsDirectory()}>
             Open Directory
           </ButtonContained>
@@ -85,12 +112,12 @@ export const Settings = ({ onClose }: SettingsProps) => {
                 type="checkbox"
                 className="bg-text-disabled"
                 disabled
-                checked={autoSwitch}
+                checked={settings?.autoSwitch ?? false}
                 onChange={handleToggle}
               />
               <span className="slider round"></span>
             </label>
-            <span className="ml-2">{autoSwitch ? "On" : "Off"}</span>
+            <span className="ml-2">{settings?.autoSwitch ? "On" : "Off"}</span>
           </div>
         </div>
 
@@ -123,9 +150,11 @@ export const Settings = ({ onClose }: SettingsProps) => {
               Save
             </ButtonContained>
           )}
-          <ButtonContained color="secondary" onClick={onClose}>
-            Cancel
-          </ButtonContained>
+          {onClose && (
+            <ButtonContained color="secondary" onClick={onClose}>
+              Cancel
+            </ButtonContained>
+          )}
         </div>
       </div>
     </div>

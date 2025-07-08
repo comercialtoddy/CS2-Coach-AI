@@ -1,0 +1,74 @@
+# Task ID: 13
+# Title: Screenshot Capture Module
+# Status: done
+# Dependencies: 2
+# Priority: medium
+# Description: Implement the `Tool_CaptureScreenshot` functionality, allowing the agent to capture specific areas of the screen for visual analysis or documentation.
+# Details:
+Utilize Electron's `desktopCapturer` API to get access to screen sources. Implement logic to capture a specific display or a defined area. Save the captured image to a temporary directory using Node.js `fs` module. The tool should return the path to the saved image. Consider `sharp` for image processing if resizing or annotations are needed later.
+
+# Test Strategy:
+Trigger a screenshot capture via an IPC call. Verify that the image file is created in the specified directory and that its content accurately reflects the captured screen area.
+
+# Subtasks:
+## 1. Implement Core Screen Capture Logic [done]
+### Dependencies: None
+### Description: Develop the initial functionality to list available screen sources using Electron's `desktopCapturer` and allow selection of a primary screen. Capture the full screen content as a `NativeImage` object.
+### Details:
+Focus on `desktopCapturer.getSources({ types: ['screen'] })`, `capturePage()`, and handling the resulting `NativeImage` object. Ensure proper permissions are requested if necessary.
+<info added on 2025-07-08T02:07:44.278Z>
+Funcionalidade principal de captura de tela implementada:
+
+1. Criada a classe Tool_CaptureScreenshot que implementa a interface ITool.
+2. Funcionalidades implementadas:
+   - Captura de tela cheia usando desktopCapturer
+   - Suporte para seleção de região
+   - Suporte para caminho de saída personalizado
+   - Gerenciamento de diretório temporário
+   - Validação de entrada
+   - Tratamento de erros
+   - Verificações de saúde (Health checks)
+3. Adicionada função de registro da ferramenta.
+4. Integrado com a inicialização das ferramentas de IA.
+
+A implementação segue os requisitos da interface ITool e inclui tratamento de erros, validação e funcionalidade de limpeza adequados. A ferramenta pode ser usada para capturar a tela inteira ou regiões específicas, com caminhos de saída configuráveis.
+</info added on 2025-07-08T02:07:44.278Z>
+
+## 2. Develop Area Selection and Image Processing [done]
+### Dependencies: 13.1
+### Description: Create a user interface (e.g., an overlay `BrowserWindow`) that allows the user to select a specific rectangular area on the captured screen. Implement logic to crop the `NativeImage` based on the selected coordinates and save the resulting image to a specified file path (e.g., PNG format).
+### Details:
+Consider using a transparent `BrowserWindow` for the selection overlay. Utilize `NativeImage.crop()` for precise cropping and `NativeImage.toPNG()` or `toJPEG()` for saving the image to disk.
+<info added on 2025-07-08T02:10:59.959Z>
+Implementada a funcionalidade de seleção de área e processamento de imagem:
+
+1. Criado o componente React ScreenshotSelector para a seleção de área:
+   - Sobreposição transparente com seleção de clicar e arrastar
+   - Feedback visual durante a seleção
+   - Tecla ESC para cancelar
+   - Manipula eventos do mouse para uma seleção precisa
+
+2. Criados arquivos de suporte:
+   - Componente de página ScreenshotSelector
+   - Gerenciador de janela do seletor de captura de tela
+   - Ponto de entrada HTML
+   - Ponto de entrada do renderizador
+
+3. Atualizado o Tool_CaptureScreenshot:
+   - Adicionada a opção useSelector
+   - Integrada a UI de seleção de área
+   - Validação aprimorada para novas opções
+   - Melhorado o tratamento de erros para o cancelamento da seleção
+
+A implementação oferece uma maneira amigável para o usuário selecionar áreas específicas da tela para captura, com feedback visual adequado e controles intuitivos.
+</info added on 2025-07-08T02:10:59.959Z>
+
+## 3. Integrate Module and Expose Callable API [done]
+### Dependencies: 13.1, 13.2
+### Description: Package the screen capture functionality into a reusable module. Expose a clear API (e.g., via IPC handlers) that other parts of the Electron application can call to initiate a screenshot, specifying options like save path or whether to show the area selection UI.
+### Details:
+Define the module's interface, implement IPC communication (e.g., `ipcMain.handle` and `ipcRenderer.invoke`) for triggering the capture process from renderer processes, and ensure robust error handling and user feedback mechanisms.
+<info added on 2025-07-08T02:12:03.477Z>
+O módulo de captura de tela foi integrado e sua API foi exposta. Foram adicionados manipuladores IPC em `ipMainEvents.ts` (`captureScreenshot` e `selectScreenshotRegion`) com tratamento de erros e segurança de tipos adequados. As definições de tipo foram atualizadas, incluindo a interface `IElectronAPI` e tipos para todos os parâmetros e valores de retorno. A integração foi realizada no registro de ferramentas de IA, na ponte IPC do script de preload e nas definições de tipo do processo de renderização. O módulo está agora totalmente integrado e pode ser chamado de qualquer parte da aplicação.
+</info added on 2025-07-08T02:12:03.477Z>
+

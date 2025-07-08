@@ -1,0 +1,46 @@
+# Task ID: 5
+# Title: SQLite3 Database & ORM Setup
+# Status: done
+# Dependencies: 3
+# Priority: high
+# Description: Set up SQLite3 as the local database for persistent storage of player profiles, match history, and AI memory. Integrate an Object-Relational Mapper (ORM) for simplified database interactions.
+# Details:
+Use `better-sqlite3` for efficient synchronous SQLite operations in Node.js. Integrate `Sequelize` (v6.x) or `Drizzle ORM` (v0.29.x) for defining models and managing migrations. Design initial schemas for `PlayerProfile`, `MatchHistory`, and `MemoryEntry` tables. Example schema for `PlayerProfile`: `id (PK), name, preferredWeapon, playStyle, commonErrors, lastFeedback, totalXP`.
+
+# Test Strategy:
+Create a simple script to initialize the database, define a model, and perform a basic CRUD operation (e.g., insert a player, retrieve it). Verify that data persists after application restart.
+
+# Subtasks:
+## 1. Select & Integrate ORM (Sequelize/Drizzle) [done]
+### Dependencies: None
+### Description: Research and choose between Sequelize and Drizzle ORM based on project needs and preferences. Install the chosen ORM and its necessary dependencies for SQLite3.
+### Details:
+Evaluate features, community support, and documentation for Sequelize vs. Drizzle. Install the selected ORM package (e.g., `npm install sequelize sqlite3` or `npm install drizzle-orm @sqlite/sqlite3`).
+<info added on 2025-07-06T15:15:19.737Z>
+Architectural decision: The project will use SQLite3 directly instead of an ORM like Sequelize or Drizzle. This choice provides better performance due to less overhead, full control over SQL queries, lower dependency complexity, and greater transparency in database operations. The implementation is located in `src/electron/database/database.ts` with tables for players, teams, matches, coaches, and settings. Services implement CRUD operations using manual promisification of SQLite3.
+</info added on 2025-07-06T15:15:19.737Z>
+
+## 2. Configure SQLite3 Database Connection [done]
+### Dependencies: 5.1
+### Description: Set up the chosen ORM to connect to a local SQLite3 database file, ensuring proper initialization and configuration.
+### Details:
+Create a configuration file or section for the ORM, specifying the SQLite3 database file path (e.g., `database.sqlite`). Initialize the ORM instance with the correct dialect and connection parameters.
+
+## 3. Define PlayerProfile Database Schema [done]
+### Dependencies: 5.2
+### Description: Create the ORM model definition for the 'PlayerProfile' entity, including relevant attributes such as ID, name, level, and experience.
+### Details:
+Map 'PlayerProfile' attributes to ORM data types (e.g., STRING, INTEGER, BOOLEAN). Define primary keys, unique constraints, and default values as necessary within the ORM model.
+
+## 4. Define MatchHistory & MemoryEntry Schemas [done]
+### Dependencies: 5.2
+### Description: Create ORM model definitions for 'MatchHistory' and 'MemoryEntry' entities, including their respective attributes and any necessary relationships (e.g., foreign keys) to 'PlayerProfile'.
+### Details:
+Define attributes for 'MatchHistory' (e.g., match ID, player IDs, outcome, timestamp) and 'MemoryEntry' (e.g., entry ID, content, timestamp, associated player). Establish foreign key relationships where applicable.
+
+## 5. Implement Basic CRUD Operations [done]
+### Dependencies: 5.3, 5.4
+### Description: Develop functions or methods to perform Create, Read, Update, and Delete (CRUD) operations for the 'PlayerProfile', 'MatchHistory', and 'MemoryEntry' models.
+### Details:
+Write code examples for: creating new records, retrieving single or multiple records based on criteria, updating existing records, and deleting records. Test these operations to ensure data persistence and correctness.
+

@@ -1,238 +1,55 @@
-import * as React from 'react';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAgentSocket } from '../../hooks/useAgentSocket';
-import { AgentStatus, AgentStatusState } from './types';
+
+interface AgentStatus {
+  state: 'idle' | 'analyzing' | 'awaiting' | 'feedback' | 'error';
+  message: string;
+  timestamp: number;
+}
 
 export const AgentOverlay: React.FC = () => {
-  const [agentStatus, setAgentStatus] = React.useState<AgentStatus>({
+  const [agentStatus, setAgentStatus] = useState<AgentStatus>({
     state: 'idle',
-    message: 'OpenHud Agent Ready',
+    message: 'CS2 Coach AI Agent Ready',
     timestamp: Date.now()
   });
 
-  // Socket.io integration for real-time updates
-  const { 
-    isConnected, 
-    error: socketError, 
-    requestCurrentStatus
-  } = useAgentSocket({
-    onStatusUpdate: (status: AgentStatus) => {
-      console.log('Agent overlay received status update:', status);
-      setAgentStatus((prev: AgentStatus) => ({
-        ...prev,
-        ...status,
-        timestamp: status.timestamp || Date.now()
-      }));
-    },
-    onAudioUpdate: (isPlaying: boolean, message?: string) => {
-      console.log('Agent overlay received audio update:', isPlaying, message);
-      setAgentStatus((prev: AgentStatus) => ({
-        ...prev,
-        isAudioPlaying: isPlaying,
-        audioMessage: message,
-        timestamp: Date.now()
-      }));
-    },
-    onError: (error: string) => {
-      console.error('Agent socket error:', error);
-      setAgentStatus((prev: AgentStatus) => ({
-        ...prev,
-        state: 'error',
-        message: `Connection error: ${error}`,
-        timestamp: Date.now()
-      }));
-    }
+  const { isConnected, error } = useAgentSocket({
+    onStatusUpdate: (status) => setAgentStatus(status)
   });
 
-  React.useEffect(() => {
-    // Listen for agent status updates from the main process (IPC fallback)
-    const electron = window.electron;
-    if (electron) {
-      electron.onAgentStatusUpdate((status: AgentStatus) => {
-        console.log('Agent overlay received IPC status update:', status);
-        setAgentStatus((prev: AgentStatus) => ({
-          ...prev,
-          ...status,
-          timestamp: status.timestamp || Date.now()
-        }));
-      });
-    }
-
-    // Request current status when component mounts
-    const timeoutId = setTimeout(() => {
-      requestCurrentStatus();
-    }, 1000); // Give socket time to connect
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [requestCurrentStatus]);
-
-  // Update connection status in the UI
-  React.useEffect(() => {
-    if (!isConnected && !socketError) {
-      setAgentStatus((prev: AgentStatus) => ({
-        ...prev,
-        state: 'awaiting',
-        message: 'Connecting to server...',
-        timestamp: Date.now()
-      }));
-    } else if (isConnected && agentStatus.state === 'awaiting' && agentStatus.message?.includes('Connecting')) {
-      setAgentStatus((prev: AgentStatus) => ({
-        ...prev,
-        state: 'idle',
-        message: 'OpenHud Agent Ready',
-        timestamp: Date.now()
-      }));
-    }
-  }, [isConnected, socketError, agentStatus.state, agentStatus.message]);
-
-  const getStatusColor = (state: AgentStatusState) => {
-    switch (state) {
-      case 'analyzing':
-        return 'text-yellow-400 border-yellow-400/50';
-      case 'awaiting':
-        return 'text-blue-400 border-blue-400/50';
-      case 'feedback':
-        return 'text-green-400 border-green-400/50';
-      case 'error':
-        return 'text-red-400 border-red-400/50';
-      default:
-        return 'text-gray-400 border-gray-400/50';
-    }
-  };
-
-  const getStatusIcon = (state: AgentStatusState) => {
-    switch (state) {
-      case 'analyzing':
-        return '🔍';
-      case 'awaiting':
-        return '⏳';
-      case 'feedback':
-        return '💬';
-      case 'error':
-        return '❌';
-      default:
-        return '🤖';
-    }
-  };
-
-  const getStatusText = (state: AgentStatusState) => {
-    switch (state) {
-      case 'analyzing':
-        return 'Analyzing...';
-      case 'awaiting':
-        return 'Awaiting';
-      case 'feedback':
-        return 'Feedback';
-      case 'error':
-        return 'Error';
-      default:
-        return 'Ready';
-    }
-  };
-
   return (
-    <div className="fixed top-0 right-0 w-screen h-screen pointer-events-none bg-transparent">
-      <div className="absolute top-4 right-4 pointer-events-none">
-        <div
-          className={`
-            relative bg-black/80 backdrop-blur-sm rounded-lg border z-50
-            ${getStatusColor(agentStatus.state)}
-            px-4 py-3 min-w-[280px] max-w-[320px]
-            animate-in fade-in duration-300 slide-in-from-right-2
-          `}
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
+    <div className="fixed top-4 right-4 z-50 pointer-events-none">
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="bg-black/80 backdrop-blur-sm rounded-lg p-4 shadow-lg min-w-[240px]"
         >
-          {/* Main Status Display */}
-          <div className="flex items-center gap-3">
-            <div
-              className={`text-xl transition-transform duration-1000 ${
-                agentStatus.state === 'analyzing' ? 'animate-spin' : ''
-              }`}
-            >
-              {getStatusIcon(agentStatus.state)}
-            </div>
-            
-            <div className="flex-1">
-              <div className={`font-semibold text-sm ${getStatusColor(agentStatus.state).split(' ')[0]} transition-colors duration-300`}>
-                {getStatusText(agentStatus.state)}
-              </div>
-              {agentStatus.message && (
-                <div className="text-xs text-gray-300 mt-1 line-clamp-2 transition-opacity duration-300">
-                  {agentStatus.message}
-                </div>
-              )}
-            </div>
-
-            {/* Pulse indicator for active states */}
-            {(agentStatus.state === 'analyzing' || agentStatus.state === 'feedback') && (
-              <div
-                className={`w-2 h-2 rounded-full ${getStatusColor(agentStatus.state).split(' ')[0].replace('text-', 'bg-')} animate-pulse`}
-              />
-            )}
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${
+              isConnected ? 'bg-green-500' : error ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'
+            }`} />
+            <span className="text-sm font-medium text-white/90">
+              {agentStatus.state.charAt(0).toUpperCase() + agentStatus.state.slice(1)}
+            </span>
           </div>
+          
+          <p className="mt-2 text-sm text-white/70">
+            {agentStatus.message}
+          </p>
 
-          {/* Audio Indicator */}
-          {agentStatus.isAudioPlaying && (
-            <div className="mt-3 pt-3 border-t border-gray-600/50 animate-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="w-1 h-3 bg-green-400 rounded-full animate-pulse"
-                      style={{
-                        animationDelay: `${i * 100}ms`,
-                        animationDuration: '600ms'
-                      }}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs text-green-400 font-medium animate-pulse">
-                  🔊 Audio Playing
-                </span>
-              </div>
-              {agentStatus.audioMessage && (
-                <div className="text-xs text-gray-300 mt-1">
-                  "{agentStatus.audioMessage}"
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Action indicator */}
-          {agentStatus.action && (
-            <div className="mt-2 text-xs text-gray-400 transition-opacity duration-300">
-              Action: {agentStatus.action}
-            </div>
-          )}
-
-          {/* Connection Status Indicator */}
-          <div className="absolute bottom-2 right-2 flex items-center gap-2">
-            <div 
-              className={`w-2 h-2 rounded-full ${
-                isConnected 
-                  ? 'bg-green-400 animate-pulse' 
-                  : socketError 
-                    ? 'bg-red-400' 
-                    : 'bg-yellow-400 animate-pulse'
-              }`}
-              title={
-                isConnected 
-                  ? 'Socket.io Connected' 
-                  : socketError 
-                    ? `Connection Error: ${socketError}` 
-                    : 'Connecting...'
-              }
+          {agentStatus.state === 'feedback' && (
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              className="mt-2 h-1 bg-blue-500 rounded-full origin-left"
             />
-            {agentStatus.timestamp && (
-              <div className="text-xs text-gray-500 font-mono">
-                {new Date(agentStatus.timestamp).toLocaleTimeString()}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }; 

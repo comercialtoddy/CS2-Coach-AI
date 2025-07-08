@@ -1,107 +1,101 @@
-const electron = require("electron");
-const { contextBridge, ipcRenderer } = electron;
+const { contextBridge, ipcRenderer } = require('electron');
 
 console.log('Preload script starting...');
-
-type AgentStatusState = "analyzing" | "awaiting" | "feedback" | "idle" | "error";
-
-interface AgentStatus {
-  state: AgentStatusState;
-  message?: string;
-  isAudioPlaying?: boolean;
-  audioMessage?: string;
-  timestamp?: number;
-  action?: string;
-}
-
-type FrameWindowAction = "close" | "minimize" | "maximize";
-
-interface Window {
-  electron: {
-    startServer: (callback: (message: string) => void) => void;
-    sendFrameAction: (payload: FrameWindowAction) => void;
-    startOverlay: () => void;
-    startAgentOverlay: () => void;
-    stopAgentOverlay: () => void;
-    updateAgentStatus: (status: AgentStatus) => void;
-    onAgentStatusUpdate: (callback: (status: AgentStatus) => void) => void;
-    openExternalLink: (url: string) => void;
-    openHudsDirectory: () => void;
-  };
-}
 
 // Log all available IPC channels
 console.log('Available IPC channels:', ipcRenderer.eventNames());
 
-const api = {
-  startServer: (callback: (message: string) => void) =>
-    ipcOn("startServer", (response) => {
-      callback(response);
-    }),
+type Callback<T = any> = (data: T) => void;
+type IpcRendererEvent = { sender: unknown; senderId: number };
 
-  sendFrameAction: (payload: FrameWindowAction) => {
+const api = {
+  startServer: (callback: Callback<string>) => {
+    console.log('Setting up startServer listener');
+    ipcRenderer.on("startServer", (_: IpcRendererEvent, response: string) => {
+      callback(response);
+    });
+  },
+
+  sendFrameAction: (payload: unknown) => {
     console.log('Sending frame action:', payload);
-    ipcSend("sendFrameAction", payload);
+    ipcRenderer.send("sendFrameAction", payload);
   },
 
   // Game HUD overlay
   startOverlay: () => {
     console.log('Starting game HUD overlay');
-    ipcSend("startOverlay", undefined);
+    ipcRenderer.send("startOverlay");
   },
   
   // Agent AI Overlay
   startAgentOverlay: () => {
     console.log('Starting agent overlay');
-    ipcSend("startAgentOverlay", undefined);
+    ipcRenderer.send("startAgentOverlay");
   },
   stopAgentOverlay: () => {
     console.log('Stopping agent overlay');
-    ipcSend("stopAgentOverlay", undefined);
+    ipcRenderer.send("stopAgentOverlay");
   },
-  updateAgentStatus: (status: AgentStatus) => {
+  updateAgentStatus: (status: unknown) => {
     console.log('Updating agent status:', status);
-    ipcSend("updateAgentStatus", status);
+    ipcRenderer.send("updateAgentStatus", status);
   },
-  onAgentStatusUpdate: (callback: (status: AgentStatus) => void) => {
+  onAgentStatusUpdate: (callback: Callback) => {
     console.log('Setting up agent status update listener');
-    ipcOn("agent-status-update", callback);
+    ipcRenderer.on("agent-status-update", (_: IpcRendererEvent, status: unknown) => callback(status));
   },
 
   openExternalLink: (url: string) => {
     console.log('Opening external link:', url);
-    ipcSend("openExternalLink", url);
+    ipcRenderer.send("openExternalLink", url);
   },
   openHudsDirectory: () => {
     console.log('Opening HUDs directory');
-    ipcSend("openHudsDirectory", undefined);
+    ipcRenderer.send("openHudsDirectory");
   },
+
+  // IPC Send
+  ipcSend: (channel: string, data: unknown) => {
+    ipcRenderer.send(channel, data);
+  },
+
+  // IPC Receive
+  ipcReceive: (channel: string, func: Callback) => {
+    ipcRenderer.on(channel, (_: IpcRendererEvent, data: unknown) => func(data));
+  },
+
+  // IPC Remove
+  ipcRemove: (channel: string) => {
+    ipcRenderer.removeAllListeners(channel);
+  },
+
+  // IPC Invoke
+  ipcInvoke: (channel: string, data: unknown) => {
+    return ipcRenderer.invoke(channel, data);
+  },
+
+  // Window Controls
+  minimizeWindow: () => ipcRenderer.send("minimize-window"),
+  maximizeWindow: () => ipcRenderer.send("maximize-window"),
+  closeWindow: () => ipcRenderer.send("close-window"),
+
+  // Agent Overlay
+  openAgentOverlay: () => ipcRenderer.send("open-agent-overlay"),
+  closeAgentOverlay: () => ipcRenderer.send("close-agent-overlay"),
+
+  // Task Overlay
+  openTaskOverlay: () => ipcRenderer.send("open-task-overlay"),
+  closeTaskOverlay: () => ipcRenderer.send("close-task-overlay"),
+
+  // Media Player
+  openMediaPlayer: () => ipcRenderer.send("open-media-player"),
+  closeMediaPlayer: () => ipcRenderer.send("close-media-player")
 };
 
 // Log the API being exposed
 console.log('Exposing electron API with methods:', Object.keys(api));
 
-contextBridge.exposeInMainWorld("electron", api);
+// Expose the API to the renderer process
+contextBridge.exposeInMainWorld('electron', api);
 
 console.log('Preload script finished.');
-
-function ipcInvoke<Key extends keyof EventPayloadMapping>(
-  key: Key,
-): Promise<EventPayloadMapping[Key]> {
-  return ipcRenderer.invoke(key);
-}
-
-/* Using callbacks because these functions are async */
-function ipcOn<Key extends keyof EventPayloadMapping>(
-  key: Key,
-  callback: (payload: EventPayloadMapping[Key]) => void,
-) {
-  ipcRenderer.on(key, (_: Electron.IpcRendererEvent, payload: EventPayloadMapping[Key]) => callback(payload));
-}
-
-function ipcSend<Key extends keyof EventPayloadMapping>(
-  key: Key,
-  payload: EventPayloadMapping[Key],
-) {
-  ipcRenderer.send(key, payload);
-}

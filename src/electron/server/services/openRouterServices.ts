@@ -368,8 +368,8 @@ export async function makeOpenRouterRequest(
   const requestHeaders = {
     'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
     'Content-Type': 'application/json',
-    'HTTP-Referer': 'https://openhud.ai', // For OpenRouter analytics
-    'X-Title': 'OpenHud AI Agent', // For OpenRouter analytics
+    'HTTP-Referer': 'https://cs2-coach-ai.toddyclipsgg.com',
+    'X-Title': 'CS2 Coach AI by Toddyclipsgg',
     ...headers
   };
 
@@ -798,8 +798,8 @@ async function createStreamingChatCompletion(
   const headers = {
     'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
     'Content-Type': 'application/json',
-    'HTTP-Referer': 'https://openhud.ai',
-    'X-Title': 'OpenHud AI Agent',
+    'HTTP-Referer': 'https://cs2-coach-ai.toddyclipsgg.com',
+    'X-Title': 'CS2 Coach AI by Toddyclipsgg',
     'Accept': 'text/event-stream'
   };
 

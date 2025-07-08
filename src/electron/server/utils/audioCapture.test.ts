@@ -1,4 +1,4 @@
-import { AudioCapture } from './audioCapture';
+import { AudioCapture, AudioDevice } from './audioCapture.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -14,7 +14,7 @@ async function testAudioCapture() {
   console.log('1. Getting available audio devices...');
   const devices = await audioCapture.listDevices();
   console.log('✅ Available audio devices:', devices.length);
-  devices.forEach(device => {
+  devices.forEach((device: AudioDevice) => {
     console.log(`   - ${device.name} (${device.id})`);
   });
   console.log('');
@@ -72,4 +72,21 @@ async function testAudioCapture() {
 // Run the test
 testAudioCapture().catch(error => {
   console.error('❌ Test failed:', error);
+});
+
+describe('AudioCapture', () => {
+  let audioCapture: AudioCapture;
+
+  beforeAll(() => {
+    audioCapture = AudioCapture.getInstance();
+  });
+
+  test('should list audio devices', async () => {
+    const devices = await audioCapture.listDevices();
+    console.log('✅ Available audio devices:', devices.length);
+    devices.forEach((device: AudioDevice) => {
+      console.log(`   - ${device.name} (${device.id})`);
+    });
+    expect(devices.length).toBeGreaterThan(0);
+  });
 }); 

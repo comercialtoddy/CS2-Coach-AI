@@ -1,88 +1,66 @@
 import { app, BrowserWindow } from "electron";
-import {
-  checkDirectories,
-  isDev,
-  showNotification,
-  getPreloadPath,
-  getUIPath,
-} from "./helpers/index.js";
-import { shutDown, startServer } from "./server/server.js";
+import { setupIpcEvents, closeWindows } from "./ipcEvents/index.js";
+import { getPreloadPath } from "./helpers/index.js";
+import { join } from "path";
+import { startServer } from "./server/server.js";
 import { createTray } from "./tray.js";
 import { createMenu } from "./menu.js";
-import { createTaskOverlayWindow } from "./taskOverlayWindow.js";
-import http from "http";
-import { ipcMainEvents } from "./ipcEvents/index.js";
 
-let server: http.Server;
-let mainWindow: BrowserWindow;
-let taskOverlayWindow: BrowserWindow;
+let mainWindow: BrowserWindow | null = null;
 
-app.on("ready", () => {
-  mainWindow = createMainWindow();
-  taskOverlayWindow = createTaskOverlayWindow();
-  checkDirectories();
-  server = startServer(mainWindow);
-  createTray(mainWindow);
-  createMenu(mainWindow);
-  handleCloseEvents(mainWindow, taskOverlayWindow);
-  ipcMainEvents(mainWindow);
-});
-
-function createMainWindow() {
-  const mainWindow = new BrowserWindow({
-    width: 1200,
+function createWindow() {
+  // Create the browser window
+  const window = new BrowserWindow({
+    width: 1280,
+    height: 720,
     minWidth: 800,
-    height: 700,
-    minHeight: 513,
+    minHeight: 600,
     frame: false,
     webPreferences: {
       preload: getPreloadPath(),
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
-  if (isDev()) {
-    mainWindow.loadURL("http://localhost:5123");
+  // Load the app
+  if (process.env.NODE_ENV === "development") {
+    window.loadURL("http://localhost:5123");
+    window.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(getUIPath());
+    window.loadFile(join(__dirname, "../index.html"));
   }
 
-  return mainWindow;
+  // Initialize server and tray
+  startServer(window);
+  createTray(window);
+  createMenu(window);
+
+  // Setup IPC events
+  setupIpcEvents();
+
+  // Handle window close
+  window.on("closed", () => {
+    mainWindow = null;
+    closeWindows();
+  });
+
+  mainWindow = window;
+  return window;
 }
 
-function handleCloseEvents(mainWindow: BrowserWindow, taskOverlayWindow: BrowserWindow) {
-  /* Handle minimizing to tray */
-  let willClose = false;
+app.whenReady().then(() => {
+  createWindow();
 
-  mainWindow.on("close", (e) => {
-    if (willClose) {
-      return;
-    }
-    e.preventDefault();
-    showNotification("Application still running but minimized to tray");
-    mainWindow.hide();
-    taskOverlayWindow.hide();
-    if (app.dock) {
-      app.dock.hide();
+  app.on("activate", () => {
+    if (mainWindow === null) {
+      createWindow();
     }
   });
+});
 
-  // Reset willClose when we open the app from the tray again
-  app.on("before-quit", () => {
-    willClose = true;
-    shutDown(server);
-  });
-
-  mainWindow.on("show", () => {
-    willClose = false;
-    taskOverlayWindow.show();
-  });
-
-  // Handle task overlay window events
-  taskOverlayWindow.on("close", (e) => {
-    if (willClose) {
-      return;
-    }
-    e.preventDefault();
-    taskOverlayWindow.hide();
-  });
-}
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});

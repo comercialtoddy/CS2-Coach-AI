@@ -144,14 +144,16 @@ async function makeTrackerGGRequest(endpoint: string): Promise<AxiosResponse<Tra
   try {
     rateLimiter.recordRequest();
     
+    const headers = {
+      'TRN-Api-Key': API_KEY,
+      'Accept': 'application/json',
+      'User-Agent': 'CS2CoachAI/3.0.7'
+    };
+
     const response = await axios.get<TrackerGGPlayerStats>(
       `${TRACKER_GG_BASE_URL}${endpoint}`,
       {
-        headers: {
-          'TRN-Api-Key': API_KEY,
-          'Accept': 'application/json',
-          'User-Agent': 'OpenHud/3.0.7'
-        },
+        headers,
         timeout: 10000 // 10 second timeout
       }
     );

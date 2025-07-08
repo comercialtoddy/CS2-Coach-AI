@@ -1,0 +1,11 @@
+# Task ID: 27
+# Title: Rebranding do Projeto para CS2 Coach AI e Redesign da UI
+# Status: pending
+# Dependencies: 1, 3, 12, 15, 24
+# Priority: medium
+# Description: Realizar o rebranding completo do projeto de OpenHud para 'CS2 Coach AI by Toddyclipsgg', atualizando todas as referências de nome e ativos de marca, e substituindo a UI existente por uma nova interface minimalista focada no agente de IA.
+# Details:
+Esta tarefa envolve duas atividades principais: rebranding e redesenho da UI. Primeiro, realize uma busca e substituição em toda a base de código para alterar todas as ocorrências de 'OpenHud' para 'CS2 Coach AI'. Isso inclui nomes de variáveis, comentários, arquivos de configuração e `package.json`. Em seguida, substitua todos os ativos visuais (logos, ícones, etc.) nos diretórios de front-end por novos ativos alinhados com a marca 'CS2 Coach AI by Toddyclipsgg'. A segunda parte é remover os componentes de UI legados do OpenHud, especificamente os overlays criados nas tarefas 12 e 15. Crie um novo conjunto de componentes React para uma interface de usuário moderna, limpa e minimalista, que servirá como o principal overlay do agente de IA, integrando as funcionalidades dos overlays de HUD (Tarefa 12) e de tarefas (Tarefa 24) em uma experiência unificada. A nova UI deve continuar a usar Socket.io para atualizações de estado em tempo real do backend.
+
+# Test Strategy:
+1. Faça uma busca global por 'OpenHud' em todo o projeto para garantir que nenhuma referência antiga permaneça. 2. Inicie a aplicação e verifique visualmente todos os elementos da interface do usuário, incluindo a janela principal, o ícone da bandeja do sistema e os overlays no jogo, para confirmar que o novo nome e os novos logotipos são exibidos corretamente. 3. Execute um teste de regressão completo para garantir que todas as funcionalidades existentes, como a captura de GSI, o processamento de dados e a comunicação com o backend, permaneçam intactas. 4. Teste especificamente o novo overlay de IA, enviando vários estados do agente (por exemplo, 'Analisando', 'Feedback', 'Nova Tarefa') do backend e verificando se a UI os exibe de forma clara e correta sem interferir no jogo. 5. Compile e empacote a aplicação para verificar se o executável final e o instalador usam o novo nome e ícone do projeto.

@@ -1,13 +1,13 @@
 {
-  "appId": "com.openhud.electron-app",
-  "productName": "OpenHud",
+  "appId": "com.toddyclipsgg.cs2-coach-ai",
+  "productName": "CS2 Coach AI",
   "files": ["dist-electron", "dist-react"],
   "extraResources": ["dist-electron/preload.cjs", "src/assets/**"],
   "icon": "./desktopIcon.png",
   "publish": {
     "provider": "github",
-    "owner": "JohnTimmermann",
-    "repo": "OpenHud",
+    "owner": "toddyamakawa",
+    "repo": "cs2-coach-ai",
     "releaseType": "release"
   },
   "mac": {

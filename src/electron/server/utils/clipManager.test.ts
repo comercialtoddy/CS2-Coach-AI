@@ -1,4 +1,4 @@
-import { ClipManager } from './clipManager';
+import { ClipManager } from './clipManager.js';
 import fs from 'fs';
 import path from 'path';
 

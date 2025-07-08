@@ -29,7 +29,7 @@ export function getAssetPath() {
 }
 
 export function getCustomHudPath() {
-  return path.join(app.getPath("home"), "OpenHud-Huds/build");
+  return path.join(app.getPath("home"), "CS2CoachAI/build");
 }
 
 // Default HUD path

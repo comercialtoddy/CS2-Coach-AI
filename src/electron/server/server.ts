@@ -4,6 +4,7 @@ import http from "http";
 import { initializeSocket } from "./sockets/socket.js";
 import { readGameData } from "./sockets/GSI.js";
 import {
+  router as mainRouter,
   playerRoutes,
   teamRoutes,
   matchRoutes,
@@ -14,6 +15,7 @@ import {
   agentOverlayDemoRoutes,
   openRouterRoutes,
   dataRetrievalRoutes,
+  performanceRoutes
 } from "./routes/index.js";
 import { BrowserWindow } from "electron";
 import { ipcWebContentsSend } from "../helpers/util.js";
@@ -44,6 +46,7 @@ export const startServer = (mainWindow: BrowserWindow) => {
   });
 
   /* Routes */
+  expressApp.use(mainRouter);
   expressApp.use(playerRoutes);
   expressApp.use(teamRoutes);
   expressApp.use(matchRoutes);
@@ -54,6 +57,7 @@ export const startServer = (mainWindow: BrowserWindow) => {
   expressApp.use("/agent-demo", agentOverlayDemoRoutes);
   expressApp.use("/openrouter", openRouterRoutes);
   expressApp.use("/data-retrieval", dataRetrievalRoutes);
+  expressApp.use("/performance", performanceRoutes);
 
   server.listen(port, async () => {
     console.log(`Server listening on port ${port}`);

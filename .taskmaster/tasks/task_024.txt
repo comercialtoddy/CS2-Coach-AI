@@ -1,0 +1,49 @@
+# Task ID: 24
+# Title: In-Game Task Overlay
+# Status: done
+# Dependencies: 2, 4, 12, 23
+# Priority: high
+# Description: Implementação de um overlay minimalista para exibir a tarefa atual, seu progresso e status de forma clara e não-intrusiva durante o jogo. O overlay é totalmente funcional, com animações suaves, atualizações em tempo real via Socket.io e integração com os principais sistemas do jogo.
+# Details:
+A implementação final inclui uma janela Electron dedicada (`TaskOverlayWindow`) e um componente React (`TaskOverlay.tsx`) para a UI. A comunicação é feita via Socket.io e IPC do Electron. As principais funcionalidades incluem: exibição da tarefa, progresso e status; animações de entrada/saída; transparência e efeito de blur; e a capacidade de ignorar eventos do mouse para não interferir no gameplay. Foram expostas APIs para controle do overlay (`open/close/show/hide`) e para atualização de dados (`updateTask`, `updateTaskProgress`, `updateTaskStatus`).
+
+# Test Strategy:
+A funcionalidade foi verificada através do envio de diversos eventos de atualização de tarefas (nova tarefa, atualização de progresso, conclusão, falha) a partir do backend. Foi confirmado que o overlay atualiza corretamente, exibe as informações de forma clara sem obstruir o jogo e responde adequadamente às APIs de controle.
+
+# Subtasks:
+## 1. Criação da Janela do Overlay (Electron) [done]
+### Dependencies: None
+### Description: Implementar e configurar a `BrowserWindow` do Electron para o overlay, incluindo gerenciamento de visibilidade, animação e configuração para 'sempre visível'.
+### Details:
+
+
+## 2. Desenvolvimento do Componente de UI (React) [done]
+### Dependencies: None
+### Description: Criar o componente `TaskOverlay.tsx` com interface minimalista, barra de progresso, indicador de status, animações e integração com Socket.io.
+### Details:
+
+
+## 3. Configuração da Infraestrutura de Build e Comunicação [done]
+### Dependencies: None
+### Description: Configurar o Vite para múltiplas páginas, criar o script de preload, definir tipos TypeScript e estabelecer a comunicação via IPC do Electron.
+### Details:
+
+
+## 4. Implementação das APIs de Controle e Atualização [done]
+### Dependencies: None
+### Description: Implementar as APIs para controlar o ciclo de vida do overlay (open, close, show, hide) e para atualizar seu conteúdo (updateTask, updateTaskProgress, updateTaskStatus).
+### Details:
+
+
+## 5. Definição dos Eventos de Socket.io [done]
+### Dependencies: None
+### Description: Estabelecer e implementar os eventos de Socket.io para atualizações em tempo real: `update-task`, `update-progress`, `update-status`, `animate-in`, `animate-out`.
+### Details:
+
+
+## 6. Integração com Sistemas do Jogo [done]
+### Dependencies: None
+### Description: Integrar o overlay com os serviços existentes, como `TaskGenerationService`, GSI para progresso, sistema de recompensas e gerenciamento de janelas.
+### Details:
+
+

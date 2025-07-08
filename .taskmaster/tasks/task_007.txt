@@ -1,0 +1,46 @@
+# Task ID: 7
+# Title: GSI Data Parsing & Initial Player/Team Data Extraction
+# Status: done
+# Dependencies: 6
+# Priority: high
+# Description: Process raw GSI data into structured, normalized objects. Extract crucial information about the main player, teammates, and the game state, including detecting the team side (CT/TR).
+# Details:
+Create a GSI parsing service that takes the raw JSON and transforms it into a consistent internal data model. Extract `player_main` details (health, armor, money, weapons, kills, deaths, assists, utilities), `team_players` (status, health, weapons, money), `round_info` (score, time, bomb status), and `team_side` (CT or TR). This normalized data will be used by AI modules. Use a schema validation library like `Zod` or `Joi` for robust parsing.
+
+# Test Strategy:
+Feed sample GSI JSON payloads to the parsing module and assert that the output matches the expected normalized data structure. Test with various game states (e.g., different team sides, player statuses, round states).
+
+# Subtasks:
+## 1. Analyze GSI Data Structure & Identify Key Entities [done]
+### Dependencies: None
+### Description: Conduct a thorough analysis of the raw GSI (Game State Integration) JSON data to understand its structure, identify all relevant player, team, and round-specific data points, and determine relationships between them. This step is crucial for defining the target internal data model.
+### Details:
+Review sample GSI payloads, map out nested structures, and list all required fields for player, team, and round states.
+
+## 2. Define Normalized Internal Data Model [done]
+### Dependencies: 7.1
+### Description: Based on the GSI data analysis, design and document a normalized internal data model (e.g., using Pydantic, JSON Schema, or similar) for player, team, and round data. This model should ensure data consistency, reduce redundancy, and facilitate easier querying and analysis.
+### Details:
+Create schema definitions for Player, Team, Round, and GameState objects, specifying data types, constraints, and relationships.
+
+## 3. Implement Core GSI Data Parsing Logic [done]
+### Dependencies: 7.2
+### Description: Develop the initial parsing logic to extract relevant player, team, and round data from the raw GSI JSON. This logic should transform the raw, potentially nested GSI data into instances conforming to the defined internal data model.
+### Details:
+Write functions or classes to traverse the GSI JSON and map its fields to the corresponding fields in the internal data model. Focus on correct data extraction.
+<info added on 2025-07-06T15:23:28.525Z>
+Implementation was completed using the `csgogsi` library (v3.0.7) to automate GSI data parsing. This professional library was chosen for its maturity, built-in TypeScript types, advanced event system, and automatic data validation, making it a more robust and efficient solution than manual parsing. The core logic instantiates `CSGOGSI`, configures match rules (`regulationMR = 12`, `overtimeMR = 3`), and uses the `GSI.digest(data)` method to convert raw data into a normalized structure. Additional custom features were also implemented: a `fixGSIData()` function for specific corrections like handling observer slots and filtering coaches, Socket.io integration for real-time data, a custom match event system, and automatic database integration.
+</info added on 2025-07-06T15:23:28.525Z>
+
+## 4. Develop Schema Validation Module [done]
+### Dependencies: 7.2
+### Description: Create a dedicated module or set of functions responsible for validating parsed GSI data against the defined internal data model schema. This module should identify missing fields, incorrect data types, or values that do not conform to specified constraints.
+### Details:
+Implement validation rules based on the defined schema, ensuring data integrity before storage or further processing. Consider using a library like Pydantic or jsonschema.
+
+## 5. Integrate Parsing with Schema Validation & Error Handling [done]
+### Dependencies: 7.3, 7.4
+### Description: Combine the implemented parsing logic with the schema validation module. Ensure that all parsed data is validated before being accepted. Implement robust error handling mechanisms for cases where data fails validation or parsing encounters unexpected structures, logging issues appropriately.
+### Details:
+Modify the parsing pipeline to include a validation step. Implement try-except blocks or similar mechanisms to catch parsing/validation errors and log detailed information for debugging.
+
