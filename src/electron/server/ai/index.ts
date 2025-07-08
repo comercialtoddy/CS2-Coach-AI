@@ -36,6 +36,9 @@ import {
   type PlayerDataToolOutput
 } from './tools/ExamplePlayerTool.js';
 
+import { registerCoreDataRetrievalTools } from './tools/registerCoreDataRetrievalTools.js';
+import { registerScreenshotTool } from './tools/registerScreenshotTool.js';
+
 import {
   AIToolingTest
 } from './AIToolingTest.js';
@@ -56,25 +59,14 @@ export type {
   PlayerDataToolOutput
 };
 
+// Export core classes and instances
 export {
-  ToolCategory,
-  ToolPriority,
   ToolManager,
   toolManager,
-  ToolManagerEvent,
+  ToolCategory,
+  ToolPriority,
   PlayerDataTool,
   AIToolingTest
-};
-
-/**
- * Framework version information
- */
-export const AI_TOOLING_VERSION = {
-  version: '1.0.0',
-  name: 'OpenHud AI Tooling Framework',
-  description: 'Extensible framework for AI agent tools',
-  author: 'OpenHud AI System',
-  lastUpdated: new Date('2024-01-01')
 };
 
 /**
@@ -111,6 +103,24 @@ export async function initializeAITooling(options: {
     } catch (error) {
       console.error('❌ Failed to register example tools:', error);
     }
+  }
+
+  // Register core data retrieval tools
+  try {
+    registerCoreDataRetrievalTools(toolManager);
+    registeredTools.push('get-gsi-info', 'get-trackergg-stats', 'update-player-profile', 'analyze-positioning');
+    console.log('✅ Registered core data retrieval tools');
+  } catch (error) {
+    console.error('❌ Failed to register core data retrieval tools:', error);
+  }
+
+  // Register screenshot tool
+  try {
+    registerScreenshotTool(toolManager);
+    registeredTools.push('capture-screenshot');
+    console.log('✅ Registered screenshot tool');
+  } catch (error) {
+    console.error('❌ Failed to register screenshot tool:', error);
   }
 
   // Setup event logging if requested
@@ -165,159 +175,46 @@ export async function initializeAITooling(options: {
   };
 }
 
-/**
- * Helper function to create a simple tool from a function
- * Useful for quickly converting existing functions into tools
- * 
- * @param config - Tool configuration
- * @returns Simple tool implementation
- */
-export function createSimpleTool<TInput, TOutput>(config: {
-  name: string;
-  description: string;
-  category?: ToolCategory;
-  tags?: string[];
-  execute: (input: TInput) => Promise<TOutput>;
-  inputExample?: TInput;
-  outputExample?: TOutput;
-}): ISimpleTool<TInput, TOutput> {
-  const {
-    name,
-    description,
-    category = ToolCategory.UTILITY,
-    tags = [],
-    execute,
-    inputExample,
-    outputExample
-  } = config;
-
+// Helper function to create a simple tool
+export function createSimpleTool<TInput = any, TOutput = any>(
+  name: string,
+  description: string,
+  execute: (input: TInput) => Promise<TOutput>
+): ISimpleTool<TInput, TOutput> {
   return {
     name,
     description,
-    inputSchema: {}, // Simple tools don't require complex schemas
-    outputExample: outputExample || {} as TOutput,
-    metadata: {
-      version: '1.0.0',
-      category,
-      tags,
-      author: 'OpenHud AI System',
-      lastUpdated: new Date(),
-      experimental: false,
-      deprecated: false
-    },
     execute
   };
 }
 
-/**
- * Utility function to validate tool input against a schema
- * Can be used by tools that implement custom validation logic
- * 
- * @param input - Input to validate
- * @param schema - Schema to validate against
- * @returns Validation result
- */
-export function validateToolInput(
-  input: any,
+// Helper function to validate tool input
+export function validateToolInput<T>(
+  input: T,
   schema: Record<string, ToolParameterSchema>
-): {
-  isValid: boolean;
-  errors?: Array<{
-    parameter: string;
-    message: string;
-    receivedType?: string;
-    expectedType?: string;
-  }>;
-} {
-  const errors: Array<{
-    parameter: string;
-    message: string;
-    receivedType?: string;
-    expectedType?: string;
-  }> = [];
+): { valid: boolean; errors?: string[] } {
+  const errors: string[] = [];
 
-  // Check each schema parameter
-  for (const [paramName, paramSchema] of Object.entries(schema)) {
-    const value = input[paramName];
-    const isRequired = paramSchema.required || false;
-    const expectedType = paramSchema.type;
+  for (const [key, paramSchema] of Object.entries(schema)) {
+    const value = (input as any)[key];
 
-    // Check if required parameter is missing
-    if (isRequired && (value === undefined || value === null)) {
-      errors.push({
-        parameter: paramName,
-        message: `Required parameter '${paramName}' is missing`,
-        receivedType: typeof value,
-        expectedType
-      });
+    if (paramSchema.required && value === undefined) {
+      errors.push(`Missing required parameter: ${key}`);
       continue;
     }
 
-    // Skip validation for optional missing parameters
-    if (value === undefined || value === null) {
-      continue;
-    }
-
-    // Type validation
-    const actualType = Array.isArray(value) ? 'array' : typeof value;
-    if (actualType !== expectedType) {
-      errors.push({
-        parameter: paramName,
-        message: `Parameter '${paramName}' has incorrect type`,
-        receivedType: actualType,
-        expectedType
-      });
-      continue;
-    }
-
-    // Enum validation
-    if (paramSchema.enum && !paramSchema.enum.includes(value)) {
-      errors.push({
-        parameter: paramName,
-        message: `Parameter '${paramName}' must be one of: ${paramSchema.enum.join(', ')}`,
-        receivedType: actualType,
-        expectedType: `enum(${paramSchema.enum.join('|')})`
-      });
-    }
-
-    // Object property validation (recursive)
-    if (expectedType === 'object' && paramSchema.properties) {
-      const nestedValidation = validateToolInput(value, paramSchema.properties);
-      if (!nestedValidation.isValid && nestedValidation.errors) {
-        nestedValidation.errors.forEach(error => {
-          errors.push({
-            ...error,
-            parameter: `${paramName}.${error.parameter}`
-          });
-        });
-      }
-    }
-
-    // Array item validation
-    if (expectedType === 'array' && paramSchema.items && Array.isArray(value)) {
-      value.forEach((item, index) => {
-        const itemValidation = validateToolInput({ item }, { item: paramSchema.items! });
-        if (!itemValidation.isValid && itemValidation.errors) {
-          itemValidation.errors.forEach(error => {
-            errors.push({
-              ...error,
-              parameter: `${paramName}[${index}]`
-            });
-          });
-        }
-      });
+    if (value !== undefined && typeof value !== paramSchema.type) {
+      errors.push(`Invalid type for parameter ${key}: expected ${paramSchema.type}, got ${typeof value}`);
     }
   }
 
   return {
-    isValid: errors.length === 0,
+    valid: errors.length === 0,
     errors: errors.length > 0 ? errors : undefined
   };
 }
 
-/**
- * Default export for convenient importing
- */
+// Default export for convenient importing
 export default {
   ToolManager,
   toolManager,
@@ -328,5 +225,5 @@ export default {
   initializeAITooling,
   createSimpleTool,
   validateToolInput,
-  version: AI_TOOLING_VERSION
+  version: '1.0.0'
 };

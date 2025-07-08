@@ -108,4 +108,32 @@ db.run(
   },
 );
 
+db.run(
+  `CREATE TABLE IF NOT EXISTS generated_tasks(
+    id TEXT PRIMARY KEY,
+    player_id TEXT NOT NULL,
+    task_type_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    parameters TEXT NOT NULL,
+    completion_criteria TEXT NOT NULL,
+    difficulty TEXT NOT NULL,
+    expected_reward INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL,
+    expires_at TEXT,
+    progress TEXT NOT NULL,
+    context TEXT NOT NULL,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players(steamid)
+  )`,
+  (err) => {
+    if (err) {
+      console.error("Error creating generated_tasks table:", err.message);
+    } else {
+      console.log("Generated tasks table ready.");
+    }
+  },
+);
+
 export default db;

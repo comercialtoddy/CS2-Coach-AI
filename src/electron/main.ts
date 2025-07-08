@@ -9,19 +9,22 @@ import {
 import { shutDown, startServer } from "./server/server.js";
 import { createTray } from "./tray.js";
 import { createMenu } from "./menu.js";
+import { createTaskOverlayWindow } from "./taskOverlayWindow.js";
 import http from "http";
 import { ipcMainEvents } from "./ipcEvents/index.js";
 
 let server: http.Server;
 let mainWindow: BrowserWindow;
+let taskOverlayWindow: BrowserWindow;
 
 app.on("ready", () => {
   mainWindow = createMainWindow();
+  taskOverlayWindow = createTaskOverlayWindow();
   checkDirectories();
   server = startServer(mainWindow);
   createTray(mainWindow);
   createMenu(mainWindow);
-  handleCloseEvents(mainWindow);
+  handleCloseEvents(mainWindow, taskOverlayWindow);
   ipcMainEvents(mainWindow);
 });
 
@@ -46,7 +49,7 @@ function createMainWindow() {
   return mainWindow;
 }
 
-function handleCloseEvents(mainWindow: BrowserWindow) {
+function handleCloseEvents(mainWindow: BrowserWindow, taskOverlayWindow: BrowserWindow) {
   /* Handle minimizing to tray */
   let willClose = false;
 
@@ -57,6 +60,7 @@ function handleCloseEvents(mainWindow: BrowserWindow) {
     e.preventDefault();
     showNotification("Application still running but minimized to tray");
     mainWindow.hide();
+    taskOverlayWindow.hide();
     if (app.dock) {
       app.dock.hide();
     }
@@ -70,5 +74,15 @@ function handleCloseEvents(mainWindow: BrowserWindow) {
 
   mainWindow.on("show", () => {
     willClose = false;
+    taskOverlayWindow.show();
+  });
+
+  // Handle task overlay window events
+  taskOverlayWindow.on("close", (e) => {
+    if (willClose) {
+      return;
+    }
+    e.preventDefault();
+    taskOverlayWindow.hide();
   });
 }
