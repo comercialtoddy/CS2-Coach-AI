@@ -18,7 +18,9 @@ export function getDatabasePath() {
 
 // Needed for verifying URL
 export function getUIPath() {
-  return path.join(app.getAppPath() + "/dist-react/index.html");
+  return isDev()
+    ? 'http://localhost:5123'
+    : path.join(app.getAppPath(), 'dist-react', 'index.html');
 }
 
 // Path for Assets (images, icons, ect)

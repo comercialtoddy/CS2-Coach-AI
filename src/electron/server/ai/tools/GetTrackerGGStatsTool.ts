@@ -9,8 +9,8 @@ import {
 import { 
   getTrackerGGPlayerStats, 
   getPlayerSpecificStats, 
+  getTrackerGGRateLimitInfo, 
   isTrackerGGConfigured, 
-  getRateLimitInfo, 
   clearTrackerGGCache 
 } from '../../services/trackerGGServices.js';
 import { getPlayerBySteamId } from '../../services/playersServices.js';
@@ -39,6 +39,7 @@ export class GetTrackerGGStatsTool implements ITool<GetTrackerGGStatsInput, GetT
       required: false,
       items: {
         type: 'string',
+        description: 'A single stat type to retrieve.',
         enum: [
           'kills', 'deaths', 'kdr', 'adr', 'headshots', 'accuracy', 'rating',
           'maps_played', 'rounds_played', 'wins', 'win_rate', 'time_played',
@@ -87,36 +88,64 @@ export class GetTrackerGGStatsTool implements ITool<GetTrackerGGStatsInput, GetT
       avatarUrl: 'https://avatar.example.com/player.jpg',
       lastUpdated: '2023-12-07T10:30:00.000Z',
       stats: {
-        kills: {
-          value: 15420,
-          displayValue: '15,420',
-          rank: 25000,
-          percentile: 85.5
-        },
-        deaths: {
-          value: 12350,
-          displayValue: '12,350',
-          rank: 20000,
-          percentile: 78.2
-        },
-        kdr: {
-          value: 1.25,
-          displayValue: '1.25',
-          rank: 18500,
-          percentile: 82.1
-        },
-        adr: {
-          value: 75.8,
-          displayValue: '75.8',
-          rank: 15000,
-          percentile: 88.4
-        }
+        kills: { value: 15420, displayValue: '15,420', rank: 25000, percentile: 85.5 },
+        deaths: { value: 12350, displayValue: '12,350', rank: 20000, percentile: 78.2 },
+        kdr: { value: 1.25, displayValue: '1.25', rank: 18500, percentile: 82.1 },
+        adr: { value: 75.8, displayValue: '75.8', rank: 15000, percentile: 88.4 },
+        headshots: { value: 6168, displayValue: '6,168', rank: 22000, percentile: 84.0 },
+        accuracy: { value: 0.22, displayValue: '22%', rank: 19000, percentile: 80.5 },
+        rating: { value: 1.15, displayValue: '1.15', rank: 17000, percentile: 86.2 },
+        maps_played: { value: 500, displayValue: '500', rank: 10000, percentile: 90.1 },
+        rounds_played: { value: 12500, displayValue: '12,500', rank: 11000, percentile: 89.5 },
+        wins: { value: 275, displayValue: '275', rank: 9000, percentile: 91.3 },
+        win_rate: { value: 0.55, displayValue: '55%', rank: 8000, percentile: 92.0 },
+        time_played: { value: 1800000, displayValue: '500h', rank: null, percentile: null },
+        damage_per_round: { value: 75.8, displayValue: '75.8', rank: 15000, percentile: 88.4 },
+        kills_per_round: { value: 0.75, displayValue: '0.75', rank: 16000, percentile: 87.1 },
+        assists: { value: 3000, displayValue: '3,000', rank: null, percentile: null },
+        flash_assists: { value: 500, displayValue: '500', rank: null, percentile: null },
+        clutch_kills: { value: 200, displayValue: '200', rank: null, percentile: null },
+        entry_kills: { value: 1000, displayValue: '1,000', rank: null, percentile: null },
+        multi_kills: { value: 1500, displayValue: '1,500', rank: null, percentile: null },
+        bomb_planted: { value: 300, displayValue: '300', rank: null, percentile: null },
+        bomb_defused: { value: 150, displayValue: '150', rank: null, percentile: null },
+        knife_kills: { value: 50, displayValue: '50', rank: null, percentile: null },
+        grenade_kills: { value: 100, displayValue: '100', rank: null, percentile: null },
+        wallbang_kills: { value: 75, displayValue: '75', rank: null, percentile: null },
+        no_scope_kills: { value: 25, displayValue: '25', rank: null, percentile: null },
+        blind_kills: { value: 10, displayValue: '10', rank: null, percentile: null },
+        smoke_kills: { value: 5, displayValue: '5', rank: null, percentile: null },
+        through_smoke_kills: { value: 15, displayValue: '15', rank: null, percentile: null },
+        crouch_kills: { value: 4000, displayValue: '4,000', rank: null, percentile: null },
+        jump_kills: { value: 20, displayValue: '20', rank: null, percentile: null },
+        reload_kills: { value: 1, displayValue: '1', rank: null, percentile: null },
+        team_kills: { value: 100, displayValue: '100', rank: null, percentile: null },
+        enemy_kills: { value: 15320, displayValue: '15,320', rank: null, percentile: null },
+        damage_dealt: { value: 947500, displayValue: '947.5k', rank: null, percentile: null },
+        damage_taken: { value: 890000, displayValue: '890k', rank: null, percentile: null },
+        utility_damage: { value: 50000, displayValue: '50k', rank: null, percentile: null },
+        enemies_flashed: { value: 2000, displayValue: '2,000', rank: null, percentile: null },
+        teammates_flashed: { value: 200, displayValue: '200', rank: null, percentile: null },
+        defuse_attempts: { value: 200, displayValue: '200', rank: null, percentile: null },
+        plant_attempts: { value: 400, displayValue: '400', rank: null, percentile: null },
+        mvp_rounds: { value: 400, displayValue: '400', rank: null, percentile: null },
+        first_kill_rounds: { value: 800, displayValue: '800', rank: null, percentile: null },
+        first_death_rounds: { value: 700, displayValue: '700', rank: null, percentile: null },
+        traded_kill_rounds: { value: 600, displayValue: '600', rank: null, percentile: null },
+        kast_rounds: { value: 0.72, displayValue: '72%', rank: null, percentile: null },
+        survived_rounds: { value: 6000, displayValue: '6,000', rank: null, percentile: null },
+        clutch_rounds: { value: 150, displayValue: '150', rank: null, percentile: null },
+        economy_rating: { value: 1.1, displayValue: '1.1', rank: null, percentile: null },
+        impact_rating: { value: 1.2, displayValue: '1.2', rank: null, percentile: null }
       },
       segments: [
         {
           type: 'overview',
           mode: 'competitive',
-          stats: {}
+          stats: {
+            kills: { value: 15420, displayValue: '15,420', rank: 25000, percentile: 85.5 },
+            deaths: { value: 12350, displayValue: '12,350', rank: 20000, percentile: 78.2 }
+          }
         }
       ]
     },
@@ -259,7 +288,7 @@ export class GetTrackerGGStatsTool implements ITool<GetTrackerGGStatsInput, GetT
       }
 
       // Check rate limits
-      const rateLimitInfo = getRateLimitInfo();
+      const rateLimitInfo = getTrackerGGRateLimitInfo();
       if (!rateLimitInfo.canMakeRequest && !input.forceRefresh) {
         return {
           success: false,
@@ -309,7 +338,7 @@ export class GetTrackerGGStatsTool implements ITool<GetTrackerGGStatsInput, GetT
           trackerStats = await getTrackerGGPlayerStats(steamId, gameMode);
           
           // Filter the response to only include requested stats
-          const filteredStats: Record<TrackerGGStatType, any> = {};
+          const filteredStats: Partial<Record<TrackerGGStatType, any>> = {};
           for (const statType of input.statTypes) {
             if (specificStats[statType]) {
               filteredStats[statType] = specificStats[statType];
@@ -352,7 +381,7 @@ export class GetTrackerGGStatsTool implements ITool<GetTrackerGGStatsInput, GetT
       }
 
       // Get updated rate limit info
-      const updatedRateLimitInfo = getRateLimitInfo();
+      const updatedRateLimitInfo = getTrackerGGRateLimitInfo();
 
       const response: GetTrackerGGStatsOutput = {
         success: true,
@@ -400,7 +429,7 @@ export class GetTrackerGGStatsTool implements ITool<GetTrackerGGStatsInput, GetT
   async healthCheck(): Promise<{ healthy: boolean; message?: string; details?: Record<string, any> }> {
     try {
       const isConfigured = isTrackerGGConfigured();
-      const rateLimitInfo = getRateLimitInfo();
+      const rateLimitInfo = getTrackerGGRateLimitInfo();
       
       if (!isConfigured) {
         return {
@@ -435,45 +464,55 @@ export class GetTrackerGGStatsTool implements ITool<GetTrackerGGStatsInput, GetT
    * Convert TrackerGG API response to our standard format
    */
   private convertToStandardFormat(trackerGGResponse: any, filteredStats?: Record<string, any>): TrackerGGPlayerStats {
-    const stats: Record<TrackerGGStatType, any> = {};
-    
-    // Process segments to extract stats
-    if (trackerGGResponse.segments && Array.isArray(trackerGGResponse.segments)) {
-      trackerGGResponse.segments.forEach((segment: any) => {
-        if (segment.stats && typeof segment.stats === 'object') {
-          Object.entries(segment.stats).forEach(([statKey, statData]: [string, any]) => {
-            const normalizedKey = this.normalizeStatKey(statKey);
-            if (normalizedKey && statData) {
-              stats[normalizedKey as TrackerGGStatType] = {
-                value: statData.value ?? 0,
-                displayValue: statData.displayValue ?? String(statData.value ?? 0),
-                rank: statData.rank ?? null,
-                percentile: statData.percentile ?? null
+    const defaultStat = { value: 0, displayValue: '0', rank: null, percentile: null };
+    const allStats: Record<TrackerGGStatType, any> = {
+        kills: {...defaultStat}, deaths: {...defaultStat}, kdr: {...defaultStat}, adr: {...defaultStat}, headshots: {...defaultStat}, accuracy: {...defaultStat}, rating: {...defaultStat},
+        maps_played: {...defaultStat}, rounds_played: {...defaultStat}, wins: {...defaultStat}, win_rate: {...defaultStat}, time_played: {...defaultStat},
+        damage_per_round: {...defaultStat}, kills_per_round: {...defaultStat}, assists: {...defaultStat}, flash_assists: {...defaultStat},
+        clutch_kills: {...defaultStat}, entry_kills: {...defaultStat}, multi_kills: {...defaultStat}, bomb_planted: {...defaultStat}, bomb_defused: {...defaultStat},
+        knife_kills: {...defaultStat}, grenade_kills: {...defaultStat}, wallbang_kills: {...defaultStat}, no_scope_kills: {...defaultStat},
+        blind_kills: {...defaultStat}, smoke_kills: {...defaultStat}, through_smoke_kills: {...defaultStat}, crouch_kills: {...defaultStat},
+        jump_kills: {...defaultStat}, reload_kills: {...defaultStat}, team_kills: {...defaultStat}, enemy_kills: {...defaultStat},
+        damage_dealt: {...defaultStat}, damage_taken: {...defaultStat}, utility_damage: {...defaultStat}, enemies_flashed: {...defaultStat},
+        teammates_flashed: {...defaultStat}, defuse_attempts: {...defaultStat}, plant_attempts: {...defaultStat}, mvp_rounds: {...defaultStat},
+        first_kill_rounds: {...defaultStat}, first_death_rounds: {...defaultStat}, traded_kill_rounds: {...defaultStat},
+        kast_rounds: {...defaultStat}, survived_rounds: {...defaultStat}, clutch_rounds: {...defaultStat}, economy_rating: {...defaultStat}, impact_rating: {...defaultStat}
+    };
+
+    if (trackerGGResponse && trackerGGResponse.segments) {
+        for (const segment of trackerGGResponse.segments) {
+            if (segment.type === 'overview' && segment.stats) {
+                for (const key in segment.stats) {
+                    const normalizedKey = this.normalizeStatKey(key);
+                    if (normalizedKey && allStats.hasOwnProperty(normalizedKey)) {
+                        const stat = segment.stats[key];
+                        allStats[normalizedKey as TrackerGGStatType] = {
+                            value: stat.value ?? 0,
+                            displayValue: stat.displayValue ?? String(stat.value ?? 0),
+                            rank: stat.rank ?? null,
+                            percentile: stat.percentile ?? null
               };
             }
-          });
+                }
         }
-      });
+        }
     }
 
-    // If we have filtered stats, use those instead
-    if (filteredStats) {
-      Object.entries(filteredStats).forEach(([key, value]) => {
-        stats[key as TrackerGGStatType] = value;
-      });
-    }
+    const finalStats = filteredStats ? 
+        Object.fromEntries(Object.entries(allStats).filter(([key]) => filteredStats[key])) as Record<TrackerGGStatType, any>
+        : allStats;
 
     return {
-      playerId: trackerGGResponse.platformInfo?.platformUserId ?? 'unknown',
-      playerName: trackerGGResponse.metadata?.name ?? 'Unknown Player',
-      steamId: trackerGGResponse.platformInfo?.platformUserId ?? 'unknown',
-      isPremium: trackerGGResponse.userInfo?.isPremium ?? false,
-      isVerified: trackerGGResponse.userInfo?.isVerified ?? false,
-      countryCode: trackerGGResponse.userInfo?.countryCode ?? null,
-      avatarUrl: trackerGGResponse.userInfo?.customAvatarUrl ?? null,
-      lastUpdated: trackerGGResponse.expiryDate ?? new Date().toISOString(),
-      stats,
-      segments: trackerGGResponse.segments ?? []
+      playerId: trackerGGResponse?.platformInfo?.platformUserId ?? 'unknown',
+      playerName: trackerGGResponse?.userInfo?.name ?? 'Unknown Player',
+      steamId: trackerGGResponse?.platformInfo?.platformUserIdentifier ?? 'unknown',
+      isPremium: trackerGGResponse?.userInfo?.isPremium ?? false,
+      isVerified: trackerGGResponse?.userInfo?.isVerified ?? false,
+      countryCode: trackerGGResponse?.userInfo?.countryCode ?? null,
+      avatarUrl: trackerGGResponse?.userInfo?.customAvatarUrl ?? null,
+      lastUpdated: trackerGGResponse?.expiryDate ?? new Date().toISOString(),
+      stats: finalStats,
+      segments: trackerGGResponse?.segments ?? []
     };
   }
 

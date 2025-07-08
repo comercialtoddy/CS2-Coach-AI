@@ -14,7 +14,7 @@ import {
   ToolError
 } from '../interfaces/DataRetrievalTools.js';
 import { GSI } from '../../sockets/GSI.js';
-import { CSGO } from 'csgogsi';
+import { CSGO, Map, Player, Round, Bomb, Side, Team } from 'csgogsi';
 
 /**
  * Tool_GetGSIInfo - Retrieves specific GSI data points from the current normalized GSI state
@@ -35,6 +35,7 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
       required: true,
       items: {
         type: 'string',
+        description: 'A single GSI data point to retrieve.',
         enum: [
           'player_state',
           'player_match_stats', 
@@ -207,7 +208,7 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
       }
 
       // Get current GSI data
-      const currentGSI: CSGO = GSI.current;
+      const currentGSI: CSGO | undefined = GSI.current;
       
       if (!currentGSI) {
         return {
@@ -378,16 +379,16 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
 
   private extractPlayerMatchStats(gsi: CSGO, steamId?: string): GSIPlayerMatchStats | undefined {
     const player = this.getTargetPlayer(gsi, steamId);
-    if (!player?.match_stats) return undefined;
+    if (!player) return undefined;
 
     return {
-      kills: player.match_stats.kills ?? 0,
-      assists: player.match_stats.assists ?? 0,
-      deaths: player.match_stats.deaths ?? 0,
-      mvps: player.match_stats.mvps ?? 0,
-      score: player.match_stats.score ?? 0,
-      headshots: player.match_stats.headshots ?? 0,
-      totalDamage: player.match_stats.total_damage ?? 0
+      kills: player.stats.kills ?? 0,
+      assists: player.stats.assists ?? 0,
+      deaths: player.stats.deaths ?? 0,
+      mvps: player.stats.mvps ?? 0,
+      score: player.stats.score ?? 0,
+      headshots: player.state.round_killhs ?? 0,
+      totalDamage: player.state.round_totaldmg ?? 0
     };
   }
 
@@ -413,8 +414,7 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
         case 'Rifle':
         case 'SniperRifle':
         case 'Shotgun':
-        case 'Machinegun':
-        case 'Submachine Gun':
+        case 'Machine Gun':
           weapons.primary = weaponData;
           break;
         case 'Pistol':
@@ -449,22 +449,23 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
     return weapons;
   }
 
-  private extractTeamState(gsi: CSGO): GSITeamState | undefined {
-    const player = gsi.player;
-    if (!player || !gsi.map) return undefined;
+  private extractTeamState(gsi: CSGO): {CT: GSITeamState, T: GSITeamState} | undefined {
+    if (!gsi.map?.team_ct || !gsi.map?.team_t) return undefined;
 
-    const team = player.team;
-    const teamScore = team === 'CT' ? gsi.map.team_ct : gsi.map.team_t;
+    const transform = (team: Team): GSITeamState => ({
+      score: team.score,
+      timeoutsRemaining: team.timeouts_remaining,
+      matchesWonThisSeries: team.matches_won_this_series,
+      side: team.side as ('CT' | 'T'),
+      consecutiveRoundLosses: team.consecutive_round_losses,
+      name: team.name ?? undefined,
+      id: team.id ?? undefined,
+      logo: team.logo ?? undefined
+    });
 
     return {
-      score: teamScore.score ?? 0,
-      timeoutsRemaining: teamScore.timeouts_remaining ?? 0,
-      matchesWonThisSeries: teamScore.matches_won_this_series ?? 0,
-      side: team,
-      consecutiveRoundLosses: teamScore.consecutive_round_losses ?? 0,
-      name: teamScore.name,
-      id: teamScore.id,
-      logo: teamScore.logo
+      CT: transform(gsi.map.team_ct),
+      T: transform(gsi.map.team_t)
     };
   }
 
@@ -481,9 +482,9 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
         matchesWonThisSeries: gsi.map.team_ct.matches_won_this_series ?? 0,
         side: 'CT',
         consecutiveRoundLosses: gsi.map.team_ct.consecutive_round_losses ?? 0,
-        name: gsi.map.team_ct.name,
-        id: gsi.map.team_ct.id,
-        logo: gsi.map.team_ct.logo
+        name: gsi.map.team_ct.name ?? undefined,
+        id: gsi.map.team_ct.id ?? undefined,
+        logo: gsi.map.team_ct.logo ?? undefined
       },
       teamT: {
         score: gsi.map.team_t.score ?? 0,
@@ -491,41 +492,37 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
         matchesWonThisSeries: gsi.map.team_t.matches_won_this_series ?? 0,
         side: 'T',
         consecutiveRoundLosses: gsi.map.team_t.consecutive_round_losses ?? 0,
-        name: gsi.map.team_t.name,
-        id: gsi.map.team_t.id,
-        logo: gsi.map.team_t.logo
+        name: gsi.map.team_t.name ?? undefined,
+        id: gsi.map.team_t.id ?? undefined,
+        logo: gsi.map.team_t.logo ?? undefined
       },
-      currentSpectatorTarget: gsi.player?.spectarget,
+      currentSpectatorTarget: gsi.player?.steamid,
       roundWins: gsi.map.round_wins
     };
   }
 
   private extractRoundInfo(gsi: CSGO): GSIRoundInfo | undefined {
     if (!gsi.round) return undefined;
-
     return {
-      phase: gsi.round.phase ?? 'unknown',
+      phase: gsi.round.phase,
       winTeam: gsi.round.win_team,
       bombPlanted: gsi.round.bomb === 'planted',
       bombTimeLeft: gsi.bomb?.countdown,
-      bombSite: gsi.bomb?.site,
-      bombDefuser: gsi.bomb?.defuser,
-      bombPlanter: gsi.bomb?.planter
+      bombSite: gsi.bomb?.site ?? undefined,
+      bombDefuser: gsi.bomb?.player?.steamid,
+      bombPlanter: gsi.bomb?.player?.steamid
     };
   }
 
   private extractAllPlayersInfo(gsi: CSGO): GSIAllPlayersInfo | undefined {
-    if (!gsi.players || gsi.players.length === 0) return undefined;
-
+    if (!gsi.players) return undefined;
     const allPlayers: GSIAllPlayersInfo = {};
-
-    gsi.players.forEach(player => {
-      if (!player.steamid) return;
-
+    for(const player of gsi.players){
+        if(!player.steamid) continue;
       allPlayers[player.steamid] = {
         name: player.name ?? 'unknown',
         observerSlot: player.observer_slot ?? 0,
-        team: player.team,
+            team: player.team.side,
         state: this.extractPlayerState(gsi, player.steamid) ?? {
           health: 0,
           armor: 0,
@@ -534,7 +531,8 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
           roundKills: 0,
           roundKillsHeadshot: 0,
           roundTotalDamage: 0,
-          equipValue: 0
+              equipValue: 0,
+              defusekit: false
         },
         matchStats: this.extractPlayerMatchStats(gsi, player.steamid) ?? {
           kills: 0,
@@ -546,23 +544,21 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
           totalDamage: 0
         },
         weapons: this.extractPlayerWeapons(gsi, player.steamid) ?? {},
-        position: player.position,
-        forward: player.forward,
-        activity: player.activity
-      };
-    });
-
+            position: player.position.join(','),
+            forward: player.forward.join(',')
+        }
+    }
     return allPlayers;
   }
 
   private extractSpectatorInfo(gsi: CSGO): { target: string; slot: number; mode: string } | undefined {
     const player = gsi.player;
-    if (!player || !player.spectarget) return undefined;
+    if (!player) return undefined;
 
     return {
-      target: player.spectarget,
-      slot: player.activity === 'textinput' ? 0 : player.observer_slot ?? 0,
-      mode: player.activity ?? 'unknown'
+      target: player.steamid,
+      slot: player.observer_slot ?? 0,
+      mode: player.state.health > 0 ? 'alive' : 'dead'
     };
   }
 
@@ -571,15 +567,13 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
   }
 
   private extractBombInfo(gsi: CSGO): { planted: boolean; timeLeft?: number; site?: string; defuser?: string; planter?: string } | undefined {
-    const bomb = gsi.bomb;
-    const round = gsi.round;
-
+    if (!gsi.bomb) return undefined;
     return {
-      planted: round?.bomb === 'planted' || false,
-      timeLeft: bomb?.countdown,
-      site: bomb?.site,
-      defuser: bomb?.defuser,
-      planter: bomb?.planter
+      planted: gsi.bomb.state !== 'carried' && gsi.bomb.state !== 'dropped',
+      timeLeft: gsi.bomb.countdown,
+      site: gsi.bomb.site ?? undefined,
+      defuser: gsi.bomb.player?.steamid,
+      planter: gsi.bomb.player?.steamid
     };
   }
 

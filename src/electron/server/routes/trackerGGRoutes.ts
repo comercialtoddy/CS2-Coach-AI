@@ -4,25 +4,27 @@ import {
   getSpecificStatsController,
   getRateLimitController,
   clearCacheController,
-  getStatusController
+  getStatusController,
 } from "../controllers/trackerGGController.js";
+import { asyncHandler } from "../helpers/asyncHandler.js";
 
-const router = Router();
+export const trackerGGRoutes = Router();
 
 // GET /tracker-gg/status - Check Tracker.GG API integration status
-router.get("/status", getStatusController);
+trackerGGRoutes.get("/status", asyncHandler(getStatusController));
 
 // GET /tracker-gg/player/:steamId - Get complete player statistics
-router.get("/player/:steamId", getPlayerStatsController);
+trackerGGRoutes.get("/player/:steamId", asyncHandler(getPlayerStatsController));
 
 // GET /tracker-gg/player/:steamId/stats - Get specific player statistics
 // Query params: stats (comma-separated), gameMode (cs2/csgo)
-router.get("/player/:steamId/stats", getSpecificStatsController);
+trackerGGRoutes.get(
+  "/player/:steamId/stats",
+  asyncHandler(getSpecificStatsController),
+);
 
 // GET /tracker-gg/rate-limit - Get current rate limiting information
-router.get("/rate-limit", getRateLimitController);
+trackerGGRoutes.get("/rate-limit", asyncHandler(getRateLimitController));
 
 // POST /tracker-gg/clear-cache - Clear the API cache
-router.post("/clear-cache", clearCacheController);
-
-export default router; 
+trackerGGRoutes.post("/clear-cache", asyncHandler(clearCacheController));

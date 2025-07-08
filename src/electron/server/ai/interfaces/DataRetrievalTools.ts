@@ -158,7 +158,10 @@ export interface GSIData {
   playerState?: GSIPlayerState;
   playerMatchStats?: GSIPlayerMatchStats;
   playerWeapons?: GSIPlayerWeapons;
-  teamState?: GSITeamState;
+  teamState?: {
+    CT: GSITeamState;
+    T: GSITeamState;
+  };
   mapInfo?: GSIMapInfo;
   roundInfo?: GSIRoundInfo;
   allPlayers?: GSIAllPlayersInfo;
@@ -253,12 +256,12 @@ export interface TrackerGGPlayerStats {
   countryCode: string | null;
   avatarUrl: string | null;
   lastUpdated: string;
-  stats: Record<TrackerGGStatType, {
+  stats: Partial<Record<TrackerGGStatType, {
     value: number;
     displayValue: string;
     rank: number | null;
     percentile: number | null;
-  }>;
+  }>>;
   segments: Array<{
     type: string;
     mode: string;

@@ -9,6 +9,37 @@
  * @version 1.0.0
  */
 
+import { 
+  ITool,
+  ISimpleTool,
+  ToolParameterSchema,
+  ToolExecutionContext,
+  ToolExecutionResult,
+  ToolMetadata,
+  ToolCategory,
+  ToolPriority
+} from './interfaces/ITool.js';
+
+import {
+  ToolManager,
+  toolManager,
+  ToolManagerEvent,
+  type ToolRegistrationOptions,
+  type ToolExecutionOptions,
+  type ToolExecutionStats,
+  type ToolManagerEventListener,
+} from './ToolManager.js';
+
+import {
+  PlayerDataTool,
+  type PlayerDataToolInput,
+  type PlayerDataToolOutput
+} from './tools/ExamplePlayerTool.js';
+
+import {
+  AIToolingTest
+} from './AIToolingTest.js';
+
 // Core interfaces and types
 export type {
   ITool,
@@ -16,36 +47,24 @@ export type {
   ToolParameterSchema,
   ToolExecutionContext,
   ToolExecutionResult,
-  ToolMetadata
-} from './interfaces/ITool.js';
+  ToolMetadata,
+  ToolRegistrationOptions,
+  ToolExecutionOptions,
+  ToolExecutionStats,
+  ToolManagerEventListener,
+  PlayerDataToolInput,
+  PlayerDataToolOutput
+};
 
 export {
   ToolCategory,
-  ToolPriority
-} from './interfaces/ITool.js';
-
-// Tool Manager
-export {
+  ToolPriority,
   ToolManager,
+  toolManager,
   ToolManagerEvent,
-  type ToolRegistrationOptions,
-  type ToolExecutionOptions,
-  type ToolExecutionStats,
-  type ToolManagerEventListener,
-  toolManager // Singleton instance
-} from './ToolManager.js';
-
-// Example tools and implementations
-export {
   PlayerDataTool,
-  type PlayerDataToolInput,
-  type PlayerDataToolOutput
-} from './tools/ExamplePlayerTool.js';
-
-// Testing utilities
-export {
   AIToolingTest
-} from './AIToolingTest.js';
+};
 
 /**
  * Framework version information
@@ -106,7 +125,7 @@ export async function initializeAITooling(options: {
     ];
 
     eventTypes.forEach(eventType => {
-      toolManager.addEventListener(eventType, (event) => {
+      toolManager.addEventListener(eventType, (event: any) => {
         console.log(`[AI-TOOLS] ${event.type}: ${event.toolName}`, event.data || '');
       });
     });
@@ -120,7 +139,7 @@ export async function initializeAITooling(options: {
       try {
         const healthStatus = await toolManager.healthCheck();
         const unhealthyTools = Object.entries(healthStatus)
-          .filter(([_, health]) => !health.healthy)
+          .filter(([_, health]) => !(health as { healthy: boolean }).healthy)
           .map(([name]) => name);
 
         if (unhealthyTools.length > 0) {
@@ -310,4 +329,4 @@ export default {
   createSimpleTool,
   validateToolInput,
   version: AI_TOOLING_VERSION
-}; 
+};

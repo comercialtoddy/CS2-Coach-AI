@@ -1,3 +1,4 @@
+declare global {
 interface Window {
   electron: {
     startServer: (callback: (message: string) => void) => void;
@@ -24,16 +25,21 @@ interface Window {
   matches: {
     getMatches: () => Promise<Match[]>;
   };
+  }
 }
 
 type EventPayloadMapping = {
   startServer: string;
-  startOverlay;
-  sendFrameAction: FrameWindowAction;
+  sendFrameAction: "close" | "minimize" | "maximize";
+  startOverlay: void;
+  startAgentOverlay: void;
+  stopAgentOverlay: void;
+  updateAgentStatus: any;
+  "agent-status-update": any;
   openExternalLink: string;
+  openHudsDirectory: void;
   getPlayers: Promise<Player[]>;
   updateMessage: string;
-  openHudsDirectory: void;
 };
 
 type FrameWindowAction =
@@ -224,4 +230,22 @@ interface AgentStatus {
   audioMessage?: string;
   timestamp?: number;
   action?: string;
+}
+
+// Custom Events
+interface CustomEventMap {
+  'route-change': CustomEvent<string>;
+}
+
+declare global {
+  interface Window {
+    addEventListener<K extends keyof CustomEventMap>(
+      type: K,
+      listener: (this: Window, ev: CustomEventMap[K]) => void
+    ): void;
+    removeEventListener<K extends keyof CustomEventMap>(
+      type: K,
+      listener: (this: Window, ev: CustomEventMap[K]) => void
+    ): void;
+  }
 }

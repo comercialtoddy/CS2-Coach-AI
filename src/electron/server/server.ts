@@ -4,14 +4,14 @@ import http from "http";
 import { initializeSocket } from "./sockets/socket.js";
 import { readGameData } from "./sockets/GSI.js";
 import {
-  playersRoutes as playerRoutes,
-  teamsRoutes as teamRoutes,
-  matchesRoutes as matchRoutes,
+  playerRoutes,
+  teamRoutes,
+  matchRoutes,
   coachRoutes,
   settingsRoutes,
   trackerGGRoutes,
   piperTTSRoutes,
-  agentOverlayDemoRoutes as agentDemoRoutes,
+  agentOverlayDemoRoutes,
   openRouterRoutes,
   dataRetrievalRoutes,
 } from "./routes/index.js";
@@ -20,6 +20,7 @@ import { ipcWebContentsSend } from "../helpers/util.js";
 import { registerCoreDataRetrievalTools } from "./ai/tools/registerCoreDataRetrievalTools.js";
 import { getHudPath, getUploadsPath } from "../helpers/index.js";
 import path from "path";
+import { ToolManager } from "./ai/ToolManager.js";
 
 const port = process.env.PORT || "1349";
 
@@ -50,16 +51,19 @@ export const startServer = (mainWindow: BrowserWindow) => {
   expressApp.use(settingsRoutes);
   expressApp.use("/tracker-gg", trackerGGRoutes);
   expressApp.use("/piper-tts", piperTTSRoutes);
-  expressApp.use("/agent-demo", agentDemoRoutes);
+  expressApp.use("/agent-demo", agentOverlayDemoRoutes);
   expressApp.use("/openrouter", openRouterRoutes);
   expressApp.use("/data-retrieval", dataRetrievalRoutes);
 
   server.listen(port, async () => {
     console.log(`Server listening on port ${port}`);
     
+    // Initialize AI Tool Manager
+    const toolManager = new ToolManager();
+    
     // Initialize Core Data Retrieval Tools
     try {
-      await registerCoreDataRetrievalTools();
+      await registerCoreDataRetrievalTools(toolManager);
     } catch (error) {
       console.error('Failed to initialize Core Data Retrieval Tools:', error);
       // Continue server startup even if tools fail to register

@@ -10,7 +10,7 @@
 import { EventEmitter } from 'events';
 import {
   IDecisionEngine,
-  DecisionContext,
+  AIDecisionContext,
   AIDecision,
   ToolChainStep,
   UserFeedback,
@@ -27,6 +27,16 @@ import {
 import { BaseMemoryEntry, MemoryType, ImportanceLevel } from '../interfaces/MemoryService.js';
 import { ToolManager } from '../ToolManager.js';
 
+type ToolName =
+  | 'Tool_GetGSIInfo'
+  | 'Tool_AnalyzePositioning'
+  | 'Tool_CallLLM'
+  | 'Tool_PiperTTS'
+  | 'Tool_SuggestEconomyBuy'
+  | 'Tool_GetTrackerGGStats'
+  | 'Tool_UpdatePlayerProfile'
+  | 'Tool_SummarizeConversation';
+
 /**
  * Decision rule for contextual analysis
  */
@@ -34,7 +44,7 @@ interface DecisionRule {
   id: string;
   name: string;
   contexts: GameContext[];
-  conditions: (context: DecisionContext) => boolean;
+  conditions: (context: AIDecisionContext) => boolean;
   toolChain: string[];
   priority: InterventionPriority;
   confidence: number;
@@ -43,7 +53,36 @@ interface DecisionRule {
 }
 
 /**
- * Learning data for decision optimization
+ * Adaptive coaching configuration
+ */
+interface AdaptiveCoachingConfig {
+  learningRate: number;
+  minConfidence: number;
+  maxAdaptations: number;
+  adaptationThreshold: number;
+  cooldownPeriod: number;
+}
+
+/**
+ * Coaching style adaptation
+ */
+interface CoachingStyleAdaptation {
+  ruleId: string;
+  timestamp: Date;
+  changes: {
+    priority?: InterventionPriority;
+    confidence?: number;
+    toolChain?: string[];
+    cooldown?: number;
+  };
+  reason: string;
+  outcome?: ExecutionOutcome;
+  feedback?: UserFeedback;
+  adjustment?: string;
+}
+
+/**
+ * Decision learning data
  */
 interface DecisionLearning {
   ruleId: string;
@@ -51,11 +90,17 @@ interface DecisionLearning {
   averageUserRating: number;
   totalApplications: number;
   lastUsed: Date;
-  adaptations: {
-    timestamp: Date;
-    feedback: UserFeedback;
-    outcome: ExecutionOutcome;
-    adjustment: string;
+  adaptations: CoachingStyleAdaptation[];
+  playerPreferences?: {
+    feedbackStyle: string;
+    detailLevel: string;
+    interventionFrequency: string;
+  };
+  effectivePatterns: {
+    context: string[];
+    toolChain: string[];
+    successRate: number;
+    applications: number;
   }[];
 }
 
@@ -92,6 +137,15 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
     defaultCooldownMs: number;
   };
 
+  private toolTimeouts: Record<ToolName, number>;
+  private toolFallbacks: Record<ToolName, string | undefined>;
+  private toolOutputs: Record<ToolName, string>;
+  private toolComplexities: Record<ToolName, number>;
+
+  private adaptiveConfig: AdaptiveCoachingConfig;
+  private lastDecisionTimestamp: Map<string, number>;
+  private readonly COOLDOWN_MS = 5000; // 5 seconds cooldown between similar decisions
+
   constructor(toolManager: ToolManager) {
     super();
     this.toolManager = toolManager;
@@ -107,7 +161,61 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
       defaultCooldownMs: 30000 // 30 seconds
     };
 
+    this.adaptiveConfig = {
+      learningRate: 0.1,
+      minConfidence: 0.6,
+      maxAdaptations: 5,
+      adaptationThreshold: 0.2,
+      cooldownPeriod: 30000 // 30 seconds
+    };
+
     this.initializeDecisionRules();
+
+    this.toolTimeouts = {
+      Tool_GetGSIInfo: 1000,
+      Tool_AnalyzePositioning: 5000,
+      Tool_CallLLM: 15000,
+      Tool_PiperTTS: 8000,
+      Tool_SuggestEconomyBuy: 3000,
+      Tool_GetTrackerGGStats: 10000,
+      Tool_UpdatePlayerProfile: 2000,
+      Tool_SummarizeConversation: 12000
+    };
+
+    this.toolFallbacks = {
+      Tool_GetGSIInfo: undefined,
+      Tool_AnalyzePositioning: 'Tool_SummarizeConversation',
+      Tool_CallLLM: undefined,
+      Tool_PiperTTS: undefined,
+      Tool_SuggestEconomyBuy: 'Tool_CallLLM',
+      Tool_GetTrackerGGStats: 'Tool_CallLLM',
+      Tool_UpdatePlayerProfile: undefined,
+      Tool_SummarizeConversation: undefined
+    };
+
+    this.toolOutputs = {
+      Tool_GetGSIInfo: 'Returns structured game state information.',
+      Tool_AnalyzePositioning: 'Returns analysis of player positioning.',
+      Tool_CallLLM: 'Returns a text response from the language model.',
+      Tool_PiperTTS: 'Returns an audio file or stream.',
+      Tool_SuggestEconomyBuy: 'Returns buy suggestions for the team.',
+      Tool_GetTrackerGGStats: 'Returns player statistics from Tracker.gg.',
+      Tool_UpdatePlayerProfile: 'Returns confirmation of player profile update.',
+      Tool_SummarizeConversation: 'Returns a summary of the conversation.'
+    };
+
+    this.toolComplexities = {
+      Tool_GetGSIInfo: 1,
+      Tool_AnalyzePositioning: 5,
+      Tool_CallLLM: 8,
+      Tool_PiperTTS: 4,
+      Tool_SuggestEconomyBuy: 3,
+      Tool_GetTrackerGGStats: 6,
+      Tool_UpdatePlayerProfile: 2,
+      Tool_SummarizeConversation: 7
+    };
+
+    this.lastDecisionTimestamp = new Map();
   }
 
   /**
@@ -203,7 +311,8 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
         averageUserRating: 3.5,
         totalApplications: 0,
         lastUsed: new Date(0),
-        adaptations: []
+        adaptations: [],
+        effectivePatterns: []
       });
     });
 
@@ -213,7 +322,7 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
   /**
    * Main analysis method - analyzes context and generates AI decisions
    */
-  async analyzeContext(context: DecisionContext): Promise<AIDecision[]> {
+  async analyzeContext(context: AIDecisionContext): Promise<AIDecision[]> {
     try {
       this.emit('analysis-started', { context: context.gameState.processed.context });
 
@@ -242,8 +351,9 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
 
       return finalDecisions;
     } catch (error) {
-      this.emit('analysis-error', { error: error.message });
-      throw new Error(`Decision analysis failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.emit('analysis-error', { error: errorMessage });
+      throw new Error(`Decision analysis failed: ${errorMessage}`);
     }
   }
 
@@ -277,32 +387,14 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
    * Optimize tool chain for better performance and reliability
    */
   optimizeToolChain(decision: AIDecision): ToolChainStep[] {
-    const optimizedSteps: ToolChainStep[] = [];
-    let stepIndex = 0;
-
-    for (const step of decision.toolChain) {
-      const optimizedStep: ToolChainStep = {
-        stepId: `${decision.id}_step_${stepIndex}`,
-        toolName: step.toolName,
-        input: this.prepareToolInput(step.toolName, decision, stepIndex),
-        expectedOutput: step.expectedOutput,
-        dependencies: stepIndex === 0 ? [] : [`${decision.id}_step_${stepIndex - 1}`],
-        timeout: this.calculateOptimalTimeout(step.toolName),
-        retryPolicy: {
-          maxRetries: this.getRetryPolicy(step.toolName).maxRetries,
-          backoffStrategy: this.getRetryPolicy(step.toolName).backoffStrategy
-        },
-        fallbackTool: this.getFallbackTool(step.toolName)
-      };
-
-      optimizedSteps.push(optimizedStep);
-      stepIndex++;
-    }
-
-    // Add parallel execution opportunities where possible
-    this.identifyParallelExecutionOpportunities(optimizedSteps);
-
-    return optimizedSteps;
+    return decision.toolChain.map(step => ({
+      ...step,
+      timeout: this.calculateOptimalTimeout(step.toolName),
+      retryPolicy: {
+        maxRetries: 2,
+        backoffStrategy: 'linear'
+      }
+    }));
   }
 
   /**
@@ -335,7 +427,10 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
 
       // Record adaptation
       learningData.adaptations.push({
+        ruleId: ruleId,
         timestamp: new Date(),
+        changes: {},
+        reason: `Feedback-based adaptation`,
         feedback,
         outcome: null as any, // Will be updated in learnFromOutcome
         adjustment: `Confidence adjusted by ${this.calculateConfidenceAdjustment(feedback)}`
@@ -387,12 +482,338 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
     }
   }
 
+  /**
+   * Apply adaptive coaching adjustments based on learning data
+   */
+  private applyAdaptiveAdjustments(rule: DecisionRule, context: AIDecisionContext): DecisionRule {
+    const learningData = this.learningData.get(rule.id);
+    if (!learningData) return rule;
+
+    // Create a copy of the rule to modify
+    const adaptedRule: DecisionRule = { ...rule };
+
+    // Check if adaptation is needed
+    const needsAdaptation = this.needsAdaptation(learningData);
+    if (!needsAdaptation) return rule;
+
+    // Analyze player preferences and patterns
+    const playerProfile = this.analyzePlayerProfile(context);
+    const effectivePatterns = this.findEffectivePatterns(learningData, context);
+
+    // Adjust rule based on learning data
+    this.adjustRulePriority(adaptedRule, learningData, playerProfile);
+    this.adjustToolChain(adaptedRule, effectivePatterns);
+    this.adjustConfidence(adaptedRule, learningData);
+    this.adjustCooldown(adaptedRule, learningData);
+
+    // Record adaptation
+    this.recordAdaptation(learningData, adaptedRule, rule);
+
+    return adaptedRule;
+  }
+
+  /**
+   * Check if a rule needs adaptation
+   */
+  private needsAdaptation(learning: DecisionLearning): boolean {
+    // Check if enough data is available
+    if (learning.totalApplications < 5) return false;
+
+    // Check if success rate is below threshold
+    if (learning.successRate < this.adaptiveConfig.minConfidence) return true;
+
+    // Check if recent adaptations have been ineffective
+    const recentAdaptations = learning.adaptations
+      .slice(-this.adaptiveConfig.maxAdaptations);
+
+    if (recentAdaptations.length > 0) {
+      const recentSuccess = recentAdaptations
+        .filter(a => a.outcome?.success)
+        .length / recentAdaptations.length;
+
+      if (recentSuccess < 0.5) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Analyze player profile for adaptation
+   */
+  private analyzePlayerProfile(context: AIDecisionContext): {
+    learningStyle: string;
+    responseToFeedback: string;
+    skillLevel: string;
+    adaptability: number;
+  } {
+    const preferences = context.learningPreferences || {
+      style: 'balanced',
+      level: 'intermediate',
+      frequency: 'moderate'
+    };
+
+    const history = context.sessionHistory || [];
+    const recentHistory = history.slice(-5);
+
+    const learningStyle = preferences.style;
+    const responseToFeedback = this.analyzeResponses(recentHistory);
+    const skillLevel = this.determineSkillLevel(context.playerMemory);
+    const adaptability = this.calculateAdaptability(recentHistory);
+
+    return {
+      learningStyle,
+      responseToFeedback,
+      skillLevel,
+      adaptability
+    };
+  }
+
+  /**
+   * Find effective patterns for the current context
+   */
+  private findEffectivePatterns(
+    learning: DecisionLearning,
+    context: AIDecisionContext
+  ): DecisionLearning['effectivePatterns'][0] | null {
+    if (!learning.effectivePatterns?.length) return null;
+
+    // Get current context tags
+    const currentContext = this.extractContextTags(context);
+
+    // Find patterns with similar context and high success rate
+    return learning.effectivePatterns
+      .filter(pattern => {
+        const contextOverlap = pattern.context
+          .filter(tag => currentContext.includes(tag))
+          .length / pattern.context.length;
+
+        return contextOverlap > 0.7 && pattern.successRate > 0.7;
+      })
+      .sort((a, b) => b.successRate - a.successRate)[0] || null;
+  }
+
+  /**
+   * Adjust rule priority based on learning data
+   */
+  private adjustRulePriority(
+    rule: DecisionRule,
+    learning: DecisionLearning,
+    profile: ReturnType<typeof this.analyzePlayerProfile>
+  ): void {
+    // Base priority adjustment on success rate
+    if (learning.successRate < 0.3) {
+      rule.priority = InterventionPriority.LOW;
+    } else if (learning.successRate > 0.8) {
+      rule.priority = InterventionPriority.HIGH;
+    }
+
+    // Consider player's response to feedback
+    if (profile.responseToFeedback === 'negative') {
+      rule.priority = this.lowerPriority(rule.priority);
+    } else if (profile.responseToFeedback === 'positive') {
+      rule.priority = this.raisePriority(rule.priority);
+    }
+
+    // Consider skill level
+    if (profile.skillLevel === 'beginner' && rule.priority === InterventionPriority.LOW) {
+      rule.priority = InterventionPriority.MEDIUM;
+    }
+  }
+
+  /**
+   * Adjust tool chain based on effective patterns
+   */
+  private adjustToolChain(
+    rule: DecisionRule,
+    effectivePattern: DecisionLearning['effectivePatterns'][0] | null
+  ): void {
+    if (!effectivePattern) return;
+
+    // Use the tool chain from the effective pattern
+    if (effectivePattern.successRate > 0.8) {
+      rule.toolChain = effectivePattern.toolChain;
+    }
+
+    // Ensure essential tools are included
+    const essentialTools = ['Tool_GetGSIInfo', 'Tool_CallLLM'];
+    essentialTools.forEach(tool => {
+      if (!rule.toolChain.includes(tool)) {
+        rule.toolChain.push(tool);
+      }
+    });
+  }
+
+  /**
+   * Adjust rule confidence based on learning data
+   */
+  private adjustConfidence(rule: DecisionRule, learning: DecisionLearning): void {
+    // Base confidence on success rate
+    const baseConfidence = learning.successRate;
+
+    // Consider total applications for reliability
+    const experienceFactor = Math.min(learning.totalApplications / 100, 1);
+    
+    // Consider recent adaptations
+    const recentAdaptations = learning.adaptations.slice(-3);
+    const adaptationImpact = recentAdaptations.reduce(
+      (sum, adaptation) => sum + (adaptation.outcome?.measuredImpact.performance || 0),
+      0
+    ) / (recentAdaptations.length || 1);
+
+    // Calculate final confidence
+    rule.confidence = Math.min(
+      1,
+      baseConfidence * 0.6 +
+      experienceFactor * 0.2 +
+      adaptationImpact * 0.2
+    );
+  }
+
+  /**
+   * Adjust rule cooldown based on learning data
+   */
+  private adjustCooldown(rule: DecisionRule, learning: DecisionLearning): void {
+    const baseCooldown = this.adaptiveConfig.cooldownPeriod;
+
+    // Increase cooldown if frequently ignored
+    if (learning.successRate < 0.3) {
+      rule.cooldown = baseCooldown * 2;
+    }
+    // Decrease cooldown if highly successful
+    else if (learning.successRate > 0.8) {
+      rule.cooldown = baseCooldown * 0.5;
+    }
+    // Use base cooldown
+    else {
+      rule.cooldown = baseCooldown;
+    }
+  }
+
+  /**
+   * Record an adaptation for learning
+   */
+  private recordAdaptation(
+    learning: DecisionLearning,
+    adaptedRule: DecisionRule,
+    originalRule: DecisionRule
+  ): void {
+    const adaptation: CoachingStyleAdaptation = {
+      ruleId: adaptedRule.id,
+      timestamp: new Date(),
+      changes: {
+        priority: adaptedRule.priority !== originalRule.priority ? adaptedRule.priority : undefined,
+        confidence: adaptedRule.confidence !== originalRule.confidence ? adaptedRule.confidence : undefined,
+        toolChain: !this.arraysEqual(adaptedRule.toolChain, originalRule.toolChain) ? adaptedRule.toolChain : undefined,
+        cooldown: adaptedRule.cooldown !== originalRule.cooldown ? adaptedRule.cooldown : undefined
+      },
+      reason: `Adapted based on learning data (success rate: ${learning.successRate.toFixed(2)})`,
+      outcome: undefined
+    };
+
+    learning.adaptations.push(adaptation);
+  }
+
+  /**
+   * Extract context tags from decision context
+   */
+  private extractContextTags(context: AIDecisionContext): string[] {
+    const tags: string[] = [
+      context.gameState.processed.phase,
+      context.gameState.processed.economyState.roundType,
+      context.gameState.processed.teamState.side,
+      context.gameState.processed.mapState.name
+    ];
+
+    // Add situational factors
+    context.gameState.processed.situationalFactors.forEach(factor => {
+      if (factor.severity === 'high' || factor.severity === 'critical') {
+        tags.push(factor.type);
+      }
+    });
+
+    // Add coaching objectives
+    context.coachingObjectives.forEach(objective => {
+      tags.push(objective);
+    });
+
+    return tags.filter(Boolean);
+  }
+
+  /**
+   * Determine player skill level from profile data
+   */
+  private determineSkillLevel(profileData: any): string {
+    if (!profileData?.performance) return 'intermediate';
+
+    const rating = profileData.performance.averageRating || 0;
+    if (rating > 1.2) return 'advanced';
+    if (rating < 0.8) return 'beginner';
+    return 'intermediate';
+  }
+
+  /**
+   * Analyze player responses to feedback
+   */
+  private analyzeResponses(responses: any[]): string {
+    if (!responses.length) return 'neutral';
+
+    const positiveCount = responses.filter(r => r === 'positive').length;
+    const negativeCount = responses.filter(r => r === 'negative').length;
+
+    if (positiveCount > responses.length * 0.6) return 'positive';
+    if (negativeCount > responses.length * 0.4) return 'negative';
+    return 'neutral';
+  }
+
+  /**
+   * Calculate player adaptability score
+   */
+  private calculateAdaptability(responses: any[]): number {
+    if (!responses.length) return 0.5;
+
+    // Calculate how often the player successfully adapts to feedback
+    const successfulAdaptations = responses.filter(r => r === 'positive').length;
+    return successfulAdaptations / responses.length;
+  }
+
+  /**
+   * Lower priority level
+   */
+  private lowerPriority(priority: InterventionPriority): InterventionPriority {
+    switch (priority) {
+      case InterventionPriority.IMMEDIATE:
+        return InterventionPriority.HIGH;
+      case InterventionPriority.HIGH:
+        return InterventionPriority.MEDIUM;
+      case InterventionPriority.MEDIUM:
+        return InterventionPriority.LOW;
+      default:
+        return InterventionPriority.LOW;
+    }
+  }
+
+  /**
+   * Raise priority level
+   */
+  private raisePriority(priority: InterventionPriority): InterventionPriority {
+    switch (priority) {
+      case InterventionPriority.LOW:
+        return InterventionPriority.MEDIUM;
+      case InterventionPriority.MEDIUM:
+        return InterventionPriority.HIGH;
+      case InterventionPriority.HIGH:
+        return InterventionPriority.IMMEDIATE;
+      default:
+        return priority;
+    }
+  }
+
   // ===== Private Helper Methods =====
 
   /**
    * Perform deep analysis of the current context
    */
-  private async performContextAnalysis(context: DecisionContext): Promise<ContextAnalysis> {
+  private async performContextAnalysis(context: AIDecisionContext): Promise<ContextAnalysis> {
     const gameState = context.gameState;
     const player = gameState.processed.playerState;
     const team = gameState.processed.teamState;
@@ -410,7 +831,7 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
   /**
    * Apply decision rules to context and generate potential decisions
    */
-  private async applyDecisionRules(context: DecisionContext, analysis: ContextAnalysis): Promise<AIDecision[]> {
+  private async applyDecisionRules(context: AIDecisionContext, analysis: ContextAnalysis): Promise<AIDecision[]> {
     const decisions: AIDecision[] = [];
     
     for (const [ruleId, rule] of this.decisionRules) {
@@ -436,40 +857,27 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
   /**
    * Generate a decision from a rule
    */
-  private async generateDecisionFromRule(rule: DecisionRule, context: DecisionContext, analysis: ContextAnalysis): Promise<AIDecision | null> {
+  private async generateDecisionFromRule(rule: DecisionRule, context: AIDecisionContext, analysis: ContextAnalysis): Promise<AIDecision | null> {
     try {
-      const learningData = this.learningData.get(rule.id);
-      const adjustedConfidence = learningData ? 
-        (rule.confidence * 0.7 + learningData.successRate * 0.3) : rule.confidence;
-      
-      if (adjustedConfidence < this.config.minConfidenceThreshold) return null;
+      const toolChain = this.generateToolChain(rule.toolChain);
+      const complexity = this.calculateComplexity(rule.toolChain);
 
-      const decision: AIDecision = {
-        id: `decision_${rule.id}_${Date.now()}`,
+      return {
+        id: `${rule.id}_${Date.now()}`,
+        type: rule.id,
         priority: rule.priority,
-        rationale: `${rule.description} - Context: ${analysis.gameContext}, Urgency: ${analysis.urgency}`,
-        confidence: adjustedConfidence,
-        toolChain: rule.toolChain.map((toolName, index) => ({
-          stepId: `${rule.id}_step_${index}`,
-          toolName,
-          input: this.prepareToolInput(toolName, null, index),
-          expectedOutput: this.getExpectedOutput(toolName),
-          dependencies: index === 0 ? [] : [`${rule.id}_step_${index - 1}`],
-          timeout: this.calculateOptimalTimeout(toolName),
-          retryPolicy: this.getRetryPolicy(toolName),
-          fallbackTool: this.getFallbackTool(toolName)
-        })),
-        expectedOutcome: `Execute ${rule.name} to address ${analysis.coachingNeeds.join(', ')}`,
+        confidence: rule.confidence,
+        rationale: `${rule.description} based on current game state`,
+        toolChain,
+        context,
         metadata: {
-          processingTime: this.estimateProcessingTime(rule.toolChain),
-          complexity: this.calculateComplexity(rule.toolChain),
-          riskLevel: this.assessRiskLevel(rule, context)
+          complexity,
+          executionTime: this.estimateProcessingTime(rule.toolChain),
+          expectedOutcome: rule.description
         }
       };
-
-      return decision;
     } catch (error) {
-      this.emit('decision-generation-error', { ruleId: rule.id, error: error.message });
+      console.error('Failed to generate decision:', error);
       return null;
     }
   }
@@ -479,11 +887,13 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
    */
   private filterViableDecisions(decisions: AIDecision[]): AIDecision[] {
     return decisions.filter(decision => {
-      // Confidence threshold
-      if (decision.confidence < this.config.minConfidenceThreshold) return false;
-      
+      // Check cooldown
+      const lastUse = this.lastDecisionTimestamp.get(decision.type) || 0;
+      if (Date.now() - lastUse < this.COOLDOWN_MS) return false;
+
       // Resource constraints check
-      if (decision.metadata.processingTime > 30000) return false; // Max 30 seconds
+      const executionTime = decision.metadata.executionTime || 0;
+      if (executionTime > 30000) return false; // Max 30 seconds
       
       // Risk assessment
       if (decision.metadata.riskLevel === 'high' && decision.confidence < 0.8) return false;
@@ -494,7 +904,7 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
 
   // ===== Condition Check Methods =====
 
-  private isCriticalPositioning(context: DecisionContext): boolean {
+  private isCriticalPositioning(context: AIDecisionContext): boolean {
     const player = context.gameState.processed.playerState;
     const situationalFactors = context.gameState.processed.situationalFactors;
     
@@ -504,16 +914,24 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
            );
   }
 
-  private needsEconomyAdvice(context: DecisionContext): boolean {
+  private needsEconomyAdvice(context: AIDecisionContext): boolean {
     const economy = context.gameState.processed.economyState;
     const team = context.gameState.processed.teamState;
-    
-    return economy.roundType === 'eco' || 
-           economy.roundType === 'force' ||
-           team.economy.buyCapability !== 'full_buy';
+
+    // Check if team economy is in a challenging state
+    if (economy.roundType === 'eco' || economy.roundType === 'semi_eco') {
+      return true;
+    }
+
+    // Check if team has mixed buy capability
+    if (team.economy.buyCapability === 'eco' || team.economy.buyCapability === 'semi_eco') {
+      return true;
+    }
+
+    return false;
   }
 
-  private hasPerformanceInsights(context: DecisionContext): boolean {
+  private hasPerformanceInsights(context: AIDecisionContext): boolean {
     const player = context.gameState.processed.playerState;
     
     // Check for significant performance events
@@ -522,15 +940,23 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
            player.riskFactors.length > 0;
   }
 
-  private needsTacticalGuidance(context: DecisionContext): boolean {
+  private needsTacticalGuidance(context: AIDecisionContext): boolean {
     const situationalFactors = context.gameState.processed.situationalFactors;
     
-    return situationalFactors.some(factor => 
-      factor.type === 'tactical' && factor.actionRequired
+    // Check for critical or high severity factors
+    const hasCriticalFactors = situationalFactors.some(
+      f => f.severity === 'critical' || f.severity === 'high'
     );
+
+    // Check for tactical factors
+    const hasTacticalFactors = situationalFactors.some(
+      f => f.type === 'tactical' || f.type === 'positional'
+    );
+
+    return hasCriticalFactors || hasTacticalFactors;
   }
 
-  private needsMentalSupport(context: DecisionContext): boolean {
+  private needsMentalSupport(context: AIDecisionContext): boolean {
     const player = context.gameState.processed.playerState;
     const team = context.gameState.processed.teamState;
     
@@ -541,7 +967,7 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
            player.riskFactors.includes('frustration');
   }
 
-  private hasLearningOpportunity(context: DecisionContext): boolean {
+  private hasLearningOpportunity(context: AIDecisionContext): boolean {
     const situationalFactors = context.gameState.processed.situationalFactors;
     
     return situationalFactors.some(factor => 
@@ -563,7 +989,7 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
     return 'low';
   }
 
-  private identifyCoachingNeeds(context: DecisionContext): CoachingObjective[] {
+  private identifyCoachingNeeds(context: AIDecisionContext): CoachingObjective[] {
     const needs: CoachingObjective[] = [];
     const player = context.gameState.processed.playerState;
     const situationalFactors = context.gameState.processed.situationalFactors;
@@ -611,7 +1037,7 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
     return patterns;
   }
 
-  private generateInterventionRecommendations(context: DecisionContext): any[] {
+  private generateInterventionRecommendations(context: AIDecisionContext): any[] {
     const recommendations = [];
     const urgency = this.calculateUrgency(context.gameState);
     
@@ -635,107 +1061,68 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
   }
 
   private prepareToolInput(toolName: string, decision: AIDecision | null, stepIndex: number): any {
-    // Prepare context-specific input for each tool
-    switch (toolName) {
-      case 'Tool_GetGSIInfo':
-        return { requestType: 'current_state' };
-      
-      case 'Tool_CallLLM':
+    // This is a placeholder - in a real implementation, this would involve
+    // complex logic to map the decision context to specific tool inputs.
         return {
-          prompt: decision ? 
-            `Analyze the following game situation and provide coaching advice: ${decision.rationale}` :
-            'Provide general coaching guidance for the current game state',
-          maxTokens: 150,
-          temperature: 0.7
-        };
-      
-      case 'Tool_PiperTTS':
-        return {
-          text: 'Coaching advice will be provided here',
-          voice: 'en_US-ryan-medium',
-          speed: 1.0
-        };
-      
-      default:
-        return {};
-    }
+      gameState: decision?.context.gameState,
+      memory: decision?.context.playerMemory,
+      step: stepIndex,
+      // The following properties are examples and might not be used by all tools
+      // We are leaving them here for illustrative purposes.
+      timeout: this.calculateOptimalTimeout(toolName),
+      retryPolicy: this.getRetryPolicy(toolName),
+      fallback: this.getFallbackTool(toolName),
+      expectedOutput: this.getExpectedOutput(toolName)
+    };
   }
 
   private calculateOptimalTimeout(toolName: string): number {
-    const timeouts = {
-      'Tool_GetGSIInfo': 2000,
-      'Tool_CallLLM': 15000,
-      'Tool_PiperTTS': 8000,
-      'Tool_GetTrackerGGStats': 5000,
-      'Tool_UpdatePlayerProfile': 3000,
-      'Tool_AnalyzePositioning': 10000,
-      'Tool_SuggestEconomyBuy': 5000,
-      'Tool_SummarizeConversation': 12000
-    };
-    
-    return timeouts[toolName] || 10000;
+    return this.toolTimeouts[toolName as ToolName] || 30000;
   }
 
+  /**
+   * Defines the retry policy for a given tool
+   */
   private getRetryPolicy(toolName: string): { maxRetries: number; backoffStrategy: 'linear' | 'exponential' } {
-    const highReliabilityTools = ['Tool_GetGSIInfo', 'Tool_UpdatePlayerProfile'];
-    
-    return {
-      maxRetries: highReliabilityTools.includes(toolName) ? 3 : 2,
-      backoffStrategy: 'exponential'
-    };
+    switch (toolName) {
+      case 'Tool_GetGSIInfo':
+        return { maxRetries: 3, backoffStrategy: 'linear' };
+      case 'Tool_GetTrackerGGStats':
+        return { maxRetries: 2, backoffStrategy: 'exponential' };
+      default:
+        return { maxRetries: 0, backoffStrategy: 'linear' };
+    }
   }
 
   private getFallbackTool(toolName: string): string | undefined {
-    const fallbacks = {
-      'Tool_CallLLM': 'Tool_GetGSIInfo',
-      'Tool_PiperTTS': undefined, // No fallback for TTS
-      'Tool_GetTrackerGGStats': 'Tool_GetGSIInfo'
-    };
-    
-    return fallbacks[toolName];
+    return this.toolFallbacks[toolName as ToolName];
   }
 
+  /**
+   * Defines the expected output format or type for a given tool
+   */
   private getExpectedOutput(toolName: string): string {
-    const outputs = {
-      'Tool_GetGSIInfo': 'Current game state data',
-      'Tool_CallLLM': 'AI-generated coaching advice',
-      'Tool_PiperTTS': 'Audio file for coaching feedback',
-      'Tool_GetTrackerGGStats': 'Player statistics and performance data',
-      'Tool_UpdatePlayerProfile': 'Updated player profile confirmation',
-      'Tool_AnalyzePositioning': 'Positioning analysis and recommendations',
-      'Tool_SuggestEconomyBuy': 'Economy and buy recommendations',
-      'Tool_SummarizeConversation': 'Session summary and insights'
-    };
-    
-    return outputs[toolName] || 'Tool execution result';
+    return this.toolOutputs[toolName as ToolName] || 'No specific output format defined.';
   }
 
+  /**
+   * Estimates the total processing time for a tool chain
+   */
   private estimateProcessingTime(toolChain: string[]): number {
-    return toolChain.reduce((total, toolName) => {
-      return total + this.calculateOptimalTimeout(toolName);
-    }, 0);
+    return toolChain.reduce((total, toolName) => total + this.calculateOptimalTimeout(toolName), 0);
   }
 
+  /**
+   * Calculates the complexity score for a tool chain
+   */
   private calculateComplexity(toolChain: string[]): number {
-    const complexityScores = {
-      'Tool_GetGSIInfo': 1,
-      'Tool_CallLLM': 3,
-      'Tool_PiperTTS': 2,
-      'Tool_GetTrackerGGStats': 2,
-      'Tool_UpdatePlayerProfile': 1,
-      'Tool_AnalyzePositioning': 3,
-      'Tool_SuggestEconomyBuy': 2,
-      'Tool_SummarizeConversation': 3
-    };
-    
-    const totalComplexity = toolChain.reduce((total, toolName) => {
-      return total + (complexityScores[toolName] || 2);
+    return toolChain.reduce((total, toolName) => {
+      const complexity = this.toolComplexities[toolName as ToolName] || 1;
+      return total + complexity;
     }, 0);
-    
-    return Math.min(10, totalComplexity);
   }
 
-  private assessRiskLevel(rule: DecisionRule, context: DecisionContext): 'low' | 'medium' | 'high' {
+  private assessRiskLevel(rule: DecisionRule, context: AIDecisionContext): 'low' | 'medium' | 'high' {
     if (rule.priority === InterventionPriority.IMMEDIATE) return 'high';
     if (context.gameState.processed.situationalFactors.some(f => f.severity === 'critical')) return 'high';
     if (rule.confidence < 0.7) return 'medium';
@@ -781,21 +1168,12 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
   }
 
   private calculatePerformanceAdjustment(outcome: ExecutionOutcome): number {
-    let adjustment = 0;
-    
-    if (outcome.success) adjustment += 0.01;
-    else adjustment -= 0.02;
-    
-    switch (outcome.playerResponse) {
-      case 'positive': adjustment += 0.01; break;
-      case 'negative': adjustment -= 0.02; break;
-      case 'ignored': adjustment -= 0.005; break;
-    }
-    
-    adjustment += outcome.measuredImpact.performance * 0.01;
-    adjustment += outcome.measuredImpact.engagement * 0.005;
-    
-    return Math.max(-0.05, Math.min(0.05, adjustment));
+    const baseAdjustment = outcome.success ? 0.1 : -0.1;
+    const impactFactor = outcome.impact;
+    const responseFactor = outcome.playerResponse === 'positive' ? 0.2 :
+      outcome.playerResponse === 'neutral' ? 0 : -0.2;
+
+    return baseAdjustment + (impactFactor * 0.2) + responseFactor;
   }
 
   /**
@@ -835,5 +1213,134 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
    */
   getDecisionRules(): Map<string, DecisionRule> {
     return new Map(this.decisionRules);
+  }
+
+  async generateDecisions(context: AIDecisionContext): Promise<AIDecision[]> {
+    const decisions: AIDecision[] = [];
+
+    // Check positioning
+    if (this.shouldAnalyzePositioning(context)) {
+      const decision = await this.generatePositioningDecision(context);
+      if (decision) decisions.push(decision);
+    }
+
+    // Check economy
+    const phase = context.gameState.processed.phase;
+    if (phase === 'freezetime' || phase === 'round_start') {
+      const decision = await this.generateEconomyDecision(context);
+      if (decision) decisions.push(decision);
+    }
+
+    // Check performance
+    const player = context.gameState.processed.playerState;
+    if (phase === 'round_end' || player.health <= 0) {
+      const decision = await this.generatePerformanceDecision(context);
+      if (decision) decisions.push(decision);
+    }
+
+    return decisions;
+  }
+
+  private shouldAnalyzePositioning(context: AIDecisionContext): boolean {
+    const lastCheck = this.lastDecisionTimestamp.get('positioning') || 0;
+    if (Date.now() - lastCheck < this.COOLDOWN_MS) return false;
+
+    const player = context.gameState.processed.playerState;
+    const gamePhase = context.gameState.processed.phase;
+
+    // Check if player is in an active round
+    if (gamePhase !== 'live' && gamePhase !== 'freezetime') {
+      return false;
+    }
+
+    // Check player state
+    const isActive = player.health > 0;
+    const hasMovedRecently = this.hasRecentMovement(player.position);
+
+    return isActive && hasMovedRecently;
+  }
+
+  private hasRecentMovement(position: { x: number; y: number; z: number }): boolean {
+    // Implementation to check if position has changed significantly
+    // This would typically compare with a previously stored position
+    return true; // Simplified for now
+  }
+
+  // Fix the tool chain generation
+  private generateToolChain(toolNames: string[]): ToolChainStep[] {
+    return toolNames.map((toolName, index) => ({
+      stepId: `step_${index}`,
+      toolName,
+      input: this.prepareToolInput(toolName, null, index),
+      dependencies: index === 0 ? [] : [`step_${index - 1}`],
+      timeout: this.calculateOptimalTimeout(toolName),
+      retryPolicy: {
+        maxRetries: 2,
+        backoffStrategy: 'linear'
+      },
+      expectedOutput: this.getExpectedOutput(toolName)
+    }));
+  }
+
+  private async generatePositioningDecision(context: AIDecisionContext): Promise<AIDecision> {
+    const toolChain = this.generateToolChain(['Tool_AnalyzePositioning', 'Tool_CallLLM']);
+    return Promise.resolve({
+      id: `positioning_${Date.now()}`,
+      type: 'positioning_analysis',
+      priority: InterventionPriority.HIGH,
+      confidence: 0.8,
+      rationale: 'Analyzing player positioning and providing tactical advice',
+      toolChain,
+      context,
+      metadata: {
+        complexity: this.calculateComplexity(['Tool_AnalyzePositioning', 'Tool_CallLLM']),
+        executionTime: 13000, // 5s + 8s from tool chain
+        expectedOutcome: 'Improved player positioning and tactical awareness',
+        riskLevel: 'medium'
+      }
+    });
+  }
+
+  private async generateEconomyDecision(context: AIDecisionContext): Promise<AIDecision> {
+    const toolChain = this.generateToolChain(['Tool_SuggestEconomyBuy', 'Tool_CallLLM']);
+    return Promise.resolve({
+      id: `economy_${Date.now()}`,
+      type: 'economy_advice',
+      priority: InterventionPriority.HIGH,
+      confidence: 0.85,
+      rationale: 'Providing economy management and buy strategy advice',
+      toolChain,
+      context,
+      metadata: {
+        complexity: this.calculateComplexity(['Tool_SuggestEconomyBuy', 'Tool_CallLLM']),
+        executionTime: 11000, // 3s + 8s from tool chain
+        expectedOutcome: 'Optimized team economy and buy strategy',
+        riskLevel: 'medium'
+      }
+    });
+  }
+
+  private async generatePerformanceDecision(context: AIDecisionContext): Promise<AIDecision> {
+    const toolChain = this.generateToolChain(['Tool_GetTrackerGGStats', 'Tool_CallLLM']);
+    return Promise.resolve({
+      id: `performance_${Date.now()}`,
+      type: 'performance_feedback',
+      priority: InterventionPriority.MEDIUM,
+      confidence: 0.75,
+      rationale: 'Analyzing player performance and providing feedback',
+      toolChain,
+      context,
+      metadata: {
+        complexity: this.calculateComplexity(['Tool_GetTrackerGGStats', 'Tool_CallLLM']),
+        executionTime: 18000, // 10s + 8s from tool chain
+        expectedOutcome: 'Improved player performance through targeted feedback',
+        riskLevel: 'low'
+      }
+    });
+  }
+
+  // Fix the array comparison method
+  private arraysEqual<T>(a: T[], b: T[]): boolean {
+    return a.length === b.length && a.every((val, index) => val === b[index]);
   }
 } 

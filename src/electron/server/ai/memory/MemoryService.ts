@@ -16,6 +16,7 @@ import {
   MemoryImportance,
   PlayerProfileMemory,
   InteractionHistoryMemory,
+  GameKnowledgeType,
   GameKnowledgeMemory,
   SessionDataMemory,
   CoachingInsightsMemory,
@@ -768,6 +769,135 @@ export class MemoryService extends EventEmitter implements IMemoryService {
       this.stats.errorCount++;
       return { shortTerm: 0, longTerm: 0 };
     }
+  }
+
+  // ===== Interface Compliance Helper Aliases =====
+
+  /**
+   * Alias for remove() to satisfy IMemoryService.delete
+   */
+  public async delete(entryId: string): Promise<boolean> {
+    return this.remove(entryId);
+  }
+
+  public async getGameKnowledge(
+    knowledgeType?: GameKnowledgeType,
+    context: { mapName?: string; situation?: string } = {},
+    options: MemoryQueryOptions = {}
+  ): Promise<MemoryRetrievalResult<GameKnowledgeMemory>> {
+    this.ensureInitialized();
+    if (this.longTermManager) {
+      return this.longTermManager.getGameKnowledge(knowledgeType, context, options);
+    }
+    return { entries: [], totalCount: 0, hasMore: false, searchTime: 0, fromCache: false };
+  }
+
+  public async getSessionData(sessionId: string): Promise<SessionDataMemory | null> {
+    this.ensureInitialized();
+    // Check cache first
+    if (this.shortTermManager) {
+      const cacheHit = await this.shortTermManager.get<SessionDataMemory>(sessionId, MemoryType.SESSION_DATA);
+      if (cacheHit) return cacheHit;
+    }
+    // Fallback to DB
+    return this.longTermManager ? this.longTermManager.getSessionData(sessionId) : null;
+  }
+
+  public async getCoachingInsights(
+    playerId: string,
+    options: MemoryQueryOptions = {}
+  ): Promise<MemoryRetrievalResult<CoachingInsightsMemory>> {
+    this.ensureInitialized();
+    if (this.longTermManager) {
+      return this.longTermManager.getCoachingInsights(playerId, options);
+    }
+    return { entries: [], totalCount: 0, hasMore: false, searchTime: 0, fromCache: false };
+  }
+
+  public async getContextualMemories(
+    context: {
+      playerId: string;
+      currentSituation?: string;
+      mapName?: string;
+      recentTopics?: string[];
+    },
+    options: MemoryQueryOptions = {}
+  ): Promise<MemoryRetrievalResult> {
+    // Basic implementation delegates to query with filters and tags
+    const filters: any = { steamId: context.playerId };
+    if (context.recentTopics?.length) filters.tags = context.recentTopics;
+    return this.query(filters, options);
+  }
+
+  public async cleanupExpiredEntries(): Promise<number> {
+    this.ensureInitialized();
+    return this.longTermManager ? this.longTermManager.cleanupExpiredEntries() : 0;
+  }
+
+  public async promoteToLongTerm(entryId: string): Promise<boolean> {
+    // In this simplified implementation, all entries are already persisted when stored.
+    // Return true if entry exists.
+    this.ensureInitialized();
+    return (!!(await this.get(entryId)));
+  }
+
+  public async demoteToShortTerm(entryId: string): Promise<boolean> {
+    // Not currently supported – no-op.
+    return false;
+  }
+
+  public async getMemoryUsage(): Promise<{ shortTerm: number; longTerm: number }> {
+    this.ensureInitialized();
+    const shortTerm = this.shortTermManager ? this.shortTermManager.getMemoryStats().global.totalMemoryUsage : 0;
+    const longTermStatus = this.longTermManager ? await this.longTermManager.getStatus() : null;
+    const longTerm = longTermStatus?.longTermMemory.databaseSize || 0;
+    return { shortTerm, longTerm };
+  }
+
+  public async clearShortTermMemory(): Promise<void> {
+    this.ensureInitialized();
+    this.shortTermManager?.clearAllCaches();
+  }
+
+  public async warmupCache(_steamId?: string): Promise<void> {
+    // TODO: implement smarter warmup strategies
+    return;
+  }
+
+  public async exportMemories(
+    _filters?: { type?: MemoryType; steamId?: string },
+    _format: 'json' | 'csv' = 'json'
+  ): Promise<string> {
+    // Simple JSON export for now
+    const all = await this.query({}, { limit: 1000 });
+    return JSON.stringify(all.entries, null, 2);
+  }
+
+  public async importMemories(_data: string | BaseMemoryEntry[]): Promise<number> {
+    // TODO: implement bulk import
+    return 0;
+  }
+
+  public async healthCheck(): Promise<{ healthy: boolean; message?: string; details?: Record<string, any> }> {
+    const healthy = this.initialized;
+    return { healthy, message: healthy ? 'MemoryService operational' : 'MemoryService not initialized' };
+  }
+
+  /**
+   * Alias for the search method for backward compatibility.
+   */
+  async searchMemory<T extends BaseMemoryEntry>(
+    searchOptions: MemorySearchOptions
+  ): Promise<MemoryRetrievalResult<T>> {
+    return this.search(searchOptions);
+  }
+
+  /**
+   * Clears all memory from both short-term and long-term storage.
+   * A simple alias for the cleanup method.
+   */
+  async clearMemory(): Promise<void> {
+    await this.cleanup();
   }
 
   // ===== Private Helper Methods =====

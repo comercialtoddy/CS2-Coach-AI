@@ -1,39 +1,94 @@
 const electron = require("electron");
+const { contextBridge, ipcRenderer } = electron;
 
-/* context bridge used to bridge data between electron process and main window  */
-/* These functions will be loaded before the mainWindow is opened  */
+console.log('Preload script starting...');
 
-electron.contextBridge.exposeInMainWorld("electron", {
-  // On doesn't care if anyone is listeneing
-  // Invoke Expects a return value
+type AgentStatusState = "analyzing" | "awaiting" | "feedback" | "idle" | "error";
 
-  startServer: (callback: (message: any) => void) =>
+interface AgentStatus {
+  state: AgentStatusState;
+  message?: string;
+  isAudioPlaying?: boolean;
+  audioMessage?: string;
+  timestamp?: number;
+  action?: string;
+}
+
+type FrameWindowAction = "close" | "minimize" | "maximize";
+
+interface Window {
+  electron: {
+    startServer: (callback: (message: string) => void) => void;
+    sendFrameAction: (payload: FrameWindowAction) => void;
+    startOverlay: () => void;
+    startAgentOverlay: () => void;
+    stopAgentOverlay: () => void;
+    updateAgentStatus: (status: AgentStatus) => void;
+    onAgentStatusUpdate: (callback: (status: AgentStatus) => void) => void;
+    openExternalLink: (url: string) => void;
+    openHudsDirectory: () => void;
+  };
+}
+
+// Log all available IPC channels
+console.log('Available IPC channels:', ipcRenderer.eventNames());
+
+const api = {
+  startServer: (callback: (message: string) => void) =>
     ipcOn("startServer", (response) => {
       callback(response);
     }),
 
-  sendFrameAction: (payload) => {
+  sendFrameAction: (payload: FrameWindowAction) => {
+    console.log('Sending frame action:', payload);
     ipcSend("sendFrameAction", payload);
   },
 
   // Game HUD overlay
-  startOverlay: () => ipcSend("startOverlay", null),
+  startOverlay: () => {
+    console.log('Starting game HUD overlay');
+    ipcSend("startOverlay", undefined);
+  },
   
   // Agent AI Overlay
-  startAgentOverlay: () => ipcSend("startAgentOverlay", null),
-  stopAgentOverlay: () => ipcSend("stopAgentOverlay", null),
-  updateAgentStatus: (status) => ipcSend("updateAgentStatus", status),
-  onAgentStatusUpdate: (callback: (status: any) => void) =>
-    ipcOn("agent-status-update", callback),
+  startAgentOverlay: () => {
+    console.log('Starting agent overlay');
+    ipcSend("startAgentOverlay", undefined);
+  },
+  stopAgentOverlay: () => {
+    console.log('Stopping agent overlay');
+    ipcSend("stopAgentOverlay", undefined);
+  },
+  updateAgentStatus: (status: AgentStatus) => {
+    console.log('Updating agent status:', status);
+    ipcSend("updateAgentStatus", status);
+  },
+  onAgentStatusUpdate: (callback: (status: AgentStatus) => void) => {
+    console.log('Setting up agent status update listener');
+    ipcOn("agent-status-update", callback);
+  },
 
-  openExternalLink: (url) => ipcSend("openExternalLink", url),
-  openHudsDirectory: () => ipcSend("openHudsDirectory", undefined),
-} satisfies Window["electron"]);
+  openExternalLink: (url: string) => {
+    console.log('Opening external link:', url);
+    ipcSend("openExternalLink", url);
+  },
+  openHudsDirectory: () => {
+    console.log('Opening HUDs directory');
+    ipcSend("openHudsDirectory", undefined);
+  },
+};
+
+// Log the API being exposed
+console.log('Exposing electron API with methods:', Object.keys(api));
+
+contextBridge.exposeInMainWorld("electron", api);
+
+console.log('Preload script finished.');
 
 function ipcInvoke<Key extends keyof EventPayloadMapping>(
   key: Key,
 ): Promise<EventPayloadMapping[Key]> {
-  return electron.ipcRenderer.invoke(key);
+  return ipcRenderer.invoke(key);
 }
 
 /* Using callbacks because these functions are async */
@@ -41,12 +96,12 @@ function ipcOn<Key extends keyof EventPayloadMapping>(
   key: Key,
   callback: (payload: EventPayloadMapping[Key]) => void,
 ) {
-  electron.ipcRenderer.on(key, (_, payload) => callback(payload));
+  ipcRenderer.on(key, (_: Electron.IpcRendererEvent, payload: EventPayloadMapping[Key]) => callback(payload));
 }
 
 function ipcSend<Key extends keyof EventPayloadMapping>(
   key: Key,
   payload: EventPayloadMapping[Key],
 ) {
-  electron.ipcRenderer.send(key, payload);
+  ipcRenderer.send(key, payload);
 }

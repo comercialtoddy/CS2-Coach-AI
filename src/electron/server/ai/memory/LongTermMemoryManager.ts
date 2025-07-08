@@ -22,6 +22,7 @@ import {
   PlayerProfileMemory,
   InteractionHistoryMemory,
   GameKnowledgeMemory,
+  GameKnowledgeType,
   SessionDataMemory,
   CoachingInsightsMemory,
   PlayerProfileData,
@@ -63,9 +64,9 @@ const DEFAULT_CONFIG: LongTermMemoryConfig = {
 /**
  * Database operation result
  */
-interface DatabaseResult<T = any> {
+interface DatabaseResult {
   success: boolean;
-  data?: T;
+  data?: any;
   error?: string;
   rowsAffected?: number;
 }
@@ -322,7 +323,7 @@ export class LongTermMemoryManager {
         return null;
       }
 
-      const memoryEntry = result.data;
+      const memoryEntry: any = result.data;
       
       // Get type-specific data
       const typeSpecificData = await this.getTypeSpecificData(entryId, memoryEntry.type);
@@ -579,7 +580,7 @@ export class LongTermMemoryManager {
         return null;
       }
 
-      const row = result.data;
+      const row: any = result.data;
       
       const playerProfileData: PlayerProfileData = {
         steamId: row.steam_id,
@@ -707,7 +708,7 @@ export class LongTermMemoryManager {
         return null;
       }
 
-      const row = result.data;
+      const row: any = result.data;
       
       const sessionData: SessionData = {
         sessionId: row.session_id,
@@ -744,6 +745,149 @@ export class LongTermMemoryManager {
   /**
    * Get current session data for a player
    */
+  /**
+   * Get game knowledge entries
+   */
+  async getGameKnowledge(
+    knowledgeType?: GameKnowledgeType,
+    context: { mapName?: string; situation?: string } = {},
+    options: MemoryQueryOptions = {}
+  ): Promise<MemoryRetrievalResult<GameKnowledgeMemory>> {
+    this.ensureInitialized();
+
+    const { limit = 50, offset = 0 } = options;
+
+    try {
+      const result = await this.executeQuery(
+        MEMORY_QUERIES.getGameKnowledge,
+        [knowledgeType ?? null, knowledgeType ?? null, limit, offset]
+      );
+
+      const entries: GameKnowledgeMemory[] = [];
+
+      if (result.data && Array.isArray(result.data)) {
+        for (const row of result.data) {
+          const knowledgeData: GameKnowledgeData = {
+            knowledgeType: row.knowledge_type,
+            title: row.title,
+            description: row.description,
+            mapSpecific: row.map_specific ? JSON.parse(row.map_specific) : undefined,
+            situationSpecific: row.situation_specific ? JSON.parse(row.situation_specific) : undefined,
+            teamSide: row.team_side,
+            keyPoints: JSON.parse(row.key_points || '[]'),
+            commonMistakes: JSON.parse(row.common_mistakes || '[]'),
+            successIndicators: JSON.parse(row.success_indicators || '[]'),
+            sources: JSON.parse(row.sources || '[]'),
+            timesReferenced: row.times_referenced,
+            lastUsed: row.last_used ? new Date(row.last_used) : new Date(),
+            effectiveness: row.effectiveness_score
+          };
+
+          const memoryEntry: GameKnowledgeMemory = {
+            id: row.id,
+            type: MemoryType.GAME_KNOWLEDGE,
+            importance: row.importance,
+            createdAt: new Date(row.created_at),
+            updatedAt: new Date(row.updated_at),
+            expiresAt: row.expires_at ? new Date(row.expires_at) : undefined,
+            tags: JSON.parse(row.tags || '[]'),
+            metadata: JSON.parse(row.metadata || '{}'),
+            data: knowledgeData
+          };
+
+          entries.push(memoryEntry);
+        }
+      }
+
+      return {
+        entries,
+        totalCount: entries.length,
+        hasMore: entries.length === limit,
+        searchTime: 0,
+        fromCache: false
+      };
+    } catch (error) {
+      console.error('❌ Error retrieving game knowledge:', error);
+      return {
+        entries: [],
+        totalCount: 0,
+        hasMore: false,
+        searchTime: 0,
+        fromCache: false
+      };
+    }
+  }
+
+  /**
+   * Get coaching insights for a player
+   */
+  async getCoachingInsights(
+    playerId: string,
+    options: MemoryQueryOptions = {}
+  ): Promise<MemoryRetrievalResult<CoachingInsightsMemory>> {
+    this.ensureInitialized();
+
+    const { limit = 50, offset = 0 } = options;
+
+    try {
+      const result = await this.executeQuery(
+        MEMORY_QUERIES.getCoachingInsights,
+        [playerId, limit, offset]
+      );
+
+      const entries: CoachingInsightsMemory[] = [];
+
+      if (result.data && Array.isArray(result.data)) {
+        for (const row of result.data) {
+          const insightData: CoachingInsightsData = {
+            insightId: row.insight_id,
+            playerId: row.player_id,
+            insight: row.insight,
+            category: row.category,
+            confidence: row.confidence_score,
+            basedOn: JSON.parse(row.based_on || '[]'),
+            recommendations: JSON.parse(row.recommendations || '[]'),
+            validated: Boolean(row.validated),
+            validationSource: row.validation_source,
+            actualOutcome: row.actual_outcome,
+            validationScore: row.validation_score
+          };
+
+          const memoryEntry: CoachingInsightsMemory = {
+            id: row.id,
+            type: MemoryType.COACHING_INSIGHTS,
+            importance: row.importance,
+            createdAt: new Date(row.created_at),
+            updatedAt: new Date(row.updated_at),
+            expiresAt: row.expires_at ? new Date(row.expires_at) : undefined,
+            tags: JSON.parse(row.tags || '[]'),
+            metadata: JSON.parse(row.metadata || '{}'),
+            data: insightData
+          };
+
+          entries.push(memoryEntry);
+        }
+      }
+
+      return {
+        entries,
+        totalCount: entries.length,
+        hasMore: entries.length === limit,
+        searchTime: 0,
+        fromCache: false
+      };
+    } catch (error) {
+      console.error('❌ Error retrieving coaching insights:', error);
+      return {
+        entries: [],
+        totalCount: 0,
+        hasMore: false,
+        searchTime: 0,
+        fromCache: false
+      };
+    }
+  }
+
   async getCurrentSessionData(playerId: string): Promise<SessionDataMemory | null> {
     this.ensureInitialized();
 
@@ -854,7 +998,7 @@ export class LongTermMemoryManager {
     }
   }
 
-  private async executeQuery<T = any>(sql: string, params: any[] = []): Promise<DatabaseResult<T>> {
+  private async executeQuery(sql: string, params: any[] = []): Promise<DatabaseResult> {
     return new Promise((resolve, reject) => {
       if (sql.trim().toUpperCase().startsWith('SELECT')) {
         // For SELECT queries, use db.all() to get all rows
@@ -1091,7 +1235,7 @@ export class LongTermMemoryManager {
     
     if (!result.data) return null;
     
-    const row = result.data;
+    const row: any = result.data;
     return {
       steamId: row.steam_id,
       playerName: row.player_name,
@@ -1125,7 +1269,7 @@ export class LongTermMemoryManager {
     
     if (!result.data) return null;
     
-    const row = result.data;
+    const row: any = result.data;
     return {
       steamId: row.steam_id,
       playerName: row.player_name,
@@ -1149,7 +1293,7 @@ export class LongTermMemoryManager {
     
     if (!result.data) return null;
     
-    const row = result.data;
+    const row: any = result.data;
     return {
       knowledgeType: row.knowledge_type,
       title: row.title,
@@ -1175,7 +1319,7 @@ export class LongTermMemoryManager {
     
     if (!result.data) return null;
     
-    const row = result.data;
+    const row: any = result.data;
     return {
       sessionId: row.session_id,
       playerId: row.player_id,
@@ -1198,7 +1342,7 @@ export class LongTermMemoryManager {
     
     if (!result.data) return null;
     
-    const row = result.data;
+    const row: any = result.data;
     return {
       insightId: row.insight_id,
       playerId: row.player_id,

@@ -214,7 +214,7 @@ export interface ContextualCache {
 /**
  * Enhanced LRU Cache with LFU characteristics and memory management
  */
-export class EnhancedLRUCache<T> {
+export class EnhancedLRUCache<T extends BaseMemoryEntry> {
   private capacity: number;
   private maxMemoryBytes: number;
   private cache: Map<string, LRUNode<CacheEntry<T>>>;
@@ -545,7 +545,7 @@ export function calculateEntrySize(entry: BaseMemoryEntry): number {
 /**
  * Compute priority score for cache entry based on multiple factors
  */
-export function computePriorityScore(entry: CacheEntry): number {
+export function computePriorityScore(entry: CacheEntry<BaseMemoryEntry>): number {
   const now = Date.now();
   const age = now - entry.timestamp;
   const timeSinceAccess = now - entry.lastAccessed;

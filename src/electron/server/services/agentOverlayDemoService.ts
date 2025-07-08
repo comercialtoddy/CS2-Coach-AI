@@ -184,7 +184,7 @@ export class AgentOverlayDemoService {
   public getDemoStatus(): { isRunning: boolean; ttsAvailable: boolean } {
     return {
       isRunning: this.isRunning,
-      ttsAvailable: this.piperTTS.isInitialized()
+      ttsAvailable: this.piperTTS.getIsInitialized()
     };
   }
 

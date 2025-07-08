@@ -176,6 +176,27 @@ export class ToolManager {
     input: any,
     options: ToolExecutionOptions = {}
   ): Promise<ToolExecutionResult<T>> {
+    return this._executeInternal(toolName, input, options);
+  }
+
+  /**
+   * Back-compat alias expected by older orchestrator code.
+   * Delegates to execute().
+   */
+  public async executeTool<T = any>(
+    toolName: string,
+    input: any,
+    options: ToolExecutionOptions = {}
+  ): Promise<ToolExecutionResult<T>> {
+    return this.execute<T>(toolName, input, options);
+  }
+
+  // Renamed core implementation to avoid recursive call.
+  private async _executeInternal<T = any>(
+    toolName: string,
+    input: any,
+    options: ToolExecutionOptions = {}
+  ): Promise<ToolExecutionResult<T>> {
     const startTime = Date.now();
     const requestId = uuidv4();
     const { timeout = 30000, retries = 0, priority, metadata = {} } = options;
@@ -232,7 +253,7 @@ export class ToolManager {
       try {
         this.lockMap.set(toolName, true);
         
-        const result = await this.executeWithTimeout(
+        const result = await this.executeWithTimeout<T>(
           entry.tool,
           input,
           {
@@ -487,9 +508,9 @@ export class ToolManager {
     const results: Record<string, any> = {};
 
     for (const [name, entry] of this.tools) {
-      if (entry.tool.healthCheck) {
+      if ('healthCheck' in entry.tool && typeof (entry.tool as ITool).healthCheck === 'function') {
         try {
-          results[name] = await entry.tool.healthCheck();
+          results[name] = await (entry.tool as ITool).healthCheck!();
         } catch (error) {
           results[name] = {
             healthy: false,

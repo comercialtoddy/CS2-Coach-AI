@@ -2,9 +2,9 @@ import { Request, Response } from "express";
 import {
   getTrackerGGPlayerStats,
   getPlayerSpecificStats,
-  getRateLimitInfo,
-  clearTrackerGGCache,
-  isTrackerGGConfigured
+  getTrackerGGRateLimitInfo,
+  isTrackerGGConfigured,
+  clearTrackerGGCache
 } from "../services/trackerGGServices.js";
 
 /**
@@ -111,7 +111,7 @@ export const getSpecificStatsController = async (req: Request, res: Response) =>
  */
 export const getRateLimitController = async (req: Request, res: Response) => {
   try {
-    const rateLimitInfo = getRateLimitInfo();
+    const rateLimitInfo = getTrackerGGRateLimitInfo();
     
     res.status(200).json({
       success: true,
@@ -160,7 +160,7 @@ export const clearCacheController = async (req: Request, res: Response) => {
  */
 export const getStatusController = async (req: Request, res: Response) => {
   try {
-    const rateLimitInfo = getRateLimitInfo();
+    const rateLimitInfo = getTrackerGGRateLimitInfo();
     
     res.status(200).json({
       success: true,

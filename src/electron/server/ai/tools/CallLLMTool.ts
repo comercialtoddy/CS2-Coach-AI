@@ -1,5 +1,7 @@
 import { ITool, ToolExecutionContext, ToolExecutionResult, ToolParameterSchema, ToolMetadata, ToolCategory } from '../interfaces/ITool.js';
-import { callLLM, LLMCallOptions, LLMResponse, DEFAULT_MODELS, isOpenRouterConfigured } from '../../services/openRouterServices.js';
+import { callLLM, LLMCallOptions, DEFAULT_MODELS, isOpenRouterConfigured, StandardizedLLMResponse } from '../../services/openRouterServices.js';
+
+type ModelId = typeof DEFAULT_MODELS[keyof typeof DEFAULT_MODELS];
 
 /**
  * Input interface for the CallLLMTool
@@ -7,7 +9,7 @@ import { callLLM, LLMCallOptions, LLMResponse, DEFAULT_MODELS, isOpenRouterConfi
 export interface CallLLMToolInput {
   prompt: string;
   systemPrompt?: string;
-  model?: string;
+  model?: ModelId;
   temperature?: number;
   maxTokens?: number;
   responseFormat?: 'text' | 'json' | 'json_schema';
@@ -15,8 +17,9 @@ export interface CallLLMToolInput {
     name: string;
     schema: object;
   };
-  fallbackModels?: string[];
+  fallbackModels?: ModelId[];
   timeout?: number;
+  retries?: number;
 }
 
 /**
@@ -25,7 +28,7 @@ export interface CallLLMToolInput {
 export interface CallLLMToolOutput {
   success: boolean;
   content?: string;
-  model?: string;
+  model?: ModelId;
   usage?: {
     promptTokens: number;
     completionTokens: number;
@@ -75,7 +78,7 @@ export class CallLLMTool implements ITool<CallLLMToolInput, CallLLMToolOutput> {
       type: 'string',
       description: 'LLM model to use. Defaults to a balanced model. Examples: "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "openai/gpt-4o-mini"',
       required: false,
-      default: DEFAULT_MODELS.BALANCED
+      enum: Object.values(DEFAULT_MODELS)
     },
     temperature: {
       type: 'number',
@@ -109,28 +112,34 @@ export class CallLLMTool implements ITool<CallLLMToolInput, CallLLMToolOutput> {
       type: 'array',
       description: 'Array of fallback model names to try if the primary model fails',
       required: false,
-      items: { type: 'string', description: 'Model name' }
+      items: { type: 'string', description: 'Model name', enum: Object.values(DEFAULT_MODELS) }
     },
     timeout: {
       type: 'number',
       description: 'Request timeout in milliseconds',
       required: false,
       default: 30000
+    },
+    retries: {
+      type: 'number',
+      description: 'Number of retry attempts',
+      required: false,
+      default: 3
     }
   };
 
   public readonly outputExample: CallLLMToolOutput = {
     success: true,
-    content: 'This is an example response from the LLM. The content will vary based on your prompt and the selected model.',
-    model: 'openai/gpt-4o',
+    content: 'Example response content',
+    model: DEFAULT_MODELS.BALANCED,
     usage: {
-      promptTokens: 25,
-      completionTokens: 150,
-      totalTokens: 175,
-      estimatedCost: 0.001
+      promptTokens: 50,
+      completionTokens: 100,
+      totalTokens: 150,
+      estimatedCost: 0.002
     },
     metadata: {
-      executionTimeMs: 2340,
+      executionTimeMs: 1500,
       attempts: 1,
       provider: 'openrouter',
       originalPrompt: 'Example prompt'
@@ -194,13 +203,22 @@ export class CallLLMTool implements ITool<CallLLMToolInput, CallLLMToolOutput> {
     }
 
     // Validate model (optional)
-    if (input.model !== undefined && typeof input.model !== 'string') {
-      errors.push({
-        parameter: 'model',
-        message: 'model must be a string',
-        receivedType: typeof input.model,
-        expectedType: 'string'
-      });
+    if (input.model !== undefined) {
+      if (typeof input.model !== 'string') {
+        errors.push({
+          parameter: 'model',
+          message: 'model must be a string',
+          receivedType: typeof input.model,
+          expectedType: 'string'
+        });
+      } else if (!Object.values(DEFAULT_MODELS).includes(input.model as ModelId)) {
+        errors.push({
+          parameter: 'model',
+          message: `Invalid model. Must be one of: ${Object.values(DEFAULT_MODELS).join(', ')}`,
+          receivedType: input.model,
+          expectedType: 'DEFAULT_MODELS'
+        });
+      }
     }
 
     // Validate temperature (optional)
@@ -332,6 +350,25 @@ export class CallLLMTool implements ITool<CallLLMToolInput, CallLLMToolOutput> {
       }
     }
 
+    // Validate retries (optional)
+    if (input.retries !== undefined) {
+      if (typeof input.retries !== 'number') {
+        errors.push({
+          parameter: 'retries',
+          message: 'retries must be a number',
+          receivedType: typeof input.retries,
+          expectedType: 'number'
+        });
+      } else if (!Number.isInteger(input.retries) || input.retries < 0) {
+        errors.push({
+          parameter: 'retries',
+          message: 'retries must be a non-negative integer',
+          receivedType: `${input.retries}`,
+          expectedType: 'non-negative integer'
+        });
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors: errors.length > 0 ? errors : undefined
@@ -348,6 +385,23 @@ export class CallLLMTool implements ITool<CallLLMToolInput, CallLLMToolOutput> {
     const startTime = Date.now();
     
     try {
+      // Validate input
+      const validation = this.validateInput(input);
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: {
+            code: 'INVALID_INPUT',
+            message: 'Invalid input parameters',
+            details: validation.errors
+          },
+          metadata: {
+            executionTimeMs: Date.now() - startTime,
+            requestId: context.requestId
+          }
+        };
+      }
+
       // Build LLM call options
       const options: LLMCallOptions = {
         model: input.model,
@@ -357,11 +411,12 @@ export class CallLLMTool implements ITool<CallLLMToolInput, CallLLMToolOutput> {
         responseFormat: input.responseFormat,
         jsonSchema: input.jsonSchema,
         fallbackModels: input.fallbackModels,
-        timeout: input.timeout
+        timeout: input.timeout,
+        retries: input.retries
       };
 
       // Make the LLM call
-      const response: LLMResponse = await callLLM(input.prompt, options);
+      const response: StandardizedLLMResponse = await callLLM(input.prompt, options);
 
       // Calculate estimated cost (rough approximation)
       const estimatedCost = response.usage ? this.calculateEstimatedCost(response.usage, response.model) : undefined;
@@ -370,7 +425,7 @@ export class CallLLMTool implements ITool<CallLLMToolInput, CallLLMToolOutput> {
       const output: CallLLMToolOutput = {
         success: response.success,
         content: response.content,
-        model: response.model,
+        model: response.model as ModelId | undefined,
         usage: response.usage ? {
           ...response.usage,
           estimatedCost

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, MemoryRouter } from "react-router-dom";
+import { Routes, Route, Navigate, HashRouter } from "react-router-dom";
 import { Dashboard } from "./pages/Dashboard/Dashboard";
 import { MatchesPage } from "./pages/Matches/MatchPage";
 import { PlayersPage } from "./pages/Players/PlayersPage";
@@ -7,21 +7,27 @@ import { AppProviders } from "./context/AppProviders";
 import { Layout } from "./pages/Layout";
 import { AgentOverlay } from "./pages/AgentOverlay";
 
+const AppRoutes = () => {
+  return (
+    <Routes>
+      {/* Agent AI Overlay - Full screen overlay without Layout */}
+      <Route path="/agent-overlay" element={<AgentOverlay />} />
+      <Route path="/" element={<Layout />}>
+        <Route index element={<MatchesPage />} />
+        <Route path="matches" element={<Navigate to="/" />} />
+        <Route path="players" element={<PlayersPage />} />
+        <Route path="teams" element={<TeamsPage />} />
+        <Route path="dashboard" element={<Dashboard />} />
+      </Route>
+    </Routes>
+  );
+};
+
 const AuthenticatedRoutes = () => (
   <AppProviders>
-    <MemoryRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<MatchesPage />} />
-          <Route path="matches" element={<Navigate to="/" />} />
-          <Route path="players" element={<PlayersPage />} />
-          <Route path="teams" element={<TeamsPage />} />
-          <Route path="dashboard" element={<Dashboard />} />
-        </Route>
-        {/* Agent AI Overlay - Full screen overlay without Layout */}
-        <Route path="/agent-overlay" element={<AgentOverlay />} />
-      </Routes>
-    </MemoryRouter>
+    <HashRouter>
+      <AppRoutes />
+    </HashRouter>
   </AppProviders>
 );
 

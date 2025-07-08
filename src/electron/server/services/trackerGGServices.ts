@@ -168,7 +168,11 @@ async function makeTrackerGGRequest(endpoint: string): Promise<AxiosResponse<Tra
       }
       throw new Error(`Tracker.GG API error: ${error.response?.status} - ${error.response?.statusText}`);
     }
-    throw new Error(`Network error when contacting Tracker.GG: ${error.message}`);
+    console.error('Network error occurred:', error);
+    if (error instanceof Error) {
+      throw new Error(`Network error when contacting Tracker.GG: ${error.message}`);
+    }
+    throw new Error('An unknown network error occurred when contacting Tracker.GG');
   }
 }
 
@@ -238,7 +242,7 @@ export async function getPlayerSpecificStats(
 /**
  * Gets rate limiting information
  */
-export function getRateLimitInfo(): { canMakeRequest: boolean; timeUntilNext: number; requestsMade: number } {
+export function getTrackerGGRateLimitInfo(): { canMakeRequest: boolean; timeUntilNext: number; requestsMade: number } {
   return {
     canMakeRequest: rateLimiter.canMakeRequest(),
     timeUntilNext: rateLimiter.getTimeUntilNextRequest(),

@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import db from "../../database/database.js";
 
 export const getPlayers = (): Promise<Player[]> => {
@@ -14,7 +15,23 @@ export const getPlayers = (): Promise<Player[]> => {
   });
 };
 
-export const createPlayer = (player: Player) => {
+export const createPlayer = (player: Partial<Player>) => {
+  if (!player.steamid) {
+    return Promise.reject(new Error("steamid is required to create a player"));
+  }
+
+  const playerData: Player = {
+    _id: player._id || randomUUID(),
+    steamid: player.steamid,
+    username: player.username || 'New Player',
+    firstName: player.firstName || '',
+    lastName: player.lastName || '',
+    avatar: player.avatar || '',
+    country: player.country || '',
+    team: player.team || '',
+    extra: player.extra || {},
+  };
+  
   const sql = `
   INSERT INTO players (_id, firstName, lastName, username, avatar, country, steamid, team, extra)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -23,15 +40,15 @@ export const createPlayer = (player: Player) => {
     db.run(
       sql,
       [
-        player._id,
-        player.firstName,
-        player.lastName,
-        player.username,
-        player.avatar,
-        player.country,
-        player.steamid,
-        player.team,
-        player.extra,
+        playerData._id,
+        playerData.firstName,
+        playerData.lastName,
+        playerData.username,
+        playerData.avatar,
+        playerData.country,
+        playerData.steamid,
+        playerData.team,
+        JSON.stringify(playerData.extra),
       ],
       function (err) {
         if (err) {
@@ -39,9 +56,9 @@ export const createPlayer = (player: Player) => {
           reject(err);
         } else {
           console.log(
-            `Player ${player.username} created with ID ${player._id}`,
+            `Player ${playerData.username} created with ID ${playerData._id}`,
           );
-          resolve(player);
+          resolve(playerData);
         }
       },
     );
@@ -63,22 +80,21 @@ export const deletePlayer = (id: string) => {
   });
 };
 
-export const updatePlayer = (id: string, player: Player) => {
-  const sql = `UPDATE players SET firstName = ?, lastName = ?, username = ?, avatar = ?, country = ?, steamid = ?, team = ?, extra = ? WHERE _id = ?`;
+export const updatePlayer = (id: string, player: Partial<Player>) => {
+  const fields = Object.keys(player);
+  const values = Object.values(player);
+
+  if (fields.length === 0) {
+    return Promise.resolve("No fields to update");
+  }
+
+  const setClause = fields.map(field => `${field} = ?`).join(', ');
+  const sql = `UPDATE players SET ${setClause} WHERE _id = ?`;
+
   return new Promise((resolve, reject) => {
     db.run(
       sql,
-      [
-        player.firstName,
-        player.lastName,
-        player.username,
-        player.avatar,
-        player.country,
-        player.steamid,
-        player.team,
-        player.extra,
-        id,
-      ],
+      [...values.map(v => typeof v === 'object' ? JSON.stringify(v) : v), id],
       function (err) {
         if (err) {
           console.error("Error updating player :", err.message);

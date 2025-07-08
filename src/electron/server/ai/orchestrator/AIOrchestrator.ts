@@ -9,6 +9,19 @@
 import { EventEmitter } from 'events';
 import { CSGO } from 'csgogsi';
 import {
+  PlayerProfileData,
+  SessionData,
+  GameKnowledgeType,
+  GameKnowledgeData,
+  PlayerProfileMemory,
+  SessionDataMemory,
+  CoachingInsightsMemory,
+  GameKnowledgeMemory,
+  BaseMemoryEntry,
+  MemoryType,
+  MemoryImportance
+} from '../interfaces/MemoryService.js';
+import {
   IOrchestrator,
   IInputHandler,
   IStateManager,
@@ -17,9 +30,10 @@ import {
   IOutputFormatter,
   ProcessingState,
   GameStateSnapshot,
-  DecisionContext,
+  AIDecisionContext,
   AIDecision,
   ExecutionResult,
+  ExecutionResultMetadata,
   UserFeedback,
   ExecutionOutcome,
   CoachingOutput,
@@ -29,15 +43,34 @@ import {
   SystemIntegration,
   DEFAULT_ORCHESTRATOR_CONFIG,
   ResourceLimits,
-  InterventionPriority
+  InterventionPriority,
+  CoachingObjective,
+  GameContext,
+  ToolChainStep,
+  ToolChainResult,
+  ExecutionStatus,
+  PlayerGameState,
+  TeamGameState,
+  MapGameState,
+  EconomyState,
+  SituationalFactor
 } from './OrchestratorArchitecture.js';
 import { GSIInputHandler } from './GSIDataModel.js';
 import { DynamicStateManager } from './StateManager.js';
 import { GSIDecisionEngine } from './DecisionEngine.js';
 import { SystemPromptManager, CoachingPersonality, ContextMode } from './SystemPromptManager.js';
 import { ToolManager } from '../ToolManager.js';
+import { ToolExecutionResult } from '../interfaces/ITool.js';
 import { MemoryService } from '../memory/MemoryService.js';
-import { BaseMemoryEntry, MemoryType, ImportanceLevel } from '../interfaces/MemoryService.js';
+import { MemoryQueryOptions, MemoryRetrievalResult } from '../interfaces/MemoryService.js';
+import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * Execution result metadata
+ */
+// Removed local interface - using imported one from OrchestratorArchitecture
+
+// Using imported types from MemoryService.js
 
 /**
  * Tool execution implementation
@@ -46,11 +79,23 @@ class AIToolExecutor implements IToolExecutor {
   private toolManager: ToolManager;
   private systemPromptManager: SystemPromptManager;
   private activeExecutions: Map<string, any>;
+  private executionHistory: Map<string, ExecutionResult[]>;
+  private resourceMonitor: Map<string, { usageCount: number, lastUsed: Date }>;
+  private readonly maxConcurrentExecutions: number = 5;
+  private readonly resourceLimits: ResourceLimits = {
+    maxToolCalls: 30,
+    maxProcessingTime: 30000,
+    maxMemoryQueries: 10,
+    allowLLMCalls: true,
+    allowTTSGeneration: true
+  };
 
   constructor(toolManager: ToolManager, systemPromptManager: SystemPromptManager) {
     this.toolManager = toolManager;
     this.systemPromptManager = systemPromptManager;
     this.activeExecutions = new Map();
+    this.executionHistory = new Map();
+    this.resourceMonitor = new Map();
   }
 
   async executeDecision(decision: AIDecision): Promise<ExecutionResult> {
@@ -58,99 +103,143 @@ class AIToolExecutor implements IToolExecutor {
     const executionId = decision.id;
 
     try {
+      // Check resource limits
+      if (!this.checkResourceLimits(decision)) {
+        throw new Error('Resource limits exceeded');
+      }
+
+      // Initialize execution tracking
       this.activeExecutions.set(executionId, { 
         state: 'running', 
         progress: 0,
         startTime,
-        currentStep: null
+        currentStep: null,
+        decision,
+        toolChainProgress: []
       });
 
-      // Execute tool chain
+      // Update resource monitoring
+      this.updateResourceUsage(decision);
+
+      // Generate system prompt context if needed
+      const systemPrompt = await this.systemPromptManager.generatePrompt(
+        {
+          timestamp: new Date(),
+          gameState: decision.context.gameState,
+          playerMemory: decision.context.playerMemory,
+          sessionSummary: {
+            duration: 0,
+            keyEvents: [],
+            performanceMetrics: {},
+            learningOpportunities: []
+          },
+          coachingObjectives: decision.context.coachingObjectives,
+          playerPreferences: {
+            communicationStyle: 'direct',
+            feedbackFrequency: 'moderate',
+            focusAreas: [],
+            avoidTopics: []
+          },
+          dynamicContext: {
+            recentPerformance: '',
+            emotionalState: 'neutral',
+            attentionLevel: 'normal',
+            receptiveness: 0.8
+          }
+        },
+        decision.context.coachingObjectives
+      );
+
+      // Execute tool chain with context
       const toolChainResult = await this.executeToolChain(decision.toolChain);
       
       const executionTime = Date.now() - startTime;
       const success = toolChainResult.successRate > 0.7;
 
+      // Prepare execution result
       const result: ExecutionResult = {
         decisionId: decision.id,
         success,
-        output: this.formatToolChainOutput(decision, toolChainResult),
+        output: await this.formatToolChainOutput(decision, toolChainResult, systemPrompt),
         toolResults: toolChainResult,
         metadata: {
           totalTime: executionTime,
-          toolsUsed: toolChainResult.steps.map(s => s.toolName),
-          memoryAccessed: [], // Would be populated by memory interactions
-          confidence: decision.confidence
+          toolsUsed: toolChainResult.steps.map((s: any) => s.toolName),
+          memoryAccessed: toolChainResult.steps
+            .filter((s: any) => s.metadata?.memoryAccessed)
+            .flatMap((s: any) => s.metadata.memoryAccessed),
+          confidence: decision.confidence,
+          gameState: decision.context.gameState
         }
       };
 
+      // Update execution history
+      this.updateExecutionHistory(executionId, result);
+
+      // Cleanup
       this.activeExecutions.delete(executionId);
       return result;
 
     } catch (error) {
+      // Handle execution failure
+      const result = await this.handleExecutionFailure(executionId, decision, error as Error, startTime);
       this.activeExecutions.delete(executionId);
-      return {
-        decisionId: decision.id,
-        success: false,
-        output: {
-          type: 'error_correction',
-          priority: InterventionPriority.LOW,
-          title: 'Execution Error',
-          message: 'Failed to execute coaching decision',
-          details: error.message,
-          actionItems: [],
-          timing: { immediate: false, when: 'next_break' },
-          personalization: {
-            playerId: 'unknown',
-            adaptedForStyle: false,
-            confidenceLevel: 0
-          }
-        },
-        toolResults: { steps: [], totalTime: Date.now() - startTime, successRate: 0 },
-        metadata: {
-          totalTime: Date.now() - startTime,
-          toolsUsed: [],
-          memoryAccessed: [],
-          confidence: 0
-        },
-        error: {
-          code: 'EXECUTION_FAILED',
-          message: error.message,
-          details: error
-        }
-      };
+      return result;
     }
   }
 
-  async executeToolChain(steps: any[]): Promise<any> {
-    const results = [];
+  async executeToolChain(steps: ToolChainStep[]): Promise<ToolChainResult> {
+    const results: Array<{
+      stepId: string;
+      toolName: string;
+      success: boolean;
+      output: any;
+      executionTime: number;
+      error: any;
+      metadata?: any;
+    }> = [];
     let successCount = 0;
     const startTime = Date.now();
 
     for (const step of steps) {
       try {
+        // Execute tool with timeout and retry logic
         const stepStartTime = Date.now();
-        const result = await this.toolManager.executeTool(step.toolName, step.input);
-        const executionTime = Date.now() - stepStartTime;
+        const result = await this.executeToolWithRetry(step.toolName, step.input, {
+          timeout: step.timeout,
+          maxRetries: step.retryPolicy.maxRetries,
+          backoffStrategy: step.retryPolicy.backoffStrategy
+        });
 
+        // Record step result
         results.push({
           stepId: step.stepId,
           toolName: step.toolName,
           success: true,
-          output: result,
-          executionTime,
-          error: null
+          output: result.data,
+          executionTime: Date.now() - stepStartTime,
+          error: null,
+          metadata: result.metadata
         });
         successCount++;
+
       } catch (error) {
+        // Handle step failure
+        const failureResult = await this.handleToolFailure(step, error as Error);
         results.push({
           stepId: step.stepId,
           toolName: step.toolName,
           success: false,
           output: null,
-          executionTime: Date.now() - Date.now(),
-          error: error.message
+          executionTime: Date.now() - startTime,
+          error: failureResult.error,
+          metadata: failureResult.metadata
         });
+        
+        // Break chain if critical tool failed
+        if (step.dependencies.length > 0) {
+          break;
+        }
       }
     }
 
@@ -161,48 +250,241 @@ class AIToolExecutor implements IToolExecutor {
     };
   }
 
-  async handleToolFailure(step: any, error: any): Promise<any> {
-    // Implement fallback logic
-    if (step.fallbackTool) {
+  private async executeToolWithRetry(
+    toolName: string,
+    input: any,
+    options: {
+      timeout: number;
+      maxRetries: number;
+      backoffStrategy: 'linear' | 'exponential';
+    }
+  ): Promise<any> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt < options.maxRetries; attempt++) {
       try {
-        return await this.toolManager.executeTool(step.fallbackTool, step.input);
-      } catch (fallbackError) {
-        throw new Error(`Both primary tool ${step.toolName} and fallback ${step.fallbackTool} failed`);
+        return await Promise.race([
+          this.toolManager.executeTool(toolName, input),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Tool execution timeout')), options.timeout)
+          )
+        ]);
+      } catch (error) {
+        lastError = error as Error;
+        if (attempt < options.maxRetries - 1) {
+          // Wait before retry with exponential backoff
+          const delay = options.backoffStrategy === 'exponential'
+            ? Math.min(1000 * Math.pow(2, attempt), 10000)
+            : 1000 * (attempt + 1);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
     }
-    throw error;
+
+    throw lastError || new Error('Tool execution failed after retries');
   }
 
-  monitorExecution(decisionId: string): any {
-    return this.activeExecutions.get(decisionId) || { 
-      state: 'not_found', 
-      progress: 0,
-      errors: ['Execution not found'] 
+  async handleToolFailure(step: ToolChainStep, error: Error): Promise<ToolExecutionResult<any>> {
+    const startTime = Date.now();
+    // Try fallback tool if available
+    if (step.fallbackTool) {
+      try {
+        const result = await this.toolManager.executeTool(step.fallbackTool, step.input);
+        return {
+          success: true,
+          data: result,
+          metadata: {
+            executionTimeMs: Date.now() - startTime,
+            cached: false,
+            source: step.fallbackTool,
+            usedFallback: true,
+            originalError: error.message,
+            fallbackTool: step.fallbackTool
+          }
+        };
+      } catch (fallbackError) {
+        return this.createFailureResult(step, error, fallbackError as Error);
+      }
+    }
+
+    return this.createFailureResult(step, error);
+  }
+
+  private createFailureResult(step: ToolChainStep, error: Error, fallbackError?: Error): ToolExecutionResult<any> {
+    return {
+      success: false,
+      error: {
+        code: 'TOOL_EXECUTION_FAILED',
+        message: error.message,
+        details: {
+          stepId: step.stepId,
+          toolName: step.toolName,
+          fallbackAttempted: !!fallbackError,
+          fallbackError: fallbackError?.message
+        }
+      }
     };
   }
 
-  private formatToolChainOutput(decision: AIDecision, toolChainResult: any): CoachingOutput {
-    // Generate coaching output based on tool results
-    const lastSuccessfulResult = toolChainResult.steps.reverse().find(s => s.success);
+  private async handleExecutionFailure(
+    executionId: string,
+    decision: AIDecision,
+    error: Error,
+    startTime: number
+  ): Promise<ExecutionResult> {
+    const result: ExecutionResult = {
+      decisionId: decision.id,
+      success: false,
+      output: {
+        id: uuidv4(),
+        type: 'error_correction',
+        priority: InterventionPriority.LOW,
+        title: 'Execution Error',
+        message: 'Failed to execute coaching decision',
+        details: error.message,
+        actionItems: [],
+        timing: { immediate: false, when: 'next_break' },
+        personalization: {
+          playerId: 'unknown',
+          adaptedForStyle: false,
+          confidenceLevel: 0
+        }
+      },
+      toolResults: { 
+        steps: [], 
+        totalTime: Date.now() - startTime,
+        successRate: 0
+      },
+      metadata: {
+        totalTime: Date.now() - startTime,
+        toolsUsed: [],
+        memoryAccessed: [],
+        confidence: 0,
+        gameState: decision.context.gameState
+      }
+    };
+
+    this.updateExecutionHistory(executionId, result);
+    return result;
+  }
+
+  private checkResourceLimits(decision: AIDecision): boolean {
+    // Check concurrent executions
+    if (this.activeExecutions.size >= this.maxConcurrentExecutions) {
+      return false;
+    }
+
+    // Check tool call limits
+    const totalToolCalls = decision.toolChain.length;
+    if (totalToolCalls > this.resourceLimits.maxToolCalls) {
+      return false;
+    }
+
+    // Check memory query limits
+    const memoryQueries = decision.toolChain.filter(step => 
+      step.toolName.includes('memory') || step.toolName.includes('Memory')
+    ).length;
+    if (memoryQueries > this.resourceLimits.maxMemoryQueries) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private updateResourceUsage(decision: AIDecision): void {
+    for (const step of decision.toolChain) {
+      const usage = this.resourceMonitor.get(step.toolName) || { usageCount: 0, lastUsed: new Date() };
+      usage.usageCount++;
+      usage.lastUsed = new Date();
+      this.resourceMonitor.set(step.toolName, usage);
+    }
+
+    // Reset counters older than 1 minute
+    for (const [tool, usage] of this.resourceMonitor.entries()) {
+      if (Date.now() - usage.lastUsed.getTime() > 60000) {
+        usage.usageCount = 0;
+      }
+    }
+  }
+
+  private updateExecutionHistory(executionId: string, result: ExecutionResult): void {
+    const history = this.executionHistory.get(executionId) || [];
+    history.push(result);
+    this.executionHistory.set(executionId, history);
+
+    // Limit history size
+    if (history.length > 100) {
+      history.shift();
+    }
+  }
+
+  monitorExecution(decisionId: string): ExecutionStatus {
+    const execution = this.activeExecutions.get(decisionId);
+    if (!execution) {
+      return { 
+        decisionId,
+        state: 'queued',
+        progress: 0,
+        errors: ['Execution not found']
+      };
+    }
+
+    return {
+      decisionId,
+      state: execution.state,
+      progress: execution.progress,
+      currentStep: execution.currentStep,
+      estimatedTimeRemaining: Math.max(0, this.resourceLimits.maxProcessingTime - (Date.now() - execution.startTime)),
+      errors: []
+    };
+  }
+
+  private async formatToolChainOutput(
+    decision: AIDecision,
+    toolChainResult: ToolChainResult,
+    systemPrompt: any
+  ): Promise<CoachingOutput> {
+    // Find the last successful result that produced output
+    const lastSuccessfulResult = toolChainResult.steps
+      .reverse()
+      .find(s => s.success && s.output?.text);
     
     return {
+      id: uuidv4(),
       type: 'tactical_advice',
       priority: decision.priority,
       title: decision.rationale.split(' - ')[0],
       message: lastSuccessfulResult?.output?.text || 'Coaching advice generated',
       details: decision.rationale,
-      actionItems: [`Follow guidance from ${decision.toolChain[0]?.toolName}`],
+      actionItems: this.generateActionItems(toolChainResult, decision),
       timing: {
         immediate: decision.priority === InterventionPriority.IMMEDIATE,
         when: decision.priority === InterventionPriority.IMMEDIATE ? 'now' : 'next_round'
       },
       personalization: {
-        playerId: 'current_player',
+        playerId: decision.context.gameState.processed.playerState.steamId || 'unknown',
         adaptedForStyle: true,
         confidenceLevel: decision.confidence
-      },
-      supportingData: toolChainResult
+      }
     };
+  }
+
+  private generateActionItems(toolChainResult: ToolChainResult, decision: AIDecision): string[] {
+    const actionItems: string[] = [];
+
+    // Add successful tool outputs as action items
+    for (const step of toolChainResult.steps) {
+      if (step.success && step.output?.actionItem) {
+        actionItems.push(step.output.actionItem);
+      }
+    }
+
+    // Add default action based on decision if no specific items
+    if (actionItems.length === 0) {
+      actionItems.push(`Follow guidance from ${decision.toolChain[0]?.toolName}`);
+    }
+
+    return actionItems;
   }
 }
 
@@ -269,6 +551,7 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
   private isRunning: boolean;
   private lastGSIUpdate: Date;
   private healthStatus: OrchestratorHealth;
+  private healthCheckInterval: NodeJS.Timeout | null;
 
   constructor(integration: SystemIntegration, config?: Partial<OrchestratorConfig>) {
     super();
@@ -281,7 +564,7 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
     this.memoryService = integration.memoryService;
     
     this.inputHandler = new GSIInputHandler();
-    this.stateManager = new DynamicStateManager(this.memoryService);
+    this.stateManager = new DynamicStateManager({}, this.memoryService);
     this.decisionEngine = new GSIDecisionEngine(this.toolManager);
     this.systemPromptManager = new SystemPromptManager(this.memoryService);
     this.toolExecutor = new AIToolExecutor(this.toolManager, this.systemPromptManager);
@@ -292,6 +575,7 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
     this.activeDecisions = new Map();
     this.isRunning = false;
     this.lastGSIUpdate = new Date();
+    this.healthCheckInterval = null;
     
     // Initialize stats
     this.stats = {
@@ -308,17 +592,16 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
 
     // Initialize health status
     this.healthStatus = {
-      overall: 'healthy',
-      components: {
-        inputHandler: 'healthy',
-        stateManager: 'healthy',
-        decisionEngine: 'healthy',
-        toolExecutor: 'healthy',
-        outputFormatter: 'healthy',
-        memoryService: 'healthy'
-      },
-      issues: [],
-      lastCheck: new Date()
+      status: 'healthy',
+      lastCheck: new Date(),
+      metrics: {
+        gsiLag: 0,
+        activeDecisions: 0,
+        staleDecisions: 0,
+        successRate: 1,
+        averageExecutionTime: 0,
+        errorCount: 0
+      }
     };
 
     this.setupEventHandlers();
@@ -329,24 +612,24 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
    */
   private setupEventHandlers(): void {
     // Decision engine events
-    this.decisionEngine.on('analysis-started', (data) => {
+    (this.decisionEngine as GSIDecisionEngine).on('analysis-started', (data: any) => {
       this.emit('decision-analysis-started', data);
     });
 
-    this.decisionEngine.on('analysis-completed', (data) => {
+    (this.decisionEngine as GSIDecisionEngine).on('analysis-completed', (data: any) => {
       this.emit('decision-analysis-completed', data);
     });
 
-    this.decisionEngine.on('analysis-error', (data) => {
+    (this.decisionEngine as GSIDecisionEngine).on('analysis-error', (data: any) => {
       this.emit('error', new Error(`Decision analysis error: ${data.error}`));
     });
 
     // State manager events
-    this.stateManager.on('state-updated', (snapshot) => {
+    (this.stateManager as DynamicStateManager).on('state-updated', (snapshot: any) => {
       this.emit('gsi-update', snapshot);
     });
 
-    this.stateManager.on('pattern-detected', (pattern) => {
+    (this.stateManager as DynamicStateManager).on('pattern-detected', (pattern: any) => {
       this.emit('pattern-detected', pattern);
     });
 
@@ -378,7 +661,7 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
       
       this.emit('initialized', { config: this.config });
     } catch (error) {
-      this.emit('error', new Error(`Initialization failed: ${error.message}`));
+      this.emit('error', new Error(`Initialization failed: ${(error as Error).message}`));
       throw error;
     }
   }
@@ -392,14 +675,20 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
     }
 
     try {
+      // Initialize components
+      await this.initialize();
+
+      // Set running state
       this.isRunning = true;
-      this.processingState = ProcessingState.IDLE;
-      
+      this.setProcessingState(ProcessingState.IDLE);
+
+      // Start health check interval
+      this.startHealthCheck();
+
       this.emit('started');
-      this.emit('state-changed', this.processingState);
+
     } catch (error) {
-      this.isRunning = false;
-      this.emit('error', new Error(`Start failed: ${error.message}`));
+      this.handleProcessingError('STARTUP_ERROR', error as Error);
       throw error;
     }
   }
@@ -408,22 +697,30 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
    * Stop the orchestrator
    */
   async stop(): Promise<void> {
-    if (!this.isRunning) return;
+    if (!this.isRunning) {
+      return;
+    }
 
     try {
+      // Stop health check
+      if (this.healthCheckInterval) {
+        clearInterval(this.healthCheckInterval);
+      }
+
+      // Cancel any active decisions
+      for (const [decisionId, decision] of this.activeDecisions.entries()) {
+        await this.handleDecisionError(decision, new Error('Orchestrator stopping'));
+        this.activeDecisions.delete(decisionId);
+      }
+
+      // Update state
       this.isRunning = false;
-      this.processingState = ProcessingState.IDLE;
-      
-      // Cancel active decisions
-      this.activeDecisions.clear();
-      
-      // Persist state
-      await this.stateManager.persistState();
-      
+      this.setProcessingState(ProcessingState.STOPPED);
+
       this.emit('stopped');
-      this.emit('state-changed', this.processingState);
+
     } catch (error) {
-      this.emit('error', new Error(`Stop failed: ${error.message}`));
+      this.handleProcessingError('SHUTDOWN_ERROR', error as Error);
       throw error;
     }
   }
@@ -440,36 +737,544 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
    * Process GSI update - main entry point for real-time data
    */
   async processGSIUpdate(gsiData: CSGO): Promise<void> {
-    if (!this.isRunning) return;
+    if (!this.isRunning || this.processingState === ProcessingState.ERROR) {
+      return;
+    }
 
     try {
-      this.setProcessingState(ProcessingState.ANALYZING);
-      this.stats.totalGSIUpdates++;
+      // Update last GSI timestamp
       this.lastGSIUpdate = new Date();
 
-      // Process GSI data through input handler
-      const gameStateSnapshot = await this.inputHandler.processGSIUpdate(gsiData);
-      
-      // Validate the game state
-      if (!this.inputHandler.validateGameState(gameStateSnapshot)) {
-        this.emit('error', new Error('Invalid game state received'));
+      // Process GSI data into game state
+      const gameState = await this.inputHandler.processGSIUpdate(gsiData);
+
+      // Check if we should generate decisions
+      if (!this.shouldGenerateDecisions(gameState)) {
         return;
       }
 
-      // Update state manager
-      await this.stateManager.updateGameState(gameStateSnapshot);
+      // Set processing state
+      this.setProcessingState(ProcessingState.PROCESSING);
 
-      // Check if we should generate decisions
-      if (this.shouldGenerateDecisions(gameStateSnapshot)) {
-        await this.generateAndExecuteDecisions(gameStateSnapshot);
-      }
+      // Generate and execute decisions
+      await this.generateAndExecuteDecisions(gameState);
 
+      // Reset processing state
       this.setProcessingState(ProcessingState.IDLE);
 
     } catch (error) {
-      this.setProcessingState(ProcessingState.ERROR);
-      this.emit('error', new Error(`GSI processing failed: ${error.message}`));
+      this.handleProcessingError('GSI_PROCESSING_ERROR', error as Error);
     }
+  }
+
+  /**
+   * Main decision generation and execution flow
+   */
+  private async generateAndExecuteDecisions(gameState: GameStateSnapshot): Promise<void> {
+    try {
+      this.setProcessingState(ProcessingState.PROCESSING);
+      const startTime = Date.now();
+
+      // Prepare decision context with system prompt and contextual input
+      const context = await this.prepareDecisionContext(gameState);
+
+      // Generate decisions using the enhanced context
+      const decisions = await this.decisionEngine.generateDecisions(context);
+
+      // Execute each decision with the enhanced context
+      for (const decision of decisions) {
+        await this.executeDecisionAsync(decision);
+      }
+
+      // Update stats
+      this.updateDecisionStats(Date.now() - context.timestamp.getTime());
+
+    } catch (error) {
+      this.handleProcessingError('DECISION_GENERATION_ERROR', error as Error);
+    } finally {
+      this.setProcessingState(ProcessingState.IDLE);
+    }
+  }
+
+  /**
+   * Prepare context for decision making
+   */
+  private async prepareDecisionContext(gameState: GameStateSnapshot): Promise<AIDecisionContext> {
+    // Build basic contextual input
+    const contextualInput = await this.buildContextualInputForPrompt(gameState);
+
+    // Determine coaching objectives based on game state
+    const coachingObjectives = this.determineCoachingObjectives(gameState);
+
+    // Generate system prompt with context
+    const systemPrompt = await this.systemPromptManager.generatePrompt(
+      contextualInput,
+      coachingObjectives,
+      {
+        contextMode: ContextMode.ADAPTIVE,
+        urgencyOverride: this.calculateUrgency(gameState)
+      }
+    );
+
+    // Prepare memory context
+    const playerMemory = await this.memoryService.query({
+      type: MemoryType.PLAYER_PROFILE
+    });
+
+    // Return complete decision context
+    return {
+      gameState,
+      systemPrompt,
+      playerMemory: playerMemory.entries,
+      coachingObjectives,
+      timestamp: new Date(),
+      contextualInput
+    };
+  }
+
+  /**
+   * Determine coaching objectives based on game state
+   */
+  private determineCoachingObjectives(gameState: GameStateSnapshot): CoachingObjective[] {
+    const objectives: CoachingObjective[] = [];
+    const player = gameState.processed.playerState;
+    const situationalFactors = gameState.processed.situationalFactors;
+
+    // Check player state
+    if (player.health < 50) {
+      objectives.push(CoachingObjective.TACTICAL_GUIDANCE);
+    }
+
+    if (player.statistics.deaths > player.statistics.kills) {
+      objectives.push(CoachingObjective.PERFORMANCE_IMPROVEMENT);
+    }
+
+    // Check team state
+    const teamState = gameState.processed.teamState;
+    if (teamState.communication.activity < 0.5) {
+      objectives.push(CoachingObjective.TEAM_COORDINATION);
+    }
+
+    // Check situational factors
+    for (const factor of situationalFactors) {
+      switch (factor.type) {
+        case 'tactical':
+          if (factor.severity === 'high' || factor.severity === 'critical') {
+            objectives.push(CoachingObjective.TACTICAL_GUIDANCE);
+          }
+          break;
+        case 'psychological':
+          if (factor.severity === 'high') {
+            objectives.push(CoachingObjective.MENTAL_COACHING);
+          }
+          break;
+        case 'economic':
+          if (factor.severity === 'high' || factor.severity === 'critical') {
+            objectives.push(CoachingObjective.STRATEGIC_ANALYSIS);
+          }
+          break;
+      }
+    }
+
+    // Check for learning opportunities
+    if (gameState.processed.context === GameContext.LEARNING_OPPORTUNITY) {
+      objectives.push(CoachingObjective.SKILL_DEVELOPMENT);
+    }
+
+    // Add error correction if needed
+    if (objectives.length === 0) {
+      objectives.push(CoachingObjective.ERROR_CORRECTION);
+    }
+
+    return Array.from(new Set(objectives)); // Remove duplicates
+  }
+
+  /**
+   * Execute a single decision
+   */
+  private async executeDecisionAsync(decision: AIDecision): Promise<void> {
+    try {
+      // Execute the decision with the enhanced context
+      const result = await this.toolExecutor.executeDecision(decision);
+
+      // Evaluate the outcome
+      const outcome = await this.evaluateExecutionOutcome(decision, result);
+
+      // Update memory with the outcome
+      await this.updateMemoryFromOutcome(decision, outcome, decision.context.gameState);
+
+      // Update system prompt manager with feedback
+      this.systemPromptManager.updateFromFeedback(decision.context.systemPrompt.id, {
+        rating: outcome.success ? 5 : 3,
+        effectiveness: outcome.impact,
+        appropriateness: outcome.relevance,
+        suggestions: outcome.learningPoints.join(', ')
+      });
+
+      // Emit outcome event
+      this.emit('decision-executed', { decision, result, outcome });
+
+    } catch (error) {
+      this.handleDecisionError(decision, error as Error);
+    }
+  }
+
+  /**
+   * Evaluate execution outcome for learning
+   */
+  private async evaluateExecutionOutcome(
+    decision: AIDecision,
+    result: ExecutionResult
+  ): Promise<ExecutionOutcome> {
+    const success = result.success;
+    const impact = this.calculateDecisionImpact(decision, result);
+    const relevance = this.assessDecisionRelevance(decision);
+    const learningPoints = this.extractLearningPoints(result);
+
+    return {
+      decisionId: decision.id,
+      success,
+      impact,
+      relevance,
+      learningPoints,
+      timestamp: new Date(),
+      playerResponse: 'neutral',
+      measuredImpact: {
+        performance: impact * 0.8,
+        engagement: impact * 0.6,
+        learning: impact * 0.7
+      },
+      followUpRequired: !success || impact < 0.5,
+      metadata: {
+        executionTime: result.metadata.totalTime,
+        toolsUsed: result.metadata.toolsUsed,
+        confidence: decision.confidence
+      }
+    };
+  }
+
+  private calculateDecisionImpact(decision: AIDecision, result: ExecutionResult): number {
+    // Calculate impact based on decision type and result
+    let impact = 0;
+
+    switch (decision.type) {
+      case 'positioning':
+        impact = this.calculatePositioningImpact(decision, result);
+        break;
+      case 'economy':
+        impact = this.calculateEconomyImpact(decision, result);
+        break;
+      case 'performance':
+        impact = this.calculatePerformanceImpact(decision, result);
+        break;
+      default:
+        impact = result.success ? 0.7 : 0.3;
+    }
+
+    return Math.min(1, Math.max(0, impact));
+  }
+
+  private calculatePositioningImpact(decision: AIDecision, result: ExecutionResult): number {
+    const playerState = decision.context.gameState.processed.playerState;
+    const gamePhase = decision.context.gameState.processed.phase;
+
+    // Higher impact for successful positioning in critical situations
+    if (gamePhase === 'clutch' && result.success) {
+      return 0.9;
+    }
+
+    // Medium impact for general positioning improvements
+    if (playerState.health > 0 && result.success) {
+      return 0.7;
+    }
+
+    return result.success ? 0.5 : 0.2;
+  }
+
+  private calculateEconomyImpact(decision: AIDecision, result: ExecutionResult): number {
+    const gamePhase = decision.context.gameState.processed.phase;
+    const economyState = decision.context.gameState.processed.economyState;
+
+    // Higher impact for successful economy management in critical rounds
+    if (economyState.teamAdvantage === 'disadvantage' && result.success) {
+      return 0.9;
+    }
+
+    // Medium impact for general economy decisions
+    if (gamePhase === 'freezetime' && result.success) {
+      return 0.7;
+    }
+
+    return result.success ? 0.5 : 0.2;
+  }
+
+  private calculatePerformanceImpact(decision: AIDecision, result: ExecutionResult): number {
+    const gamePhase = decision.context.gameState.processed.phase;
+    const situationalFactors = decision.context.gameState.processed.situationalFactors;
+
+    // Higher impact for performance analysis after critical rounds
+    const isClutch = situationalFactors.some(f => f.type === 'clutch' && f.severity === 'critical');
+    if (gamePhase === 'round_end' || isClutch) {
+      return result.success ? 0.9 : 0.4;
+    }
+
+    // Medium impact for general performance analysis
+    return result.success ? 0.6 : 0.3;
+  }
+
+  private assessDecisionRelevance(decision: AIDecision): number {
+    const gameState = decision.context.gameState;
+    const gamePhase = gameState.processed.phase;
+    const playerState = gameState.processed.playerState;
+    const situationalFactors = gameState.processed.situationalFactors;
+
+    // Base relevance on timing and context
+    let relevance = 0.5;
+
+    // Adjust based on game context
+    const isCritical = situationalFactors.some(f => f.severity === 'critical');
+    if (isCritical) {
+      relevance += 0.3;
+    }
+
+    // Adjust based on player state
+    const isAlive = playerState.health > 0;
+    const isInCombat = playerState.health > 0 && playerState.health < 100;
+    if (isAlive && isInCombat) {
+      relevance += 0.2;
+    }
+
+    // Adjust based on decision priority
+    switch (decision.priority) {
+      case InterventionPriority.IMMEDIATE:
+        relevance += 0.2;
+        break;
+      case InterventionPriority.HIGH:
+        relevance += 0.1;
+        break;
+      case InterventionPriority.LOW:
+        relevance -= 0.1;
+        break;
+    }
+
+    return Math.min(1, Math.max(0, relevance));
+  }
+
+  private extractLearningPoints(result: ExecutionResult): string[] {
+    const learningPoints: string[] = [];
+
+    // Extract learning points from tool results
+    result.toolResults.steps.forEach(step => {
+      if (step.success && step.output?.learningPoints) {
+        learningPoints.push(...step.output.learningPoints);
+      }
+    });
+
+    // Add general learning point if none found
+    if (learningPoints.length === 0) {
+      learningPoints.push(result.success ? 
+        'Successfully executed coaching decision' :
+        'Identified area for improvement in coaching approach'
+      );
+    }
+
+    return learningPoints;
+  }
+
+  /**
+   * Error handling for processing errors
+   */
+  private handleProcessingError(code: string, error: Error): void {
+    // Update health status
+    this.healthStatus = {
+      status: 'error',
+      lastCheck: new Date(),
+      lastError: {
+        code,
+        message: error.message,
+        timestamp: new Date()
+      },
+      metrics: {
+        ...this.healthStatus.metrics,
+        errorCount: (this.healthStatus.metrics.errorCount || 0) + 1
+      }
+    };
+
+    // Set error state
+    this.setProcessingState(ProcessingState.ERROR);
+
+    // Log error
+    console.error(`[AIOrchestrator] ${code}:`, error);
+
+    // Emit error event
+    this.emit('error', { code, error });
+
+    // Try to recover based on error type
+    switch (code) {
+      case 'STARTUP_ERROR':
+        // Fatal error, cannot recover
+        break;
+
+      case 'GSI_PROCESSING_ERROR':
+        // Wait for next GSI update
+        setTimeout(() => {
+          if (this.isRunning) {
+            this.setProcessingState(ProcessingState.IDLE);
+          }
+        }, 5000);
+        break;
+
+      case 'DECISION_GENERATION_ERROR':
+        // Clear active decisions and reset state
+        this.activeDecisions.clear();
+        this.setProcessingState(ProcessingState.IDLE);
+        break;
+
+      case 'DECISION_EXECUTION_ERROR':
+        // Individual decision errors handled by handleDecisionError
+        break;
+
+      default:
+        // Unknown error, try to reset to idle state
+        if (this.isRunning) {
+          this.setProcessingState(ProcessingState.IDLE);
+        }
+    }
+  }
+
+  /**
+   * Error handling for decision execution errors
+   */
+  private handleDecisionError(decision: AIDecision, error: Error): void {
+    // Log error
+    console.error(`[AIOrchestrator] Decision execution error (${decision.id}):`, error);
+
+    // Update stats
+    this.stats.failedExecutions++;
+
+    // Emit error event
+    this.emit('decision-error', {
+      decisionId: decision.id,
+      error: {
+        message: error.message,
+        stack: error.stack
+      },
+      context: {
+        type: decision.type,
+        priority: decision.priority,
+        gameState: decision.context.gameState
+      }
+    });
+
+    // Handle based on priority
+    if (decision.priority === InterventionPriority.IMMEDIATE || 
+        decision.priority === InterventionPriority.HIGH) {
+      // Critical decision failed, pause processing
+      this.setProcessingState(ProcessingState.PAUSED);
+
+      // Try to recover after delay
+      setTimeout(() => {
+        if (this.isRunning) {
+          this.setProcessingState(ProcessingState.IDLE);
+        }
+      }, 10000);
+    }
+  }
+
+  /**
+   * Check if we should generate new decisions
+   */
+  private shouldGenerateDecisions(gameState: GameStateSnapshot): boolean {
+    // Skip if too many active decisions
+    if (this.activeDecisions.size >= this.config.processing.maxConcurrentDecisions) {
+      return false;
+    }
+
+    // Skip if no significant state change
+    if (!this.hasSignificantStateChange(gameState)) {
+      return false;
+    }
+
+    // Skip if processing is paused or in error state
+    if (this.processingState === ProcessingState.PAUSED || 
+        this.processingState === ProcessingState.ERROR) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Check for significant changes in game state
+   */
+  private hasSignificantStateChange(gameState: GameStateSnapshot): boolean {
+    const gamePhase = gameState.processed.phase;
+    const playerState = gameState.processed.playerState;
+    const situationalFactors = gameState.processed.situationalFactors;
+
+    // Always process on round state changes
+    if (gamePhase === 'round_start' || gamePhase === 'round_end') {
+      return true;
+    }
+
+    // Process on significant player events
+    const prevHealth = playerState.health;
+    if (prevHealth === 0 || prevHealth === 100) {
+      return true;
+    }
+
+    // Process on combat events
+    const isInCombat = playerState.health > 0 && playerState.health < 100;
+    const hasCombatNearby = situationalFactors.some(f => f.type === 'tactical' && f.severity === 'high');
+    if (isInCombat || hasCombatNearby) {
+      return true;
+    }
+
+    // Process on economy events
+    if (gamePhase === 'freezetime') {
+      return true;
+    }
+
+    // Process on critical situations
+    const isCritical = situationalFactors.some(f => f.severity === 'critical');
+    const isClutch = situationalFactors.some(f => f.type === 'clutch');
+    if (isCritical || isClutch) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Update decision-related statistics
+   */
+  private updateDecisionStats(totalTime: number): void {
+    const { totalDecisions } = this.stats;
+    
+    // Update average decision time
+    this.stats.averageDecisionTime = totalDecisions === 1
+      ? totalTime
+      : (this.stats.averageDecisionTime * (totalDecisions - 1) + totalTime) / totalDecisions;
+
+    // Update average execution time
+    const successRate = this.stats.successfulExecutions / totalDecisions;
+    this.stats.averageExecutionTime = (
+      this.stats.averageExecutionTime * (totalDecisions - 1) + totalTime
+    ) / totalDecisions;
+
+    // Update tool usage stats
+    const activeTools = Array.from(this.toolExecutor.monitorExecution('').errors);
+    activeTools.forEach(tool => {
+      this.stats.toolUsageStats[tool] = (this.stats.toolUsageStats[tool] || 0) + 1;
+    });
+  }
+
+  /**
+   * Set processing state and emit event
+   */
+  private setProcessingState(state: ProcessingState): void {
+    this.processingState = state;
+    this.emit('state-changed', state);
   }
 
   /**
@@ -494,7 +1299,7 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
           this.emit('error', new Error(`Unknown command: ${command}`));
       }
     } catch (error) {
-      this.emit('error', new Error(`Command execution failed: ${error.message}`));
+      this.emit('error', new Error(`Command execution failed: ${(error as Error).message}`));
     }
   }
 
@@ -511,7 +1316,7 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
       
       this.emit('user-feedback', feedback);
     } catch (error) {
-      this.emit('error', new Error(`Feedback processing failed: ${error.message}`));
+      this.emit('error', new Error(`Feedback processing failed: ${(error as Error).message}`));
     }
   }
 
@@ -606,7 +1411,7 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
 
       return generatedPrompt;
     } catch (error) {
-      this.emit('error', new Error(`System prompt generation failed: ${error.message}`));
+      this.emit('error', new Error(`System prompt generation failed: ${(error as Error).message}`));
       throw error;
     }
   }
@@ -636,249 +1441,22 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
   // ===== Private Methods =====
 
   /**
-   * Set processing state and emit events
-   */
-  private setProcessingState(state: ProcessingState): void {
-    if (this.processingState !== state) {
-      this.processingState = state;
-      this.emit('state-changed', state);
-    }
-  }
-
-  /**
-   * Determine if decisions should be generated based on game state
-   */
-  private shouldGenerateDecisions(gameState: GameStateSnapshot): boolean {
-    // Check rate limiting
-    const timeSinceLastDecision = Date.now() - (this.stats.totalDecisions > 0 ? Date.now() : 0);
-    if (timeSinceLastDecision < this.config.intervention.minTimeBetweenInterventions) {
-      return false;
-    }
-
-    // Check if we've reached max interventions for this round
-    if (this.activeDecisions.size >= this.config.intervention.maxInterventionsPerRound) {
-      return false;
-    }
-
-    // Check if there are significant changes or critical situations
-    const situationalFactors = gameState.processed.situationalFactors;
-    const hasCriticalSituation = situationalFactors.some(factor => 
-      factor.severity === 'critical' || factor.actionRequired
-    );
-
-    return hasCriticalSituation || this.hasSignificantStateChange(gameState);
-  }
-
-  /**
-   * Check for significant state changes
-   */
-  private hasSignificantStateChange(gameState: GameStateSnapshot): boolean {
-    const previousState = this.stateManager.getStateHistory(1)[0];
-    if (!previousState) return true;
-
-    // Check for context changes
-    if (gameState.processed.context !== previousState.processed.context) {
-      return true;
-    }
-
-    // Check for health/position changes
-    const currentPlayer = gameState.processed.playerState;
-    const previousPlayer = previousState.processed.playerState;
-    
-    const healthChange = Math.abs(currentPlayer.health - previousPlayer.health) > 20;
-    const positionChange = Math.sqrt(
-      Math.pow(currentPlayer.position.x - previousPlayer.position.x, 2) +
-      Math.pow(currentPlayer.position.y - previousPlayer.position.y, 2)
-    ) > 100;
-
-    return healthChange || positionChange;
-  }
-
-  /**
-   * Generate and execute decisions based on current state
-   */
-  private async generateAndExecuteDecisions(gameState: GameStateSnapshot): Promise<void> {
-    try {
-      this.setProcessingState(ProcessingState.EXECUTING_TOOLS);
-
-      // Prepare decision context
-      const decisionContext = await this.prepareDecisionContext(gameState);
-      
-      // Generate decisions
-      const startTime = Date.now();
-      const decisions = await this.decisionEngine.analyzeContext(decisionContext);
-      const decisionTime = Date.now() - startTime;
-      
-      this.updateDecisionStats(decisionTime);
-
-      // Execute decisions
-      for (const decision of decisions) {
-        this.activeDecisions.set(decision.id, decision);
-        this.emit('decision-made', decision);
-        
-        // Execute asynchronously
-        this.executeDecisionAsync(decision);
-      }
-
-    } catch (error) {
-      this.emit('error', new Error(`Decision generation failed: ${error.message}`));
-    }
-  }
-
-  /**
-   * Prepare decision context from current state
-   */
-  private async prepareDecisionContext(gameState: GameStateSnapshot): Promise<DecisionContext> {
-    // Get relevant memory entries
-    const playerMemory = await this.memoryService.searchMemory(
-      `player:${gameState.processed.playerState.steamId}`,
-      { limit: 10, types: [MemoryType.PLAYER_PROFILE, MemoryType.INTERACTION_HISTORY] }
-    );
-
-    const sessionHistory = await this.memoryService.searchMemory(
-      'session:current',
-      { limit: 20, types: [MemoryType.SESSION_DATA] }
-    );
-
-    // Determine resource limits based on config
-    const resourceLimits: ResourceLimits = {
-      maxToolCalls: this.config.processing.maxConcurrentDecisions * 3,
-      maxProcessingTime: this.config.processing.decisionTimeout,
-      maxMemoryQueries: 5,
-      allowLLMCalls: this.config.tools.enableLLMCalls,
-      allowTTSGeneration: this.config.tools.enableTTSGeneration
-    };
-
-    return {
-      gameState,
-      playerMemory,
-      sessionHistory,
-      coachingObjectives: this.determineCoachingObjectives(gameState),
-      constraints: {
-        timeWindow: this.config.processing.decisionTimeout,
-        complexity: this.config.processing.defaultComplexity,
-        resourceLimits
-      },
-      userPreferences: {
-        feedbackStyle: this.config.output.defaultFeedbackStyle,
-        detailLevel: 'detailed',
-        interventionFrequency: 'moderate'
-      }
-    };
-  }
-
-  /**
-   * Determine coaching objectives based on game state
-   */
-  private determineCoachingObjectives(gameState: GameStateSnapshot): any[] {
-    // Logic to determine what the player needs coaching on
-    const objectives = [];
-    const player = gameState.processed.playerState;
-    const situationalFactors = gameState.processed.situationalFactors;
-
-    if (player.health < 50) {
-      objectives.push('tactical_guidance');
-    }
-
-    if (situationalFactors.some(f => f.type === 'economic')) {
-      objectives.push('economic_strategy');
-    }
-
-    return objectives;
-  }
-
-  /**
-   * Execute decision asynchronously
-   */
-  private async executeDecisionAsync(decision: AIDecision): Promise<void> {
-    try {
-      this.emit('execution-started', decision.id);
-      
-      const result = await this.toolExecutor.executeDecision(decision);
-      
-      // Update stats
-      if (result.success) {
-        this.stats.successfulExecutions++;
-      } else {
-        this.stats.failedExecutions++;
-      }
-
-      // Generate output
-      this.setProcessingState(ProcessingState.GENERATING_RESPONSE);
-      const output = this.outputFormatter.formatCoachingAdvice(result);
-      
-      this.setProcessingState(ProcessingState.DELIVERING_FEEDBACK);
-      this.emit('output-generated', output);
-      this.emit('execution-completed', result);
-
-      // Learn from outcome
-      const outcome: ExecutionOutcome = {
-        decisionId: decision.id,
-        success: result.success,
-        playerResponse: 'neutral', // Would be determined by monitoring
-        measuredImpact: {
-          performance: 0,
-          engagement: 0.5,
-          learning: 0.3
-        },
-        followUpRequired: false
-      };
-
-      this.decisionEngine.learnFromOutcome(decision, outcome);
-
-      // Remove from active decisions
-      this.activeDecisions.delete(decision.id);
-
-    } catch (error) {
-      this.stats.failedExecutions++;
-      this.activeDecisions.delete(decision.id);
-      this.emit('error', new Error(`Decision execution failed: ${error.message}`));
-    }
-  }
-
-  /**
-   * Force analysis (for testing or manual triggers)
-   */
-  private async forceAnalysis(): Promise<void> {
-    const currentState = this.getCurrentState();
-    if (currentState) {
-      await this.generateAndExecuteDecisions(currentState);
-    }
-  }
-
-  /**
-   * Update decision statistics
-   */
-  private updateDecisionStats(decisionTime: number): void {
-    this.stats.totalDecisions++;
-    this.stats.averageDecisionTime = 
-      (this.stats.averageDecisionTime * (this.stats.totalDecisions - 1) + decisionTime) / 
-      this.stats.totalDecisions;
-  }
-
-  /**
-   * Update player satisfaction score
-   */
-  private updatePlayerSatisfaction(rating: number): void {
-    const weight = 0.1; // Learning rate for satisfaction
-    this.stats.playerSatisfactionScore = 
-      this.stats.playerSatisfactionScore * (1 - weight) + rating * weight;
-  }
-
-  /**
    * Build contextual input for system prompt generation
    */
   private async buildContextualInputForPrompt(gameState: GameStateSnapshot): Promise<any> {
     // Get relevant memory entries
-    const playerMemory = await this.memoryService.searchMemory(
-      `player:${gameState.processed.playerState.steamId}`,
-      { limit: 10, types: [MemoryType.PLAYER_PROFILE, MemoryType.INTERACTION_HISTORY] }
-    );
+    const playerMemoryResult = await this.memoryService.searchMemory({
+      query: `player:${gameState.processed.playerState.steamId}`,
+      limit: 10
+    });
 
-    const sessionHistory = await this.memoryService.searchMemory(
-      'session:current',
-      { limit: 20, types: [MemoryType.SESSION_DATA] }
-    );
+    const sessionHistoryResult = await this.memoryService.searchMemory({
+      query: 'session:current',
+      limit: 20
+    });
+
+    const playerMemory = playerMemoryResult.entries;
+    const sessionHistory = sessionHistoryResult.entries;
 
     // Calculate session duration and key events
     const sessionDuration = Date.now() - (this.stats.totalGSIUpdates > 0 ? Date.now() - 600000 : Date.now());
@@ -924,7 +1502,7 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
   private extractKeyEventsFromMemory(sessionHistory: BaseMemoryEntry[]): string[] {
     return sessionHistory
       .filter(entry => entry.metadata?.isKeyEvent)
-      .map(entry => entry.content.substring(0, 50))
+      .map(entry => (entry.content ?? '').substring(0, 50))
       .slice(0, 5);
   }
 
@@ -947,127 +1525,735 @@ export class AIOrchestrator extends EventEmitter implements IOrchestrator {
    */
   private inferEmotionalState(gameState: GameStateSnapshot, memory: BaseMemoryEntry[]): string {
     const player = gameState.processed.playerState;
-    const recentDeaths = player.statistics.deaths;
-    const health = player.health;
-    
-    // Check for frustration indicators
-    if (recentDeaths > 5 && player.statistics.kills < 2) return 'frustrated';
-    if (health < 30 && player.riskFactors.includes('pressure')) return 'stressed';
-    if (player.statistics.rating > 1.5) return 'confident';
-    
-    // Check memory for emotional indicators
-    const recentEmotionalMemory = memory.filter(entry => 
-      entry.metadata?.emotionalIndicators?.length > 0
-    );
-    
-    if (recentEmotionalMemory.length > 0) {
-      const lastEmotional = recentEmotionalMemory[0];
-      return lastEmotional.metadata.emotionalIndicators[0] || 'neutral';
-    }
-    
-    return 'neutral';
-  }
-
-  /**
-   * Calculate player attention level
-   */
-  private calculateAttentionLevel(gameState: GameStateSnapshot): string {
+    const team = gameState.processed.teamState;
+    const map = gameState.processed.mapState;
     const situationalFactors = gameState.processed.situationalFactors;
-    const criticalSituations = situationalFactors.filter(f => f.severity === 'critical');
-    
-    if (criticalSituations.length > 2) return 'high_stress';
-    if (criticalSituations.length > 0) return 'focused';
-    if (gameState.processed.context === GameContext.CRITICAL_SITUATION) return 'focused';
-    return 'relaxed';
+
+    // Performance-based emotional indicators
+    const performanceIndicators = {
+      recentDeaths: player.statistics.deaths,
+      killDeathRatio: player.statistics.kills / Math.max(player.statistics.deaths, 1),
+      damageOutput: player.statistics.adr,
+      roundImpact: this.calculateRoundImpact(player, gameState),
+      isUnderperforming: this.isUnderperforming(player, memory)
+    };
+
+    // Team-based emotional indicators
+    const teamIndicators = {
+      isTeamWinning: team.score > (map.round / 2),
+      recentTeamPerformance: this.analyzeRecentTeamPerformance(gameState, memory),
+      communicationQuality: team.communication.activity,
+      teamCoordination: team.communication.coordination
+    };
+
+    // Situational stress indicators
+    const stressIndicators = {
+      isClutchSituation: this.isClutchSituation(gameState),
+      isEconomyPressure: this.isEconomyStressed(gameState),
+      isTimeConstraint: gameState.processed.timeRemaining && gameState.processed.timeRemaining < 20,
+      isCriticalRound: this.isCriticalRound(gameState)
+    };
+
+    // Analyze recent memory entries for emotional patterns
+    const recentEmotionalMemory = memory
+      .filter(entry => entry.metadata?.emotionalIndicators?.length > 0)
+      .slice(0, 5); // Last 5 emotional states
+
+    // Calculate emotional state based on all factors
+    let emotionalState = this.calculateEmotionalState(
+      performanceIndicators,
+      teamIndicators,
+      stressIndicators,
+      recentEmotionalMemory
+    );
+
+    // Add situational context
+    const situationalContext = situationalFactors
+      .filter(factor => factor.severity === 'high' || factor.severity === 'critical')
+      .map(factor => factor.type);
+
+    if (situationalContext.length > 0) {
+      emotionalState = this.adjustEmotionalStateForContext(emotionalState, situationalContext);
+    }
+
+    return emotionalState;
   }
 
   /**
-   * Calculate player receptiveness to coaching
+   * Calculate round impact score
    */
-  private calculateReceptiveness(gameState: GameStateSnapshot, emotionalState: string): number {
-    let receptiveness = 0.7; // Base receptiveness
-    
-    // Adjust based on emotional state
-    switch (emotionalState) {
-      case 'frustrated': receptiveness -= 0.3; break;
-      case 'confident': receptiveness += 0.2; break;
-      case 'stressed': receptiveness -= 0.2; break;
-      case 'neutral': break; // No change
+  private calculateRoundImpact(player: PlayerGameState, gameState: GameStateSnapshot): number {
+    const impactScore = 
+      (player.statistics.kills * 2) +
+      (player.statistics.assists * 0.5) +
+      (player.statistics.utilityDamage / 50) +
+      (player.statistics.flashAssists * 0.7);
+
+    // Normalize to 0-1 range
+    return Math.min(impactScore / 10, 1);
+  }
+
+  /**
+   * Check if player is underperforming compared to their usual level
+   */
+  private isUnderperforming(player: PlayerGameState, memory: BaseMemoryEntry[]): boolean {
+    const performanceMemory = memory.find(entry => 
+      entry.type === MemoryType.PLAYER_PROFILE
+    );
+
+    if (!performanceMemory) {
+      return false;
     }
-    
-    // Adjust based on performance
-    const rating = gameState.processed.playerState.statistics.rating;
-    if (rating < 0.5) receptiveness -= 0.1; // Poor performance may reduce receptiveness
-    if (rating > 1.5) receptiveness += 0.1; // Good performance may increase receptiveness
-    
-    // Ensure within bounds
-    return Math.max(0.1, Math.min(1.0, receptiveness));
+
+    const profileData = performanceMemory.data as PlayerProfileData;
+    const consistency = profileData.playingStyle?.consistency || 0.5;
+    return player.statistics.rating < (consistency * 0.7); // 30% below average
+  }
+
+  /**
+   * Analyze recent team performance
+   */
+  private analyzeRecentTeamPerformance(
+    gameState: GameStateSnapshot,
+    memory: BaseMemoryEntry[]
+  ): number {
+    const recentRounds = memory
+      .filter(entry => entry.type === MemoryType.SESSION_DATA)
+      .slice(0, 3); // Last 3 rounds
+
+    if (recentRounds.length === 0) {
+      return 0;
+    }
+
+    const roundWins = recentRounds.filter(round => {
+      const data = round.data as SessionData;
+      return data.currentGameMode === 'competitive' &&
+        data.currentTeamComposition?.includes(gameState.processed.teamState.side);
+    }).length;
+
+    return roundWins / recentRounds.length;
+  }
+
+  /**
+   * Check if current situation is a clutch
+   */
+  private isClutchSituation(gameState: GameStateSnapshot): boolean {
+    const aliveTeammates = gameState.processed.teamState.formation.split(',').length;
+    const aliveEnemies = 5 - gameState.processed.teamState.score; // Approximate
+    return aliveTeammates === 1 && aliveEnemies > 1;
+  }
+
+  /**
+   * Check if team is under economic pressure
+   */
+  private isEconomyStressed(gameState: GameStateSnapshot): boolean {
+    const economy = gameState.processed.economyState;
+    return (
+      economy.roundType === 'eco' ||
+      economy.roundType === 'semi_eco' ||
+      gameState.processed.teamState.economy.buyCapability === 'force_buy'
+    );
+  }
+
+  /**
+   * Check if current round is critical
+   */
+  private isCriticalRound(gameState: GameStateSnapshot): boolean {
+    const round = gameState.processed.mapState.round;
+    const teamScore = gameState.processed.teamState.score;
+    const maxRounds = 30; // Standard competitive format
+
+    // Match point scenarios
+    if (teamScore === 15 || maxRounds - round <= 2) {
+      return true;
+    }
+
+    // Reset point scenarios (after 15 rounds)
+    if (round === 15) {
+      return true;
+    }
+
+    // Economic turning points
+    if (this.isEconomyStressed(gameState) && round > 3) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Calculate emotional state based on all indicators
+   */
+  private calculateEmotionalState(
+    performance: any,
+    team: any,
+    stress: any,
+    recentEmotions: BaseMemoryEntry[]
+  ): string {
+    // Base emotional state calculation
+    let emotionalState = 'neutral';
+
+    // Performance-based emotions
+    if (performance.isUnderperforming && performance.recentDeaths > 2) {
+      emotionalState = 'frustrated';
+    } else if (performance.killDeathRatio > 2 && performance.roundImpact > 0.7) {
+      emotionalState = 'confident';
+    }
+
+    // Team-based emotional modifiers
+    if (!team.isTeamWinning && team.recentTeamPerformance < 0.3) {
+      emotionalState = emotionalState === 'frustrated' ? 'tilted' : 'pressured';
+    } else if (team.isTeamWinning && team.communicationQuality > 0.7) {
+      emotionalState = 'motivated';
+    }
+
+    // Stress-based modifiers
+    if (Object.values(stress).filter(Boolean).length >= 2) {
+      emotionalState = 'stressed';
+    }
+
+    // Consider recent emotional history
+    if (recentEmotions.length > 0) {
+      const lastEmotion = recentEmotions[0].metadata.emotionalIndicators[0];
+      if (lastEmotion === emotionalState) {
+        // Intensify the emotion if it persists
+        emotionalState = this.intensifyEmotion(emotionalState);
+      }
+    }
+
+    return emotionalState;
+  }
+
+  /**
+   * Adjust emotional state based on situational context
+   */
+  private adjustEmotionalStateForContext(
+    baseState: string,
+    context: string[]
+  ): string {
+    // Clutch situations intensify emotions
+    if (context.includes('clutch')) {
+      return this.intensifyEmotion(baseState);
+    }
+
+    // Economic pressure can dampen positive emotions
+    if (context.includes('economy_pressure') && baseState === 'confident') {
+      return 'focused';
+    }
+
+    // Time pressure can escalate stress
+    if (context.includes('time_pressure') && baseState === 'stressed') {
+      return 'anxious';
+    }
+
+    return baseState;
+  }
+
+  /**
+   * Intensify an emotional state
+   */
+  private intensifyEmotion(emotion: string): string {
+    const intensityMap: Record<string, string> = {
+      'frustrated': 'tilted',
+      'confident': 'dominant',
+      'pressured': 'stressed',
+      'stressed': 'anxious',
+      'motivated': 'energized'
+    };
+
+    return intensityMap[emotion] || emotion;
   }
 
   /**
    * Identify learning opportunities from current state
    */
   private identifyLearningOpportunities(gameState: GameStateSnapshot): string[] {
-    const opportunities = [];
+    const opportunities: Array<{
+      type: string;
+      priority: 'high' | 'medium' | 'low';
+      context: string[];
+    }> = [];
+
     const player = gameState.processed.playerState;
+    const team = gameState.processed.teamState;
     const situationalFactors = gameState.processed.situationalFactors;
-    
-    // Check for positioning improvements
+    const economy = gameState.processed.economyState;
+
+    // Positioning and movement
     if (player.riskFactors.includes('positioning')) {
-      opportunities.push('positioning_improvement');
+      opportunities.push({
+        type: 'positioning_improvement',
+        priority: 'high',
+        context: ['safety', 'map_control']
+      });
     }
-    
-    // Check for economy lessons
-    if (gameState.processed.economyState.roundType === 'eco') {
-      opportunities.push('economy_management');
+
+    // Aim and combat
+    if (player.statistics.kills === 0 && player.statistics.deaths > 1) {
+      opportunities.push({
+        type: 'aim_training',
+        priority: 'high',
+        context: ['mechanical_skill', 'confidence']
+      });
     }
-    
-    // Check for tactical opportunities
-    if (situationalFactors.some(f => f.type === 'tactical')) {
-      opportunities.push('tactical_decision_making');
+
+    // Economy management
+    if (economy.roundType === 'eco' || economy.roundType === 'force_buy') {
+      opportunities.push({
+        type: 'economy_management',
+        priority: 'medium',
+        context: ['resource_optimization', 'team_coordination']
+      });
     }
-    
-    return opportunities;
+
+    // Utility usage
+    if (player.statistics.utilityDamage === 0 && player.equipment.flash > 0) {
+      opportunities.push({
+        type: 'utility_usage',
+        priority: 'medium',
+        context: ['map_control', 'team_support']
+      });
+    }
+
+    // Team play
+    if (team.communication.activity < 0.3) {
+      opportunities.push({
+        type: 'communication_improvement',
+        priority: 'high',
+        context: ['team_coordination', 'information_sharing']
+      });
+    }
+
+    // Map awareness
+    if (situationalFactors.some(f => f.type === 'flanked' || f.type === 'surprised')) {
+      opportunities.push({
+        type: 'map_awareness',
+        priority: 'high',
+        context: ['game_sense', 'information_processing']
+      });
+    }
+
+    // Clutch situations
+    if (this.isClutchSituation(gameState)) {
+      opportunities.push({
+        type: 'clutch_performance',
+        priority: 'medium',
+        context: ['decision_making', 'pressure_handling']
+      });
+    }
+
+    // Post-plant/retake scenarios
+    if (gameState.processed.mapState.bombState === 'planted') {
+      opportunities.push({
+        type: team.side === 'CT' ? 'retake_execution' : 'post_plant_positioning',
+        priority: 'high',
+        context: ['tactical_play', 'time_management']
+      });
+    }
+
+    // Trading opportunities
+    if (team.formation.split(',').length < 4) {
+      opportunities.push({
+        type: 'trade_fragging',
+        priority: 'medium',
+        context: ['team_coordination', 'positioning']
+      });
+    }
+
+    // Sort by priority and return types
+    return opportunities
+      .sort((a, b) => {
+        const priorityMap = { high: 3, medium: 2, low: 1 };
+        return priorityMap[b.priority] - priorityMap[a.priority];
+      })
+      .map(opp => opp.type);
   }
 
   /**
    * Perform health check
    */
   private async performHealthCheck(): Promise<void> {
-    const issues: string[] = [];
-    
-    // Check component health
-    const components = {
-      inputHandler: 'healthy',
-      stateManager: 'healthy', 
-      decisionEngine: 'healthy',
-      toolExecutor: 'healthy',
-      outputFormatter: 'healthy',
-      memoryService: 'healthy'
-    };
+    const now = Date.now();
 
-    // Check for issues
-    if (Date.now() - this.lastGSIUpdate.getTime() > 30000) {
-      issues.push('No GSI updates in 30 seconds');
-      components.inputHandler = 'degraded';
+    // Check GSI connection
+    const gsiLag = now - this.lastGSIUpdate.getTime();
+    const isGSIHealthy = gsiLag < this.config.processing.decisionTimeout;
+
+    // Check active decisions
+    const staleDecisions = Array.from(this.activeDecisions.entries())
+      .filter(([_, execution]) => now - (execution.metadata?.executionTime || 0) > this.config.processing.decisionTimeout);
+
+    // Clean up stale decisions
+    for (const [decisionId, execution] of staleDecisions) {
+      await this.handleDecisionError(
+        execution as AIDecision,
+        new Error('Decision execution timeout')
+      );
+      this.activeDecisions.delete(decisionId);
     }
 
-    if (this.activeDecisions.size > this.config.processing.maxConcurrentDecisions) {
-      issues.push('Too many concurrent decisions');
-      components.decisionEngine = 'degraded';
-    }
-
-    const overall = issues.length === 0 ? 'healthy' : 
-                   issues.length < 3 ? 'degraded' : 'critical';
-
+    // Update health status
     this.healthStatus = {
-      overall,
-      components,
-      issues,
-      lastCheck: new Date()
+      status: isGSIHealthy && staleDecisions.length === 0 ? 'healthy' : 'degraded',
+      lastCheck: new Date(),
+      metrics: {
+        gsiLag,
+        activeDecisions: this.activeDecisions.size,
+        staleDecisions: staleDecisions.length,
+        successRate: this.stats.successfulExecutions / 
+          (this.stats.successfulExecutions + this.stats.failedExecutions),
+        averageExecutionTime: this.stats.averageExecutionTime,
+        errorCount: this.healthStatus.metrics.errorCount || 0
+      }
     };
 
+    // Emit health status
     this.emit('health-check', this.healthStatus);
+
+    // Try to recover if in error state
+    if (this.processingState === ProcessingState.ERROR && isGSIHealthy) {
+      this.setProcessingState(ProcessingState.IDLE);
+    }
+  }
+
+  /**
+   * Force analysis (for testing or manual triggers)
+   */
+  private async forceAnalysis(): Promise<void> {
+    const currentState = this.getCurrentState();
+    if (currentState) {
+      await this.generateAndExecuteDecisions(currentState);
+    }
+  }
+
+  /**
+   * Update player satisfaction score
+   */
+  private updatePlayerSatisfaction(rating: number): void {
+    const weight = 0.1; // Learning rate for satisfaction
+    this.stats.playerSatisfactionScore = 
+      this.stats.playerSatisfactionScore * (1 - weight) + rating * weight;
+  }
+
+  /**
+   * Calculate player's attention level
+   */
+  private calculateAttentionLevel(gameState: GameStateSnapshot): number {
+    const player = gameState.processed.playerState;
+    const situationalFactors = gameState.processed.situationalFactors;
+
+    let attentionScore = 0.5; // Base attention level
+
+    // Recent performance impact
+    if (player.statistics.kills > 0 || player.statistics.assists > 0) {
+      attentionScore += 0.1; // More engaged after successful actions
+    }
+
+    // Critical situations increase attention
+    if (this.isClutchSituation(gameState) || this.isCriticalRound(gameState)) {
+      attentionScore += 0.2;
+    }
+
+    // High-pressure situations
+    if (situationalFactors.some(f => f.severity === 'critical')) {
+      attentionScore += 0.15;
+    }
+
+    // Economic pressure can increase focus
+    if (this.isEconomyStressed(gameState)) {
+      attentionScore += 0.1;
+    }
+
+    // Cap attention level between 0 and 1
+    return Math.min(Math.max(attentionScore, 0), 1);
+  }
+
+  /**
+   * Calculate player's receptiveness to coaching
+   */
+  private calculateReceptiveness(gameState: GameStateSnapshot, emotionalState: string): number {
+    let receptiveness = 0.5; // Base receptiveness
+
+    // Emotional state impact
+    const emotionalImpact: Record<string, number> = {
+      'neutral': 0,
+      'confident': 0.2,
+      'motivated': 0.3,
+      'focused': 0.2,
+      'frustrated': -0.2,
+      'tilted': -0.4,
+      'stressed': -0.1,
+      'anxious': -0.3
+    };
+
+    receptiveness += emotionalImpact[emotionalState] || 0;
+
+    // Performance impact
+    const player = gameState.processed.playerState;
+    const recentPerformance = this.analyzeRecentPerformance(gameState);
+    
+    if (recentPerformance === 'excellent') {
+      receptiveness += 0.2; // More receptive when performing well
+    } else if (recentPerformance === 'struggling') {
+      receptiveness -= 0.1; // Less receptive when struggling
+    }
+
+    // Game phase impact
+    const phase = gameState.processed.phase;
+    if (phase === 'freezetime' || phase === 'warmup') {
+      receptiveness += 0.1; // More receptive during low-pressure phases
+    } else if (phase === 'live' && this.isClutchSituation(gameState)) {
+      receptiveness -= 0.3; // Less receptive during intense situations
+    }
+
+    // Team performance impact
+    const team = gameState.processed.teamState;
+    if (team.score > gameState.processed.mapState.round / 2) {
+      receptiveness += 0.1; // More receptive when team is winning
+    }
+
+    // Cap receptiveness between 0 and 1
+    return Math.min(Math.max(receptiveness, 0), 1);
+  }
+
+  /**
+   * Update memory based on execution outcome
+   */
+  private async updateMemoryFromOutcome(
+    decision: AIDecision,
+    outcome: ExecutionOutcome,
+    gameState: GameStateSnapshot
+  ): Promise<void> {
+    try {
+      // Create coaching insights entry
+      const insightEntry: CoachingInsightsMemory = {
+        id: uuidv4(),
+        type: MemoryType.COACHING_INSIGHTS,
+        importance: outcome.success ? MemoryImportance.HIGH : MemoryImportance.CRITICAL,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        tags: [
+          decision.type,
+          outcome.success ? 'successful' : 'unsuccessful',
+          ...this.extractContextTags(gameState)
+        ],
+        metadata: {
+          decisionId: decision.id,
+          playerResponse: outcome.playerResponse,
+          measuredImpact: outcome.measuredImpact,
+          emotionalState: this.inferEmotionalState(gameState, []),
+          gamePhase: gameState.processed.phase,
+          situationalFactors: gameState.processed.situationalFactors
+        },
+              data: {
+        insightId: decision.id,
+        playerId: gameState.processed.playerState.steamId,
+        insight: decision.rationale,
+        category: decision.type,
+        confidence: outcome.measuredImpact.performance,
+        basedOn: [{
+          dataSource: 'gameState',
+          dataPoints: ['phase', 'playerState', 'teamState'],
+          weight: 1.0
+        }, {
+          dataSource: 'decision',
+          dataPoints: ['type', 'priority', 'context'],
+          weight: 0.8
+        }],
+        recommendations: [],
+        validated: true,
+        validationSource: 'outcome-inference',
+        actualOutcome: outcome.success ? 'positive' : 'negative',
+        validationScore: outcome.measuredImpact.performance
+      }
+      };
+
+      // Store the coaching insight
+      await this.memoryService.store(insightEntry);
+
+      // Update player profile with learning patterns
+      const playerProfile = await this.memoryService.getPlayerProfile(
+        gameState.processed.playerState.steamId
+      );
+
+      if (playerProfile) {
+        const profileData = playerProfile.data as PlayerProfileData;
+        const updates: Partial<PlayerProfileMemory> = {
+          data: {
+            steamId: gameState.processed.playerState.steamId,
+            playerName: gameState.processed.playerState.name,
+            strengths: profileData.strengths || [],
+            weaknesses: profileData.weaknesses || [],
+            commonErrors: [
+              ...(profileData.commonErrors || []),
+              {
+                pattern: decision.type,
+                frequency: outcome.success ? 0 : 1,
+                context: this.extractContextTags(gameState),
+                lastOccurrence: new Date()
+              }
+            ],
+            playingStyle: profileData.playingStyle || {
+              aggression: 0.5,
+              teamwork: 0.5,
+              adaptability: 0.5,
+              consistency: 0.5,
+              preferredRoles: [],
+              preferredWeapons: [],
+              preferredMaps: []
+            },
+            mentalState: profileData.mentalState || {
+              tiltResistance: 0.5,
+              communicationStyle: 'neutral',
+              motivationFactors: [],
+              learningPreferences: []
+            },
+            improvementGoals: profileData.improvementGoals || []
+          }
+        };
+
+        await this.memoryService.update(playerProfile.id, updates);
+      }
+
+      // Update session data with interaction outcome
+      const sessionData = await this.memoryService.getCurrentSessionData(
+        gameState.processed.playerState.steamId
+      );
+
+      if (sessionData) {
+        const sessionMemory = sessionData.data as SessionData;
+        const updates: Partial<SessionDataMemory> = {
+          data: {
+            sessionId: sessionMemory.sessionId,
+            playerId: gameState.processed.playerState.steamId,
+            startTime: sessionMemory.startTime,
+            currentMap: gameState.processed.mapState.name,
+            currentGameMode: 'competitive',
+            currentTeamComposition: [gameState.processed.teamState.side],
+            observedBehaviors: [
+              ...(sessionMemory.observedBehaviors || []),
+              {
+                timestamp: new Date(),
+                behavior: decision.type,
+                context: this.extractContextTags(gameState).join(', '),
+                significance: outcome.measuredImpact.performance
+              }
+            ],
+            recentTopics: sessionMemory.recentTopics || [],
+            coachingNotes: sessionMemory.coachingNotes || [],
+            pendingActions: sessionMemory.pendingActions || []
+          }
+        };
+
+        await this.memoryService.update(sessionData.id, updates);
+      }
+
+      // If the outcome was particularly significant, store it as game knowledge
+      if (Math.abs(outcome.measuredImpact.performance) > 0.7) {
+        const knowledgeEntry: GameKnowledgeMemory = {
+          id: uuidv4(),
+          type: MemoryType.GAME_KNOWLEDGE,
+          importance: MemoryImportance.HIGH,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          tags: [
+            decision.type,
+            'learned_pattern',
+            ...this.extractContextTags(gameState)
+          ],
+          metadata: {
+            source: 'outcome-inference',
+            confidence: Math.abs(outcome.measuredImpact.performance),
+            validationCount: 1
+          },
+          data: {
+            knowledgeType: outcome.success ? GameKnowledgeType.TACTIC : GameKnowledgeType.STRATEGY,
+            title: decision.type,
+            description: decision.rationale,
+            mapSpecific: [gameState.processed.mapState.name],
+            situationSpecific: [gameState.processed.phase],
+            teamSide: gameState.processed.teamState.side as 'T' | 'CT',
+            keyPoints: this.extractContextTags(gameState),
+            commonMistakes: [],
+            successIndicators: [],
+            sources: [{
+              type: 'game_analysis',
+              description: 'Derived from gameplay observation',
+              confidence: Math.abs(outcome.measuredImpact.performance)
+            }],
+            timesReferenced: 1,
+            lastUsed: new Date(),
+            effectiveness: outcome.success ? 1 : 0
+          }
+        };
+
+        await this.memoryService.store(knowledgeEntry);
+      }
+    } catch (error) {
+      console.error('Error updating memory from outcome:', error);
+      this.emit('error', error);
+    }
+  }
+
+  /**
+   * Extract context tags from game state
+   */
+  private extractContextTags(gameState: GameStateSnapshot): string[] {
+    const tags: string[] = [
+      gameState.processed.phase,
+      gameState.processed.economyState.roundType,
+      gameState.processed.teamState.side,
+      gameState.processed.mapState.name
+    ];
+
+    // Add situational factors
+    gameState.processed.situationalFactors.forEach(factor => {
+      if (factor.severity === 'high' || factor.severity === 'critical') {
+        tags.push(factor.type);
+      }
+    });
+
+    // Add player state indicators
+    const player = gameState.processed.playerState;
+    if (player.statistics.kills > 0) tags.push('has_kills');
+    if (player.statistics.deaths > 0) tags.push('has_deaths');
+    if (player.statistics.utilityDamage > 0) tags.push('used_utility');
+
+    return tags.filter(Boolean);
+  }
+
+  private calculateUrgency(gameState: GameStateSnapshot): string {
+    const phase = gameState.processed.phase;
+    const playerState = gameState.processed.playerState;
+    const situationalFactors = gameState.processed.situationalFactors;
+
+    const isCritical = situationalFactors.some(f => f.severity === 'critical');
+    const isInCombat = playerState.health > 0 && playerState.health < 100;
+
+    if (isCritical || isInCombat) {
+      return 'critical';
+    }
+
+    const isClutch = situationalFactors.some(f => f.type === 'clutch');
+    if (isClutch || phase === 'match_point') {
+      return 'high';
+    }
+
+    if (phase === 'freezetime' || phase === 'buy_time') {
+      return 'medium';
+    }
+
+    return 'low';
+  }
+
+  private startHealthCheck(): void {
+    this.healthCheckInterval = setInterval(async () => {
+      try {
+        await this.performHealthCheck();
+      } catch (error) {
+        console.error('[AIOrchestrator] Health check failed:', error);
+      }
+    }, this.config.processing.decisionTimeout);
   }
 }
 

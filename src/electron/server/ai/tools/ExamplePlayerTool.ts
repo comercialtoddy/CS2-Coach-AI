@@ -1,5 +1,5 @@
 import { ITool, ToolExecutionContext, ToolExecutionResult, ToolParameterSchema, ToolMetadata, ToolCategory } from '../interfaces/ITool.js';
-import { getPlayerById } from '../../services/playersServices.js';
+import { getPlayers } from '../../services/playersServices.js';
 
 /**
  * Input interface for the PlayerDataTool
@@ -14,7 +14,7 @@ export interface PlayerDataToolInput {
  */
 export interface PlayerDataToolOutput {
   player: {
-    id: number;
+    id: string;
     name: string;
     realName?: string;
     steamId?: string;
@@ -59,7 +59,7 @@ export class PlayerDataTool implements ITool<PlayerDataToolInput, PlayerDataTool
 
   public readonly outputExample: PlayerDataToolOutput = {
     player: {
-      id: 1,
+      id: "1",
       name: 's1mple',
       realName: 'Oleksandr Kostyliev',
       steamId: '76561198034202275',
@@ -154,8 +154,18 @@ export class PlayerDataTool implements ITool<PlayerDataToolInput, PlayerDataTool
     const startTime = Date.now();
     
     try {
-      // Retrieve player from database
-      const player = await getPlayerById(input.playerId);
+      if (input.playerId === undefined || input.playerId === null) {
+        return {
+          success: false,
+          error: {
+            code: 'INVALID_INPUT',
+            message: "No player ID provided",
+          }
+        };
+      }
+
+      const players = await getPlayers();
+      const player: any = players.find(p => p._id === String(input.playerId));
       
       if (!player) {
         return {
@@ -176,14 +186,14 @@ export class PlayerDataTool implements ITool<PlayerDataToolInput, PlayerDataTool
       // Prepare basic player data
       const playerData: PlayerDataToolOutput = {
         player: {
-          id: player.id,
-          name: player.name,
-          realName: player.realName || undefined,
-          steamId: player.steamId || undefined,
-          country: player.country || undefined,
-          avatar: player.avatar || undefined,
-          createdAt: new Date(player.createdAt),
-          updatedAt: new Date(player.updatedAt)
+          id: player._id,
+          name: player.username,
+          realName: `${player.firstName} ${player.lastName}`,
+          steamId: player.steamid,
+          country: player.country,
+          avatar: player.avatar,
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
       };
 
@@ -214,18 +224,8 @@ export class PlayerDataTool implements ITool<PlayerDataToolInput, PlayerDataTool
       return {
         success: false,
         error: {
-          code: 'DATABASE_ERROR',
-          message: 'Failed to retrieve player data from database',
-          details: {
-            originalError: error instanceof Error ? error.message : 'Unknown error',
-            playerId: input.playerId,
-            stackTrace: error instanceof Error ? error.stack : undefined
-          }
-        },
-        metadata: {
-          executionTimeMs: Date.now() - startTime,
-          source: this.name,
-          cached: false
+            code: 'TOOL_EXECUTION_ERROR',
+            message: `Failed to retrieve player: ${error instanceof Error ? error.message : 'Unknown error'}`,
         }
       };
     }
@@ -245,13 +245,13 @@ export class PlayerDataTool implements ITool<PlayerDataToolInput, PlayerDataTool
       // - Check database connection
       // - Verify table exists
       // - Check recent query performance
-      const testResult = await getPlayerById(1);
+      const testResult = await getPlayers();
       
       return {
         healthy: true,
         message: 'Database connection and player service are working properly',
         details: {
-          testQuery: 'getPlayerById(1)',
+          testQuery: 'getPlayers()',
           responseTime: 'fast',
           timestamp: new Date()
         }

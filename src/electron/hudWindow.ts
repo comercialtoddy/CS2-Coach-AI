@@ -42,6 +42,7 @@ export function createAgentOverlayWindow() {
     transparent: true,
     frame: false,
     alwaysOnTop: true,
+    type: 'toolbar',
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -57,8 +58,14 @@ export function createAgentOverlayWindow() {
     },
   });
 
-  // Load the main React UI but we'll navigate to a specific route for the agent overlay
-  agentOverlay.loadFile(getUIPath());
+  const uiPath = getUIPath();
+  console.log('Loading UI from:', uiPath);
+
+  if (uiPath.startsWith('http')) {
+    agentOverlay.loadURL(uiPath);
+  } else {
+    agentOverlay.loadFile(uiPath);
+  }
   
   // Set to ignore mouse events so users can interact with the game underneath
   agentOverlay.setIgnoreMouseEvents(true);
@@ -68,6 +75,10 @@ export function createAgentOverlayWindow() {
   
   // Set window level to stay on top of games
   agentOverlay.setAlwaysOnTop(true, 'screen-saver');
+
+  // Ensure the window is always visible
+  agentOverlay.setSkipTaskbar(false);
+  agentOverlay.moveTop();
 
   return agentOverlay;
 }

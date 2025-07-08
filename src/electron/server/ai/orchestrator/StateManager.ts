@@ -256,7 +256,7 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
 
       // Update session data in memory service if available
       if (this.memoryService) {
-        await this.updateSessionMemory(snapshot);
+        await this.updateSessionMemory();
       }
 
       // Update metrics
@@ -304,27 +304,39 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
    * Persist current state and history
    */
   async persistState(): Promise<void> {
-    try {
+    this.ensureInitialized();
       if (!this.memoryService) {
         if (this.config.debugMode) {
-          console.log('💾 No memory service available for persistence');
+        console.warn('⚠️ Memory service not available, skipping persistence.');
         }
         return;
       }
 
-      // Create compressed session data
-      const sessionData = this.createSessionData();
-      
-      await this.memoryService.store(sessionData);
-
+    try {
+      await this.updateSessionMemory();
       if (this.config.debugMode) {
-        console.log('💾 State persisted successfully');
+        console.log('💾 Game state and session data persisted successfully.');
       }
-
-      this.emit('state-persisted');
+      this.emit('persisted');
     } catch (error) {
       console.error('❌ Error persisting state:', error);
       this.emit('error', error);
+    }
+  }
+
+  async updateSessionMemory(): Promise<void> {
+    if (!this.memoryService) {
+      return;
+    }
+    const sessionData = this.createSessionData();
+    const { sessionId } = this.getCurrentSessionInfo();
+
+    const existingSession = await this.memoryService.getSessionData(sessionId);
+
+    if (existingSession) {
+      await this.memoryService.update(sessionId, sessionData);
+    } else {
+      await this.memoryService.store(sessionData);
     }
   }
 
@@ -644,8 +656,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
    * Restore state from session data
    */
   private restoreFromSessionData(sessionData: SessionDataMemory): void {
-    // This would restore the state manager from persisted session data
-    // Implementation would depend on the specific data structure
+    // This is a simplified restoration process. A full implementation
+    // would involve more complex logic to re-hydrate the state.
     if (this.config.debugMode) {
       console.log('🔄 Restoring state from session data:', sessionData.data.sessionId);
     }
@@ -852,57 +864,56 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
   }
 
   private getCurrentSessionInfo(): { sessionId: string; playerId: string; startTime: Date } {
+    // In a real application, this would be managed more robustly.
+    // For now, we'll use a static session for demonstration.
+    const playerId = this.currentState?.processed.playerState.steamId || 'unknown_player';
     return {
-      sessionId: `session_${Date.now()}`,
-      playerId: this.currentState?.processed.playerState.steamId || 'unknown',
-      startTime: new Date() // Would track actual session start
+      sessionId: `session_${playerId}`,
+      playerId,
+      startTime: this.stateHistory[0]?.timestamp || new Date()
     };
   }
 
-  private extractObservedBehaviors(): string[] {
-    if (!this.currentState) return [];
-    return this.currentState.processed.playerState.observedBehaviors;
+  private extractObservedBehaviors(): SessionDataMemory['data']['observedBehaviors'] {
+    // Placeholder - would analyze state history for behavioral patterns
+    return [];
   }
 
-  private extractRecentTopics(): string[] {
-    const recentPatterns = Array.from(this.detectedPatterns.values()).slice(-5);
-    return recentPatterns.map(p => p.description);
+  private extractRecentTopics(): SessionDataMemory['data']['recentTopics'] {
+    // Placeholder - would analyze interactions and coaching for recent topics
+    return [];
   }
 
   private generateCoachingNotes(): string[] {
     const notes: string[] = [];
-    const recentChanges = this.stateChanges.slice(-10);
+    if (!this.currentState) {
+    return notes;
+  }
+    notes.push(`Current round: ${this.currentState.processed.mapState.round}`);
+    notes.push(`Player health: ${this.currentState.processed.playerState.health}`);
     
-    recentChanges.forEach(change => {
-      if (change.significance === 'high' || change.significance === 'critical') {
-        notes.push(`${change.changeType}: ${change.affectedAreas.join(', ')}`);
+    const criticalFactors = this.currentState.processed.situationalFactors
+      .filter(f => f.severity === 'critical')
+      .map(f => f.description);
+      
+    if (criticalFactors.length > 0) {
+      notes.push(`Critical factors: ${criticalFactors.join(', ')}`);
       }
-    });
-    
+
     return notes;
   }
 
-  private identifyPendingActions(): string[] {
-    const actions: string[] = [];
-    
-    if (this.currentState) {
-      // Identify actions based on current state
-      if (this.currentState.processed.playerState.health < 50) {
-        actions.push('Consider safer positioning');
-      }
-      if (this.currentState.processed.playerState.money < 2000) {
-        actions.push('Plan for economy round');
-      }
-    }
-    
-    return actions;
+  private identifyPendingActions(): SessionDataMemory['data']['pendingActions'] {
+    // Placeholder - would identify required future actions
+    return [];
   }
 
   /**
    * Get state management metrics
    */
   getMetrics(): StateMetrics {
-    return { ...this.metrics };
+    this.metrics.memoryUsage = process.memoryUsage().heapUsed / 1024 / 1024;
+    return this.metrics;
   }
 }
 

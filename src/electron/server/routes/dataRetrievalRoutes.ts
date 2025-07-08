@@ -1,14 +1,15 @@
-import { Router } from 'express';
+import express from "express";
 import {
   getStatus,
   getGSIInfo,
   getTrackerGGStats,
   updatePlayerProfiles,
   getToolsInfo,
-  testAllTools
-} from '../controllers/dataRetrievalController.js';
+  testAllTools,
+} from "../controllers/dataRetrievalController.js";
+import { asyncHandler } from "../helpers/asyncHandler.js";
 
-const router = Router();
+export const dataRetrievalRoutes = express.Router();
 
 /**
  * Core Data Retrieval Tools API routes
@@ -16,21 +17,22 @@ const router = Router();
  */
 
 // GET /data-retrieval/status - Get service status and health checks
-router.get('/status', getStatus);
+dataRetrievalRoutes.get("/status", asyncHandler(getStatus));
 
 // GET /data-retrieval/tools/info - Get comprehensive tool information and examples
-router.get('/tools/info', getToolsInfo);
+dataRetrievalRoutes.get("/tools/info", asyncHandler(getToolsInfo));
 
 // POST /data-retrieval/test - Test all tools with sample data
-router.post('/test', testAllTools);
+dataRetrievalRoutes.post("/test", asyncHandler(testAllTools));
 
 // POST /data-retrieval/gsi - Get GSI information from current game state
-router.post('/gsi', getGSIInfo);
+dataRetrievalRoutes.post("/gsi", asyncHandler(getGSIInfo));
 
 // POST /data-retrieval/tracker-stats - Get TrackerGG statistics for a player
-router.post('/tracker-stats', getTrackerGGStats);
+dataRetrievalRoutes.post("/tracker-stats", asyncHandler(getTrackerGGStats));
 
 // POST /data-retrieval/update-profiles - Update player profiles in local database
-router.post('/update-profiles', updatePlayerProfiles);
-
-export default router; 
+dataRetrievalRoutes.post(
+  "/update-profiles",
+  asyncHandler(updatePlayerProfiles),
+); 

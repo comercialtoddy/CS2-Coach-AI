@@ -4,6 +4,10 @@ import * as path from 'path';
 import * as https from 'https';
 import { pipeline } from 'stream/promises';
 import { createWriteStream } from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface PiperConfig {
   modelPath: string;
@@ -34,6 +38,10 @@ export class PiperTTSService {
   private modelsPath: string;
   private currentProcess?: ChildProcess;
   private isInitialized = false;
+
+  public getIsInitialized(): boolean {
+    return this.isInitialized;
+  }
 
   constructor() {
     this.piperPath = path.join(__dirname, '../../../assets/piper');

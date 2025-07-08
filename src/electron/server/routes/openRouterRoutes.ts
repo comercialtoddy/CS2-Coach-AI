@@ -10,8 +10,9 @@ import {
   executeViaToolManager,
   getExamples
 } from '../controllers/openRouterController.js';
+import { asyncHandler } from '../helpers/asyncHandler.js';
 
-const router = Router();
+export const openRouterRoutes = Router();
 
 /**
  * OpenRouter API routes
@@ -19,32 +20,30 @@ const router = Router();
  */
 
 // GET /openrouter/status - Get service status and configuration
-router.get('/status', getStatus);
+openRouterRoutes.get('/status', asyncHandler(getStatus));
 
 // GET /openrouter/test - Test API connectivity
-router.get('/test', testConnectionEndpoint);
+openRouterRoutes.get('/test', asyncHandler(testConnectionEndpoint));
 
 // GET /openrouter/models - Get available models
-router.get('/models', getModels);
+openRouterRoutes.get('/models', asyncHandler(getModels));
 
 // GET /openrouter/examples - Get usage examples and documentation
-router.get('/examples', getExamples);
+openRouterRoutes.get('/examples', asyncHandler(getExamples));
 
 // POST /openrouter/call - Simple LLM call (direct service interface)
-router.post('/call', simpleLLMCall);
+openRouterRoutes.post('/call', asyncHandler(simpleLLMCall));
 
 // Tool-related routes
 // GET /openrouter/tool/info - Get tool information and schema
-router.get('/tool/info', getToolInfo);
+openRouterRoutes.get('/tool/info', asyncHandler(getToolInfo));
 
 // POST /openrouter/tool/call - Enhanced LLM call using AI Tool framework
-router.post('/tool/call', toolLLMCall);
+openRouterRoutes.post('/tool/call', asyncHandler(toolLLMCall));
 
 // POST /openrouter/tool/register - Register CallLLMTool with ToolManager
-router.post('/tool/register', registerTool);
+openRouterRoutes.post('/tool/register', asyncHandler(registerTool));
 
 // Tool Manager integration routes
 // POST /openrouter/tool-manager/execute - Execute via ToolManager
-router.post('/tool-manager/execute', executeViaToolManager);
-
-export default router; 
+openRouterRoutes.post('/tool-manager/execute', asyncHandler(executeViaToolManager)); 

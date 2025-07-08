@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PiperTTSService, PiperConfig } from '../services/piperTTSServices';
+import { PiperTTSService, PiperConfig } from '../services/piperTTSServices.js';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -167,7 +167,7 @@ export class PiperTTSController {
         status: {
           initialized: true,
           modelsAvailable: models.length,
-          models: models.map(m => ({
+          models: models.map((m: any) => ({
             id: m.id,
             language: m.language,
             quality: m.quality

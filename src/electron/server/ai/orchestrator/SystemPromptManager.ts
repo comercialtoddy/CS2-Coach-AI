@@ -199,7 +199,11 @@ Core Principles:
             [GameContext.MID_ROUND]: "Support decision-making with encouraging guidance",
             [GameContext.ROUND_END]: "Acknowledge efforts and highlight learning opportunities",
             [GameContext.CRITICAL_SITUATION]: "Provide calm, confidence-building support",
-            [GameContext.LEARNING_OPPORTUNITY]: "Frame lessons in positive, growth-oriented language"
+            [GameContext.LEARNING_OPPORTUNITY]: "Frame lessons in positive, growth-oriented language",
+            [GameContext.ECONOMY_PHASE]: "Suggest smart buys and economic strategy.",
+            [GameContext.TACTICAL_TIMEOUT]: "Focus on a key adjustment for the next round.",
+            [GameContext.INTERMISSION]: "Review previous rounds and set goals for the next half.",
+            [GameContext.MATCH_END]: "Summarize performance and key takeaways from the match."
           },
           playerMood: {
             frustrated: "Focus on reassurance and stress reduction",
@@ -258,7 +262,11 @@ Core Principles:
             [GameContext.MID_ROUND]: "Process real-time performance metrics for optimization",
             [GameContext.ROUND_END]: "Review round statistics and identify improvement patterns",
             [GameContext.CRITICAL_SITUATION]: "Analyze situational probabilities and optimal plays",
-            [GameContext.LEARNING_OPPORTUNITY]: "Break down decision trees and outcome analysis"
+            [GameContext.LEARNING_OPPORTUNITY]: "Break down decision trees and outcome analysis",
+            [GameContext.ECONOMY_PHASE]: "Analyze buy options based on team economy.",
+            [GameContext.TACTICAL_TIMEOUT]: "Review statistics to suggest a tactical shift.",
+            [GameContext.INTERMISSION]: "Provide a statistical summary of the first half.",
+            [GameContext.MATCH_END]: "Deliver a final performance report with key stats."
           },
           playerMood: {
             frustrated: "Focus on objective data to reduce emotional decision-making",
@@ -317,7 +325,11 @@ Core Principles:
             [GameContext.MID_ROUND]: "Analyze tactical opportunities and strategic positioning adjustments",
             [GameContext.ROUND_END]: "Review tactical decisions and strategic learning opportunities",
             [GameContext.CRITICAL_SITUATION]: "Provide advanced tactical solutions for complex scenarios",
-            [GameContext.LEARNING_OPPORTUNITY]: "Explain advanced strategic concepts and tactical theory"
+            [GameContext.LEARNING_OPPORTUNITY]: "Explain advanced strategic concepts and tactical theory",
+            [GameContext.ECONOMY_PHASE]: "Suggest tactical buys to counter the enemy's economy.",
+            [GameContext.TACTICAL_TIMEOUT]: "Propose a new strategy for the upcoming rounds.",
+            [GameContext.INTERMISSION]: "Outline a strategic plan for the second half.",
+            [GameContext.MATCH_END]: "Provide a tactical summary of the match."
           },
           playerMood: {
             frustrated: "Focus on strategic foundation and tactical fundamentals",
@@ -376,7 +388,11 @@ Core Principles:
             [GameContext.MID_ROUND]: "Choose coaching style that matches player attention and stress level",
             [GameContext.ROUND_END]: "Select reflection approach that maximizes learning and motivation",
             [GameContext.CRITICAL_SITUATION]: "Use player's preferred high-pressure communication style",
-            [GameContext.LEARNING_OPPORTUNITY]: "Adapt teaching approach to player's optimal learning style"
+            [GameContext.LEARNING_OPPORTUNITY]: "Adapt teaching approach to player's optimal learning style",
+            [GameContext.ECONOMY_PHASE]: "Adapt based on the economic situation.",
+            [GameContext.TACTICAL_TIMEOUT]: "Adapt based on the tactical needs.",
+            [GameContext.INTERMISSION]: "Adapt based on halftime summary.",
+            [GameContext.MATCH_END]: "Adapt based on match results."
           },
           playerMood: {
             frustrated: "Switch to supportive approach with stress reduction focus",
@@ -437,70 +453,69 @@ Core Principles:
       urgencyOverride?: string;
     }
   ): Promise<GeneratedPrompt> {
-    try {
-      // Determine optimal personality
-      const personality = options?.forcePersonality || 
-        await this.determineOptimalPersonality(contextualInput);
+    const startTime = Date.now();
 
-      // Get appropriate template
+    try {
+      this.ensureInitialized();
+
+      // Determine personality and context mode
+      const personality = options?.forcePersonality || await this.determineOptimalPersonality(contextualInput);
+      const mode = options?.contextMode || this.contextMode;
+
+      // Get the appropriate template
       const template = this.getTemplateForPersonality(personality);
       if (!template) {
-        throw new Error(`No template found for personality: ${personality}`);
+        throw new Error(`No prompt template found for personality: ${personality}`);
       }
 
-      // Build contextual information
-      const contextMode = options?.contextMode || this.contextMode;
-      const contextInfo = await this.buildContextualInfo(contextualInput, contextMode);
+      // Build contextual information string
+      const contextInfo = await this.buildContextualInfo(contextualInput, mode);
 
-      // Generate adaptations
+      // Generate adaptations based on context
       const adaptations = this.generateAdaptations(template, contextualInput, options);
 
-      // Construct system prompt
+      // Construct the final system prompt
       const systemPrompt = this.constructSystemPrompt(template, adaptations, contextInfo);
 
       // Generate output instructions
-      const outputInstructions = this.generateOutputInstructions(
-        template,
-        contextualInput,
-        coachingObjectives
-      );
+      const outputInstructions = this.generateOutputInstructions(template, contextualInput, coachingObjectives);
 
-      const generatedPrompt: GeneratedPrompt = {
-        id: `prompt_${Date.now()}_${personality}`,
+      const finalPrompt: GeneratedPrompt = {
+        id: `prompt_${Date.now()}`,
         timestamp: new Date(),
         personality,
-        contextMode,
+        contextMode: mode,
         systemPrompt,
         contextualInfo: contextInfo,
         outputInstructions,
         metadata: {
           gameContext: contextualInput.gameState.processed.context,
           urgency: this.calculateUrgency(contextualInput),
-          adaptations: adaptations.map(a => a.type),
-          characterCount: systemPrompt.length + contextInfo.length,
-          estimatedTokens: Math.ceil((systemPrompt.length + contextInfo.length) / 4)
+          adaptations: adaptations.map((a: any) => a.name),
+          characterCount: systemPrompt.length + contextInfo.length + outputInstructions.length,
+          estimatedTokens: Math.round((systemPrompt.length + contextInfo.length + outputInstructions.length) / 4)
         }
       };
 
-      // Store in history
-      this.promptHistory.push(generatedPrompt);
+      // Store and prune history
+      this.promptHistory.push(finalPrompt);
       this.prunePromptHistory();
 
-      // Update metrics
+      // Update usage metrics
       this.updatePersonalityUsage(personality);
 
-      this.emit('prompt-generated', {
-        personality,
-        contextMode,
-        urgency: generatedPrompt.metadata.urgency,
-        tokenCount: generatedPrompt.metadata.estimatedTokens
-      });
+      if (this.config.debugMode) {
+        console.log(`✅ Generated prompt '${finalPrompt.id}' in ${Date.now() - startTime}ms`);
+      }
 
-      return generatedPrompt;
+      this.emit('prompt-generated', finalPrompt);
+      return finalPrompt;
 
     } catch (error) {
-      this.emit('prompt-generation-error', { error: error.message });
-      throw new Error(`Prompt generation failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Error generating prompt: ${errorMessage}`);
+      this.emit('error', new Error(`Prompt generation failed: ${errorMessage}`));
+      throw error;
     }
   }
 
@@ -813,49 +828,57 @@ Core Principles:
    * Format memory context
    */
   private async formatMemoryContext(playerMemory: BaseMemoryEntry[]): Promise<string> {
-    const recentMemories = playerMemory.slice(0, 5);
-    const memoryText = recentMemories.map(memory => 
-      `- ${memory.type}: ${memory.content.substring(0, 100)}...`
-    ).join('\n');
+    if (!playerMemory || playerMemory.length === 0) {
+      return "No relevant memories found.";
+    }
 
-    return `Recent History:\n${memoryText}`;
+    const formattedMemories = playerMemory.slice(0, 5).map(memory => {
+      if (!memory.content) return null;
+      return `- ${memory.type} (${memory.importance}): ${memory.content.substring(0, 100)}...`;
+    }).filter(Boolean);
+
+    return `
+### Relevant Memories
+${formattedMemories.join('\n')}
+    `.trim();
   }
 
   /**
    * Format dynamic context
    */
   private formatDynamicContext(dynamicContext: any): string {
-    return `Dynamic Context:
-- Recent Performance: ${dynamicContext.recentPerformance}
-- Emotional State: ${dynamicContext.emotionalState}
-- Attention Level: ${dynamicContext.attentionLevel}`;
+    return `Player appears to be ${dynamicContext.emotionalState} and has an attention level of ${dynamicContext.attentionLevel}.`;
   }
 
   /**
    * Calculate urgency level
    */
   private calculateUrgency(contextualInput: ContextualInput): string {
-    const situationalFactors = contextualInput.gameState.processed.situationalFactors;
-    const criticalFactors = situationalFactors.filter(f => f.severity === 'critical');
-    const highFactors = situationalFactors.filter(f => f.severity === 'high');
-
-    if (criticalFactors.length > 0) return 'critical';
-    if (highFactors.length > 1) return 'high';
-    if (highFactors.length > 0) return 'medium';
-    return 'low';
+    const { gameState } = contextualInput;
+    if (gameState.processed.situationalFactors.some(f => f.severity === 'critical')) {
+      return 'critical';
+    }
+    if (gameState.processed.context === GameContext.CRITICAL_SITUATION) {
+      return 'high';
+    }
+    if (gameState.processed.playerState.health < 30) {
+      return 'high';
+    }
+    return 'medium';
   }
 
   /**
    * Get recommended response length based on urgency
    */
   private getRecommendedResponseLength(urgency: string): string {
-    const lengths = {
-      low: 'detailed (150-250 words)',
-      medium: 'moderate (75-150 words)',
-      high: 'concise (25-75 words)',
-      critical: 'brief (10-25 words)'
+    type UrgencyLevel = 'low' | 'medium' | 'high' | 'critical';
+    const lengths: Record<UrgencyLevel, string> = {
+      low: "brief and concise",
+      medium: "moderately detailed",
+      high: "direct and to the point",
+      critical: "extremely brief and actionable"
     };
-    return lengths[urgency] || 'moderate';
+    return lengths[urgency as UrgencyLevel] || "a standard length";
   }
 
   /**
@@ -960,5 +983,11 @@ Core Principles:
    */
   getConfig(): typeof this.config {
     return { ...this.config };
+  }
+
+  private ensureInitialized(): void {
+    if (!this.memoryService || !this.promptTemplates || !this.activePersonality || !this.contextMode || !this.promptHistory || !this.personalityMetrics || !this.config) {
+      throw new Error('SystemPromptManager is not fully initialized');
+    }
   }
 } 

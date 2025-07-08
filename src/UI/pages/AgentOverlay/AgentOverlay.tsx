@@ -1,17 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import * as React from 'react';
 import { useAgentSocket } from '../../hooks/useAgentSocket';
-
-interface AgentStatus {
-  state: "analyzing" | "awaiting" | "feedback" | "idle" | "error";
-  message?: string;
-  isAudioPlaying?: boolean;
-  audioMessage?: string;
-  timestamp?: number;
-  action?: string;
-}
+import { AgentStatus, AgentStatusState } from './types';
 
 export const AgentOverlay: React.FC = () => {
-  const [agentStatus, setAgentStatus] = useState<AgentStatus>({
+  const [agentStatus, setAgentStatus] = React.useState<AgentStatus>({
     state: 'idle',
     message: 'OpenHud Agent Ready',
     timestamp: Date.now()
@@ -21,12 +13,11 @@ export const AgentOverlay: React.FC = () => {
   const { 
     isConnected, 
     error: socketError, 
-    requestCurrentStatus,
-    notifyAudioEvent 
+    requestCurrentStatus
   } = useAgentSocket({
     onStatusUpdate: (status: AgentStatus) => {
       console.log('Agent overlay received status update:', status);
-      setAgentStatus(prev => ({
+      setAgentStatus((prev: AgentStatus) => ({
         ...prev,
         ...status,
         timestamp: status.timestamp || Date.now()
@@ -34,7 +25,7 @@ export const AgentOverlay: React.FC = () => {
     },
     onAudioUpdate: (isPlaying: boolean, message?: string) => {
       console.log('Agent overlay received audio update:', isPlaying, message);
-      setAgentStatus(prev => ({
+      setAgentStatus((prev: AgentStatus) => ({
         ...prev,
         isAudioPlaying: isPlaying,
         audioMessage: message,
@@ -43,7 +34,7 @@ export const AgentOverlay: React.FC = () => {
     },
     onError: (error: string) => {
       console.error('Agent socket error:', error);
-      setAgentStatus(prev => ({
+      setAgentStatus((prev: AgentStatus) => ({
         ...prev,
         state: 'error',
         message: `Connection error: ${error}`,
@@ -52,12 +43,13 @@ export const AgentOverlay: React.FC = () => {
     }
   });
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Listen for agent status updates from the main process (IPC fallback)
-    if (window.electron?.onAgentStatusUpdate) {
-      window.electron.onAgentStatusUpdate((status: AgentStatus) => {
+    const electron = window.electron;
+    if (electron) {
+      electron.onAgentStatusUpdate((status: AgentStatus) => {
         console.log('Agent overlay received IPC status update:', status);
-        setAgentStatus(prev => ({
+        setAgentStatus((prev: AgentStatus) => ({
           ...prev,
           ...status,
           timestamp: status.timestamp || Date.now()
@@ -76,16 +68,16 @@ export const AgentOverlay: React.FC = () => {
   }, [requestCurrentStatus]);
 
   // Update connection status in the UI
-  useEffect(() => {
+  React.useEffect(() => {
     if (!isConnected && !socketError) {
-      setAgentStatus(prev => ({
+      setAgentStatus((prev: AgentStatus) => ({
         ...prev,
         state: 'awaiting',
         message: 'Connecting to server...',
         timestamp: Date.now()
       }));
     } else if (isConnected && agentStatus.state === 'awaiting' && agentStatus.message?.includes('Connecting')) {
-      setAgentStatus(prev => ({
+      setAgentStatus((prev: AgentStatus) => ({
         ...prev,
         state: 'idle',
         message: 'OpenHud Agent Ready',
@@ -94,7 +86,7 @@ export const AgentOverlay: React.FC = () => {
     }
   }, [isConnected, socketError, agentStatus.state, agentStatus.message]);
 
-  const getStatusColor = (state: AgentStatus['state']) => {
+  const getStatusColor = (state: AgentStatusState) => {
     switch (state) {
       case 'analyzing':
         return 'text-yellow-400 border-yellow-400/50';
@@ -109,7 +101,7 @@ export const AgentOverlay: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (state: AgentStatus['state']) => {
+  const getStatusIcon = (state: AgentStatusState) => {
     switch (state) {
       case 'analyzing':
         return '🔍';
@@ -124,7 +116,7 @@ export const AgentOverlay: React.FC = () => {
     }
   };
 
-  const getStatusText = (state: AgentStatus['state']) => {
+  const getStatusText = (state: AgentStatusState) => {
     switch (state) {
       case 'analyzing':
         return 'Analyzing...';
@@ -140,15 +132,16 @@ export const AgentOverlay: React.FC = () => {
   };
 
   return (
-    <div className="fixed top-0 left-0 w-screen h-screen pointer-events-none">
-      <div className="absolute top-4 left-4 pointer-events-none">
+    <div className="fixed top-0 right-0 w-screen h-screen pointer-events-none bg-transparent">
+      <div className="absolute top-4 right-4 pointer-events-none">
         <div
           className={`
-            relative bg-black/80 backdrop-blur-sm rounded-lg border
+            relative bg-black/80 backdrop-blur-sm rounded-lg border z-50
             ${getStatusColor(agentStatus.state)}
             px-4 py-3 min-w-[280px] max-w-[320px]
-            animate-in fade-in duration-300 slide-in-from-left-2
+            animate-in fade-in duration-300 slide-in-from-right-2
           `}
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
         >
           {/* Main Status Display */}
           <div className="flex items-center gap-3">
@@ -215,7 +208,7 @@ export const AgentOverlay: React.FC = () => {
           )}
 
           {/* Connection Status Indicator */}
-          <div className="absolute top-1 right-2 flex items-center gap-2">
+          <div className="absolute bottom-2 right-2 flex items-center gap-2">
             <div 
               className={`w-2 h-2 rounded-full ${
                 isConnected 

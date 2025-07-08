@@ -6,5 +6,15 @@ export * from "./settingsController.js";
 export * from "./trackerGGController.js";
 export * from "./piperTTSController.js";
 export * from "./agentOverlayDemoController.js";
-export * from "./openRouterController.js";
+export { 
+    getStatus as getOpenRouterStatus,
+    testConnectionEndpoint,
+    getModels,
+    simpleLLMCall,
+    toolLLMCall,
+    getToolInfo,
+    registerTool,
+    executeViaToolManager,
+    getExamples
+ } from "./openRouterController.js";
 export * from "./dataRetrievalController.js";

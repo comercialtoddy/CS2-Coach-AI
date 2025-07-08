@@ -30,18 +30,40 @@ export enum MemoryImportance {
   TEMPORARY = 'temporary'    // Session only, lowest priority
 }
 
+export type ImportanceLevel = MemoryImportance;
+
 /**
  * Base interface for all memory entries
  */
 export interface BaseMemoryEntry {
   id: string;
   type: MemoryType;
+  /**
+   * Importance level influences retention & prioritization
+   */
   importance: MemoryImportance;
   createdAt: Date;
   updatedAt: Date;
+  /**
+   * Optional expiration timestamp; undefined = never expires
+   */
   expiresAt?: Date;
+  /**
+   * Optional free-form textual content (used by some orchestrator helpers)
+   */
+  content?: string;
+  /**
+   * Tags for quick filtering / lookup
+   */
   tags: string[];
+  /**
+   * Arbitrary extra metadata
+   */
   metadata: Record<string, any>;
+  /**
+   * Generic payload. Concrete memory sub-types specialise this.
+   */
+  data?: unknown;
 }
 
 // ===== Player Profile Memory =====
@@ -319,6 +341,11 @@ export interface CoachingInsightsData {
   validated: boolean;
   validationSource?: string;
   actualOutcome?: string;
+  /**
+   * Historical field referenced by older code – kept for backward
+   * compatibility. New code should rely on `validationSource`.
+   */
+  validationScore?: number;
 }
 
 /**
@@ -403,6 +430,7 @@ export interface MemoryServiceStatus {
     cacheHitRate: number;
   };
 }
+
 
 // ===== Memory Service Interface =====
 

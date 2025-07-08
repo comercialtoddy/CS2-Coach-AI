@@ -219,7 +219,7 @@ export class ShortTermMemoryManagerImpl implements ShortTermMemoryManager {
         accessCount: 1,
         expiryTime: entry.expiresAt ? new Date(entry.expiresAt).getTime() : Date.now() + this.getDefaultTTL(entry.type),
         size: calculateEntrySize(entry),
-        priority: computePriorityScore({ data: entry } as CacheEntry),
+        priority: 0, // placeholder – compute below
         source: 'shortterm',
         metadata: {
           dirty: false,
@@ -227,6 +227,9 @@ export class ShortTermMemoryManagerImpl implements ShortTermMemoryManager {
           playerId: this.extractPlayerId(entry)
         }
       };
+
+      // Compute priority score based on freshly created entry
+      cacheEntry.priority = computePriorityScore(cacheEntry as CacheEntry<BaseMemoryEntry>);
 
       // Store in appropriate cache
       const success = await this.storeInCache(entry.type, entry.id, cacheEntry, forceEviction);
@@ -493,8 +496,9 @@ export class ShortTermMemoryManagerImpl implements ShortTermMemoryManager {
   /**
    * Get comprehensive memory statistics
    */
-  getMemoryStats(): {
-    global: typeof this.globalStats;
+  getMemoryStats(this: ShortTermMemoryManagerImpl): {
+
+    global: ShortTermMemoryManagerImpl['globalStats'];
     caches: Record<string, CacheStats>;
     indexes: { players: number; sessions: number; contexts: number };
     performance: { uptime: number; memoryEfficiency: number };

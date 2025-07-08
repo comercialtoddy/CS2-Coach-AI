@@ -8,7 +8,7 @@
 import { EventEmitter } from 'events';
 import { CSGO } from 'csgogsi';
 import { ToolExecutionResult } from '../interfaces/ITool.js';
-import { BaseMemoryEntry, MemoryType } from '../interfaces/MemoryService.js';
+import { BaseMemoryEntry as IMemoryEntry, MemoryType, MemoryImportance } from '../interfaces/MemoryService.js';
 
 // ===== Core Architecture Enums =====
 
@@ -17,12 +17,10 @@ import { BaseMemoryEntry, MemoryType } from '../interfaces/MemoryService.js';
  */
 export enum ProcessingState {
   IDLE = 'idle',
-  ANALYZING = 'analyzing',
-  EXECUTING_TOOLS = 'executing_tools',
-  GENERATING_RESPONSE = 'generating_response',
-  DELIVERING_FEEDBACK = 'delivering_feedback',
-  AWAITING_INPUT = 'awaiting_input',
-  ERROR = 'error'
+  PROCESSING = 'processing',
+  PAUSED = 'paused',
+  ERROR = 'error',
+  STOPPED = 'stopped'
 }
 
 /**
@@ -86,7 +84,54 @@ export interface GameStateSnapshot {
 }
 
 /**
- * Individual player state
+ * Situational factor types
+ */
+export type SituationalFactorType = 
+  | 'tactical'
+  | 'psychological'
+  | 'economic'
+  | 'positional'
+  | 'temporal'
+  | 'flanked'
+  | 'surprised'
+  | 'clutch'
+  | 'time_pressure'
+  | 'economy_pressure';
+
+/**
+ * Situational factor severity
+ */
+export type SituationalFactorSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+/**
+ * Situational factor
+ */
+export interface SituationalFactor {
+  type: SituationalFactorType;
+  severity: SituationalFactorSeverity;
+  description: string;
+  context?: string[];
+}
+
+/**
+ * Economy state types
+ */
+export type RoundType = 'eco' | 'semi_eco' | 'force_buy' | 'full_buy';
+
+/**
+ * Economy state information
+ */
+export interface EconomyState {
+  roundType: RoundType;
+  teamAdvantage: 'balanced' | 'advantage' | 'disadvantage';
+  nextRoundPrediction: {
+    T: RoundType;
+    CT: RoundType;
+  };
+}
+
+/**
+ * Player game state
  */
 export interface PlayerGameState {
   steamId: string;
@@ -100,12 +145,23 @@ export interface PlayerGameState {
     z: number;
   };
   weapons: WeaponInfo[];
+  equipment: {
+    flash: number;
+    smoke: number;
+    molotov: number;
+    he: number;
+    defusekit?: boolean;
+  };
   statistics: {
     kills: number;
     deaths: number;
     assists: number;
     adr: number;
     rating: number;
+    flashAssists: number;
+    enemiesFlashed: number;
+    utilityDamage: number;
+    enemiesBlocked: number;
   };
   observedBehaviors: string[];
   riskFactors: string[];
@@ -113,10 +169,10 @@ export interface PlayerGameState {
 }
 
 /**
- * Team state information
+ * Team game state
  */
 export interface TeamGameState {
-  side: 'T' | 'CT';
+  side: 'CT' | 'T';
   score: number;
   economy: {
     totalMoney: number;
@@ -129,45 +185,22 @@ export interface TeamGameState {
     activity: number;
     coordination: number;
   };
+  mapControl: number; // 0-1 representing percentage of map controlled
 }
 
 /**
- * Map-specific state
+ * Map game state
  */
 export interface MapGameState {
   name: string;
   round: number;
   phase: string;
-  bombSite?: 'A' | 'B';
   bombState: 'planted' | 'defused' | 'exploded' | 'none';
   controlledAreas: {
     T: string[];
     CT: string[];
     contested: string[];
   };
-}
-
-/**
- * Economic state analysis
- */
-export interface EconomyState {
-  roundType: 'pistol' | 'eco' | 'force' | 'full' | 'mixed';
-  teamAdvantage: 'T' | 'CT' | 'balanced';
-  nextRoundPrediction: {
-    T: 'buy' | 'eco' | 'force';
-    CT: 'buy' | 'eco' | 'force';
-  };
-}
-
-/**
- * Situational factors affecting decision making
- */
-export interface SituationalFactor {
-  type: 'tactical' | 'psychological' | 'economic' | 'positional' | 'temporal';
-  description: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  relevance: number; // 0-1
-  actionRequired: boolean;
 }
 
 /**
@@ -183,52 +216,60 @@ export interface WeaponInfo {
 // ===== Decision Making Framework =====
 
 /**
- * Decision context for AI processing
+ * AI decision types
  */
-export interface DecisionContext {
-  gameState: GameStateSnapshot;
-  playerMemory: BaseMemoryEntry[];
-  sessionHistory: BaseMemoryEntry[];
-  coachingObjectives: CoachingObjective[];
-  constraints: {
-    timeWindow: number;        // Available processing time
-    complexity: 'simple' | 'moderate' | 'complex';
-    resourceLimits: ResourceLimits;
-  };
-  userPreferences: {
-    feedbackStyle: 'direct' | 'supportive' | 'analytical';
-    detailLevel: 'brief' | 'detailed' | 'comprehensive';
-    interventionFrequency: 'minimal' | 'moderate' | 'active';
-  };
-}
+export type AIDecisionType = 
+  | 'tactical_advice'
+  | 'strategic_guidance'
+  | 'error_correction'
+  | 'performance_feedback'
+  | 'utility_suggestion'
+  | 'economy_advice';
 
 /**
- * Resource limits for processing
- */
-export interface ResourceLimits {
-  maxToolCalls: number;
-  maxProcessingTime: number;
-  maxMemoryQueries: number;
-  allowLLMCalls: boolean;
-  allowTTSGeneration: boolean;
-}
-
-/**
- * AI decision for tool execution
+ * AI decision
  */
 export interface AIDecision {
   id: string;
+  type: string;
   priority: InterventionPriority;
+  confidence: number;
   rationale: string;
-  confidence: number;        // 0-1
   toolChain: ToolChainStep[];
-  expectedOutcome: string;
-  fallbackPlan?: ToolChainStep[];
+  context: AIDecisionContext;
   metadata: {
-    processingTime: number;
     complexity: number;
-    riskLevel: 'low' | 'medium' | 'high';
+    executionTime?: number;
+    expectedOutcome?: string;
+    riskLevel?: 'low' | 'medium' | 'high';
   };
+}
+
+/**
+ * Execution result
+ */
+export interface ExecutionResult {
+  decisionId: string;
+  success: boolean;
+  output: CoachingOutput;
+  toolResults: ToolChainResult;
+  metadata: ExecutionResultMetadata;
+  error?: {
+    code: string;
+    message: string;
+    details: any;
+  };
+}
+
+/**
+ * Execution result metadata
+ */
+export interface ExecutionResultMetadata {
+  totalTime: number;
+  toolsUsed: string[];
+  memoryAccessed: string[];
+  confidence: number;
+  gameState: GameStateSnapshot;
 }
 
 /**
@@ -248,6 +289,44 @@ export interface ToolChainStep {
   fallbackTool?: string;
 }
 
+/**
+ * AI decision context
+ */
+export interface AIDecisionContext {
+  gameState: GameStateSnapshot;
+  systemPrompt: any;
+  playerMemory: IMemoryEntry[];
+  coachingObjectives: CoachingObjective[];
+  timestamp: Date;
+  contextualInput: any;
+  sessionHistory?: Array<{
+    timestamp: Date;
+    type: string;
+    content: string;
+  }>;
+  learningPreferences?: {
+    style: string;
+    level: string;
+    frequency: string;
+  };
+}
+
+/**
+ * Coaching style adaptation
+ */
+export interface CoachingStyleAdaptation {
+  ruleId: string;
+  timestamp: Date;
+  changes: {
+    priority?: InterventionPriority;
+    confidence?: number;
+    toolChain?: string[];
+    cooldown?: number;
+  };
+  reason: string;
+  outcome?: ExecutionOutcome;
+}
+
 // ===== Processing Pipeline Interfaces =====
 
 /**
@@ -257,7 +336,7 @@ export interface IInputHandler {
   processGSIUpdate(rawData: CSGO): Promise<GameStateSnapshot>;
   validateGameState(snapshot: GameStateSnapshot): boolean;
   detectContextChange(current: GameStateSnapshot, previous?: GameStateSnapshot): GameContext[];
-  extractSituationalFactors(snapshot: GameStateSnapshot): SituationalFactor[];
+  extractSituationalFactors(rawData: CSGO): SituationalFactor[];
 }
 
 /**
@@ -276,7 +355,7 @@ export interface IStateManager {
  * Decision engine for AI logic
  */
 export interface IDecisionEngine {
-  analyzeContext(context: DecisionContext): Promise<AIDecision[]>;
+  generateDecisions(context: AIDecisionContext): Promise<AIDecision[]>;
   prioritizeDecisions(decisions: AIDecision[]): AIDecision[];
   optimizeToolChain(decision: AIDecision): ToolChainStep[];
   adaptToFeedback(feedback: UserFeedback): void;
@@ -334,38 +413,26 @@ export interface UserFeedback {
 export interface ExecutionOutcome {
   decisionId: string;
   success: boolean;
-  playerResponse: 'positive' | 'neutral' | 'negative' | 'ignored';
+  impact: number;
+  relevance: number;
+  learningPoints: string[];
+  timestamp: Date;
+  playerResponse: 'positive' | 'neutral' | 'ignored' | 'negative';
   measuredImpact: {
-    performance: number;    // -1 to 1
-    engagement: number;     // 0-1
-    learning: number;       // 0-1
+    performance: number;
+    engagement: number;
+    learning: number;
   };
   followUpRequired: boolean;
+  metadata: {
+    executionTime: number;
+    toolsUsed: string[];
+    confidence: number;
+  };
 }
 
 /**
  * Complete execution result
- */
-export interface ExecutionResult {
-  decisionId: string;
-  success: boolean;
-  output: CoachingOutput;
-  toolResults: ToolChainResult;
-  metadata: {
-    totalTime: number;
-    toolsUsed: string[];
-    memoryAccessed: string[];
-    confidence: number;
-  };
-  error?: {
-    code: string;
-    message: string;
-    details: any;
-  };
-}
-
-/**
- * Tool chain execution result
  */
 export interface ToolChainResult {
   steps: Array<{
@@ -396,6 +463,7 @@ export interface ExecutionStatus {
  * Final coaching output
  */
 export interface CoachingOutput {
+  id: string;
   type: 'tactical_advice' | 'strategic_guidance' | 'error_correction' | 'encouragement' | 'analysis';
   priority: InterventionPriority;
   title: string;
@@ -586,17 +654,21 @@ export interface OrchestratorStats {
  * Orchestrator health status
  */
 export interface OrchestratorHealth {
-  overall: 'healthy' | 'degraded' | 'critical';
-  components: {
-    inputHandler: 'healthy' | 'degraded' | 'critical';
-    stateManager: 'healthy' | 'degraded' | 'critical';
-    decisionEngine: 'healthy' | 'degraded' | 'critical';
-    toolExecutor: 'healthy' | 'degraded' | 'critical';
-    outputFormatter: 'healthy' | 'degraded' | 'critical';
-    memoryService: 'healthy' | 'degraded' | 'critical';
-  };
-  issues: string[];
+  status: 'healthy' | 'degraded' | 'error';
   lastCheck: Date;
+  lastError?: {
+    code: string;
+    message: string;
+    timestamp: Date;
+  };
+  metrics: {
+    gsiLag: number;
+    activeDecisions: number;
+    staleDecisions: number;
+    successRate: number;
+    averageExecutionTime: number;
+    errorCount: number;
+  };
 }
 
 // ===== Event Types =====
@@ -637,4 +709,84 @@ export interface SystemIntegration {
 export type OrchestratorFactory = (
   integration: SystemIntegration,
   config?: Partial<OrchestratorConfig>
-) => Promise<IOrchestrator>; 
+) => Promise<IOrchestrator>;
+
+/**
+ * Memory entry data
+ */
+export interface MemoryEntryData {
+  performance?: {
+    averageRating: number;
+    consistency: number;
+    strengths: string[];
+    weaknesses: string[];
+    learningPatterns: Array<{
+      decisionType: string;
+      success: boolean;
+      impact: number;
+      context: string[];
+      timestamp: Date;
+    }>;
+  };
+  outcome?: 'win' | 'loss' | 'draw';
+  team?: 'CT' | 'T';
+  emotionalIndicators?: string[];
+  learningPoints?: string[];
+  interactions?: Array<{
+    decisionId: string;
+    type: string;
+    success: boolean;
+    playerResponse: string;
+    impact: {
+      performance: number;
+      engagement: number;
+      learning: number;
+    };
+    timestamp: Date;
+  }>;
+}
+
+/**
+ * Base memory entry
+ */
+export interface BaseMemoryEntry {
+  id: string;
+  type: string;
+  content?: string;
+  data: MemoryEntryData;
+  metadata?: {
+    emotionalIndicators?: string[];
+    isKeyEvent?: boolean;
+    importance?: number;
+    confidence?: number;
+  };
+  timestamp: Date;
+}
+
+export interface ResourceLimits {
+  maxToolCalls: number;
+  maxProcessingTime: number;
+  maxMemoryQueries: number;
+  allowLLMCalls: boolean;
+  allowTTSGeneration: boolean;
+}
+
+export interface MemoryQueryOptions {
+  type?: MemoryType;
+  steamId?: string;
+  sessionId?: string;
+  tags?: string[];
+  importance?: MemoryImportance[];
+  limit?: number;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+}
+
+export interface SystemPromptManager {
+  generatePrompt(contextualInput: any, coachingObjectives: CoachingObjective[], options?: any): Promise<any>;
+  generateContextualInput(gameState: GameStateSnapshot): Promise<any>;
+}
+
+export interface MemoryService {
+  query(options: MemoryQueryOptions): Promise<{ entries: BaseMemoryEntry[] }>;
+} 
