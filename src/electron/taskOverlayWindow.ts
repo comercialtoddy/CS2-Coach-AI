@@ -5,7 +5,7 @@
  * its progress, and status in a minimalist, non-intrusive overlay.
  */
 
-import { BrowserWindow } from "electron";
+import { BrowserWindow, screen } from "electron";
 import { getPreloadPath, getUIPath } from "./helpers/index.js";
 
 /**
@@ -16,11 +16,17 @@ import { getPreloadPath, getUIPath } from "./helpers/index.js";
  * - Real-time updates via Socket.io
  */
 export function createTaskOverlayWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth } = primaryDisplay.workAreaSize;
+
+  const windowWidth = 400;
+  const windowHeight = 160;
+
   const taskOverlay = new BrowserWindow({
-    width: 400,
-    height: 160,
-    x: 50,
-    y: 200, // Below the agent overlay
+    width: windowWidth,
+    height: windowHeight,
+    x: screenWidth - windowWidth - 50,
+    y: 180, // Below the agent overlay
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -30,7 +36,6 @@ export function createTaskOverlayWindow() {
     maximizable: false,
     focusable: false,
     skipTaskbar: true,
-    show: false,
     webPreferences: {
       preload: getPreloadPath(),
       nodeIntegration: false,
@@ -44,9 +49,9 @@ export function createTaskOverlayWindow() {
   console.log('Loading Task Overlay UI from:', uiPath);
 
   if (uiPath.startsWith('http')) {
-    taskOverlay.loadURL(uiPath);
+    taskOverlay.loadURL(`${uiPath}/src/pages/task-overlay.html`);
   } else {
-    taskOverlay.loadFile(uiPath);
+    taskOverlay.loadFile(uiPath); // This will need to be adjusted for production build
   }
   
   // Set to ignore mouse events so users can interact with the game underneath

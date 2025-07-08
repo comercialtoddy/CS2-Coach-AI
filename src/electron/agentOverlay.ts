@@ -1,4 +1,4 @@
-import { BrowserWindow } from "electron";
+import { BrowserWindow, screen } from "electron";
 import { getPreloadPath, getUIPath } from "./helpers/index.js";
 import path from "path";
 
@@ -12,10 +12,16 @@ import path from "path";
  * - Real-time updates via Socket.io
  */
 export function createAgentOverlayWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth } = primaryDisplay.workAreaSize;
+
+  const windowWidth = 320;
+  const windowHeight = 120;
+
   const agentOverlay = new BrowserWindow({
-    width: 320,
-    height: 120,
-    x: 50,
+    width: windowWidth,
+    height: windowHeight,
+    x: screenWidth - windowWidth - 50,
     y: 50,
     transparent: true,
     frame: false,
@@ -26,7 +32,6 @@ export function createAgentOverlayWindow() {
     maximizable: false,
     focusable: false,
     skipTaskbar: true,
-    show: false,
     webPreferences: {
       preload: getPreloadPath(),
       nodeIntegration: false,
@@ -40,9 +45,9 @@ export function createAgentOverlayWindow() {
   console.log('Loading UI from:', uiPath);
 
   if (uiPath.startsWith('http')) {
-    agentOverlay.loadURL(uiPath);
+    agentOverlay.loadURL(`${uiPath}/src/pages/agent-overlay.html`);
   } else {
-    agentOverlay.loadFile(uiPath);
+    agentOverlay.loadFile(path.join(uiPath, "agent-overlay.html"));
   }
   
   // Set to ignore mouse events so users can interact with the game underneath

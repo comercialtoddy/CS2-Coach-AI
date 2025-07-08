@@ -5,7 +5,7 @@
  * clips and screenshots in a small, non-intrusive overlay.
  */
 
-import { BrowserWindow } from "electron";
+import { BrowserWindow, screen } from "electron";
 import { getPreloadPath, getUIPath } from "./helpers/index.js";
 import path from "path";
 
@@ -17,11 +17,17 @@ import path from "path";
  * - Navigation between multiple media items
  */
 export function createMediaPlayerWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth } = primaryDisplay.workAreaSize;
+
+  const windowWidth = 320;
+  const windowHeight = 240;
+
   const mediaOverlay = new BrowserWindow({
-    width: 320,
-    height: 240,
-    x: 50,
-    y: 400, // Below the task overlay
+    width: windowWidth,
+    height: windowHeight,
+    x: screenWidth - windowWidth - 50,
+    y: 350, // Below the task overlay
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -31,7 +37,6 @@ export function createMediaPlayerWindow() {
     maximizable: false,
     focusable: false,
     skipTaskbar: true,
-    show: false,
     webPreferences: {
       preload: getPreloadPath(),
       nodeIntegration: false,
@@ -45,7 +50,7 @@ export function createMediaPlayerWindow() {
   console.log('Loading Media Player UI from:', uiPath);
 
   if (uiPath.startsWith('http')) {
-    mediaOverlay.loadURL(`${uiPath}#/media-player`);
+    mediaOverlay.loadURL(`${uiPath}/src/pages/media-player.html`);
   } else {
     mediaOverlay.loadFile(path.join(uiPath, 'media-player.html'));
   }

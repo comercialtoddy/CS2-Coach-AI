@@ -12,8 +12,14 @@ export default defineConfig({
     outDir: "dist-react",
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        taskOverlay: resolve(__dirname, 'src/pages/task-overlay.html')
+        main: resolve(__dirname, "index.html"),
+        "agent-overlay": resolve(__dirname, "src/pages/agent-overlay.html"),
+        "task-overlay": resolve(__dirname, "src/pages/task-overlay.html"),
+        "media-player": resolve(__dirname, "src/pages/media-player.html"),
+        "screenshot-selector": resolve(
+          __dirname,
+          "src/pages/screenshot-selector.html"
+        )
       }
     }
   },

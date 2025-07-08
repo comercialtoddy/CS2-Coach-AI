@@ -24,18 +24,14 @@ const api = {
   // Game HUD overlay
   startOverlay: () => {
     console.log('Starting game HUD overlay');
-    ipcRenderer.send("startOverlay");
+    ipcRenderer.send("start-overlay");
+  },
+  stopOverlay: () => {
+    console.log('Stopping agent overlay');
+    ipcRenderer.send("stop-overlay");
   },
   
   // Agent AI Overlay
-  startAgentOverlay: () => {
-    console.log('Starting agent overlay');
-    ipcRenderer.send("startAgentOverlay");
-  },
-  stopAgentOverlay: () => {
-    console.log('Stopping agent overlay');
-    ipcRenderer.send("stopAgentOverlay");
-  },
   updateAgentStatus: (status: unknown) => {
     console.log('Updating agent status:', status);
     ipcRenderer.send("updateAgentStatus", status);
@@ -78,10 +74,6 @@ const api = {
   minimizeWindow: () => ipcRenderer.send("minimize-window"),
   maximizeWindow: () => ipcRenderer.send("maximize-window"),
   closeWindow: () => ipcRenderer.send("close-window"),
-
-  // Agent Overlay
-  openAgentOverlay: () => ipcRenderer.send("open-agent-overlay"),
-  closeAgentOverlay: () => ipcRenderer.send("close-agent-overlay"),
 
   // Task Overlay
   openTaskOverlay: () => ipcRenderer.send("open-task-overlay"),

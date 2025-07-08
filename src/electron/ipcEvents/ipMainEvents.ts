@@ -1,42 +1,85 @@
 import { BrowserWindow, shell, app, dialog, ipcMain } from "electron";
 import { createAgentOverlayWindow } from "../agentOverlay.js";
+import { createTaskOverlayWindow } from "../taskOverlayWindow.js";
+import { createMediaPlayerWindow } from "../mediaPlayerWindow.js";
 import { getPlayers } from "../server/services/index.js";
 
 console.log('Setting up IPC main events...');
 
-let agentOverlayWindow: BrowserWindow | null = null;
+export let agentOverlayWindow: BrowserWindow | null = null;
+export let taskOverlayWindow: BrowserWindow | null = null;
+export let mediaPlayerWindow: BrowserWindow | null = null;
 
 export function setupIpcEvents() {
   // Agent Overlay Events
-  ipcMain.on("open-agent-overlay", () => {
+  ipcMain.on("start-overlay", () => {
     if (!agentOverlayWindow) {
       agentOverlayWindow = createAgentOverlayWindow();
-
-      // Handle window events
-      agentOverlayWindow.on('closed', () => {
-        agentOverlayWindow = null;
-      });
-
-      // Wait for window to load
-      agentOverlayWindow.webContents.once('did-finish-load', () => {
-        console.log('Agent overlay window loaded');
-      });
-
-      // Log window events
-      agentOverlayWindow.on('show', () => console.log('Agent overlay window shown'));
-      agentOverlayWindow.on('hide', () => console.log('Agent overlay window hidden'));
+      agentOverlayWindow.on('closed', () => (agentOverlayWindow = null));
     }
-
-    // Show and position window
     agentOverlayWindow.show();
-    agentOverlayWindow.moveTop();
-    console.log('Agent overlay window bounds:', agentOverlayWindow.getBounds());
+
+    if (!taskOverlayWindow) {
+      taskOverlayWindow = createTaskOverlayWindow();
+      taskOverlayWindow.on('closed', () => (taskOverlayWindow = null));
+    }
+    taskOverlayWindow.show();
+
+    if (!mediaPlayerWindow) {
+      mediaPlayerWindow = createMediaPlayerWindow();
+      mediaPlayerWindow.on('closed', () => (mediaPlayerWindow = null));
+    }
+    mediaPlayerWindow.show();
   });
 
-  ipcMain.on("close-agent-overlay", () => {
+  ipcMain.on("stop-overlay", () => {
     if (agentOverlayWindow) {
       agentOverlayWindow.close();
       agentOverlayWindow = null;
+    }
+    if (taskOverlayWindow) {
+      taskOverlayWindow.close();
+      taskOverlayWindow = null;
+    }
+    if (mediaPlayerWindow) {
+      mediaPlayerWindow.close();
+      mediaPlayerWindow = null;
+    }
+  });
+
+  // Task Overlay Events
+  ipcMain.on("open-task-overlay", () => {
+    if (!taskOverlayWindow) {
+      taskOverlayWindow = createTaskOverlayWindow();
+      taskOverlayWindow.on('closed', () => {
+        taskOverlayWindow = null;
+      });
+    }
+    taskOverlayWindow.show();
+  });
+
+  ipcMain.on("close-task-overlay", () => {
+    if (taskOverlayWindow) {
+      taskOverlayWindow.close();
+      taskOverlayWindow = null;
+    }
+  });
+
+  // Media Player Events
+  ipcMain.on("open-media-player", () => {
+    if (!mediaPlayerWindow) {
+      mediaPlayerWindow = createMediaPlayerWindow();
+      mediaPlayerWindow.on('closed', () => {
+        mediaPlayerWindow = null;
+      });
+    }
+    mediaPlayerWindow.show();
+  });
+
+  ipcMain.on("close-media-player", () => {
+    if (mediaPlayerWindow) {
+      mediaPlayerWindow.close();
+      mediaPlayerWindow = null;
     }
   });
 
