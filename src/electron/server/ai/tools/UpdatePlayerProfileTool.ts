@@ -10,7 +10,6 @@ import {
   createPlayer, 
   getPlayers 
 } from '../../services/playersServices.js';
-import { Player } from '../../../UI/api/types';
 
 /**
  * Tool_UpdatePlayerProfile - Updates player profiles in the local database
@@ -36,9 +35,9 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
       required: true,
       properties: {
         basicInfo: {
-          type: 'object',
+        type: 'object',
           description: 'Basic player information to update.',
-          properties: {
+        properties: {
             firstName: { type: 'string', description: "The player's first name." },
             lastName: { type: 'string', description: "The player's last name." },
             username: { type: 'string', description: "The player's username or alias." },
@@ -46,9 +45,9 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
             country: { type: 'string', description: 'The two-letter country code for the player.' },
             team: { type: 'string', description: 'The ID of the team the player belongs to.' }
           }
-        },
-        trackerGGStats: {
-          type: 'object',
+          },
+          trackerGGStats: {
+            type: 'object',
           description: 'Statistics from Tracker.GG to integrate into the profile.'
         },
         performance: { type: 'object', description: 'Performance-related metrics.' },
@@ -81,7 +80,7 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
 
   readonly outputExample: UpdatePlayerProfileOutput = {
     success: true,
-    playerId: '76561198041931474',
+        playerId: '76561198041931474',
     data: {
       _id: 'some_db_id',
       steamid: '76561198041931474',
@@ -94,21 +93,21 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
       extra: {}
     },
     changes: {
-      fieldsUpdated: ['username', 'team', 'country'],
-      previousValues: {
-        username: 'OldName',
-        team: 'team_id_abc',
-        country: 'US'
+        fieldsUpdated: ['username', 'team', 'country'],
+        previousValues: {
+          username: 'OldName',
+          team: 'team_id_abc',
+          country: 'US'
+        },
+        newValues: {
+          username: 'NewName',
+          team: 'team_id_123',
+          country: 'BR'
+        }
       },
-      newValues: {
-        username: 'NewName',
-        team: 'team_id_123',
-        country: 'BR'
-      }
-    },
     metadata: {
-      created: false,
-      databaseOperations: ["UPDATE players SET username = 'NewName', team = 'team_id_123', country = 'BR' WHERE steamid = '76561198041931474'"],
+        created: false,
+        databaseOperations: ["UPDATE players SET username = 'NewName', team = 'team_id_123', country = 'BR' WHERE steamid = '76561198041931474'"],
     },
     timestamp: '2023-12-07T10:30:00.000Z'
   };
@@ -130,7 +129,7 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
 
     if (!input.playerId) {
       errors.push({ parameter: 'playerId', message: 'playerId is required' });
-    }
+        }
     if (!input.updateData) {
       errors.push({ parameter: 'updateData', message: 'updateData is required' });
     }
@@ -158,11 +157,11 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
             details: JSON.stringify(validation.errors)
           },
           metadata: { executionTimeMs: Date.now() - startTime }
-        };
-      }
+          };
+        }
     }
 
-    try {
+          try {
       const result = await this.processPlayerUpdate(input);
       return {
         success: true,
@@ -189,7 +188,7 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
   /**
    * Health check method
    */
-  async healthCheck(): Promise<{ healthy: boolean; message?: string; details?: Record<string, unknown> }> {
+  async healthCheck(): Promise<{ healthy: boolean; message?: string; details?: Record<string, any> }> {
     try {
       await getPlayers();
       return { healthy: true, message: 'Database connection healthy' };
@@ -209,7 +208,7 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
     const identifier = input.playerId;
     const existingPlayer = await getPlayerBySteamId(identifier) as Player | null;
 
-    if (existingPlayer) {
+      if (existingPlayer) {
       return this.updateExistingPlayer(existingPlayer, input);
     } 
     
@@ -225,7 +224,7 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
    */
   private async updateExistingPlayer(existingPlayer: Player, input: UpdatePlayerProfileInput): Promise<UpdatePlayerProfileOutput> {
     const updatesToApply: Partial<Player> = {};
-    const previousValues: Record<string, unknown> = {};
+    const previousValues: Record<string, any> = {};
 
     if (input.updateData.basicInfo) {
       const basicInfoKeys = Object.keys(input.updateData.basicInfo) as Array<keyof typeof input.updateData.basicInfo>;
@@ -234,8 +233,8 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
         if (newValue !== undefined && existingPlayer[key] !== newValue) {
           updatesToApply[key] = newValue;
           previousValues[key] = existingPlayer[key];
-        }
       }
+    }
     }
     
     if (Object.keys(updatesToApply).length === 0) {
@@ -291,8 +290,8 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
         databaseOperations: [`INSERT INTO players (...) VALUES (...)`]
       },
       timestamp: new Date().toISOString()
-    };
-  }
+      };
+    }
 
   private mapPlayerToExtendedProfile(player: Player): ExtendedPlayerProfile {
     return {

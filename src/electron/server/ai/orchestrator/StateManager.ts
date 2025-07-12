@@ -1076,11 +1076,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
     criticalFactors.forEach(factor => {
       actions.push({
         action: `address_${factor.type}`,
-        priority: 'high',
-        deadline: new Date(Date.now() + 30000), // 30 seconds for critical issues
-        description: `Address critical situation: ${factor.description}`,
-        context: factor.context,
-        estimatedDuration: 30
+        priority: 3, // high priority
+        deadline: new Date(Date.now() + 30000) // 30 seconds for critical issues
       });
     });
 
@@ -1092,11 +1089,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
       if (hasPoorPositioning) {
         actions.push({
           action: 'improve_positioning',
-          priority: 'medium',
-          deadline: new Date(Date.now() + 300000), // 5 minutes
-          description: 'Focus on improving positioning in upcoming rounds',
-          context: ['positioning', 'map_awareness'],
-          estimatedDuration: 300
+          priority: 2, // medium priority
+          deadline: new Date(Date.now() + 300000) // 5 minutes
         });
       }
       
@@ -1104,11 +1098,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
       if (hasPoorEconomy) {
         actions.push({
           action: 'review_economy',
-          priority: 'medium',
-          deadline: new Date(Date.now() + 180000), // 3 minutes
-          description: 'Review and adjust economic decision making',
-          context: ['economy', 'buy_strategy'],
-          estimatedDuration: 180
+          priority: 2, // medium priority
+          deadline: new Date(Date.now() + 180000) // 3 minutes
         });
       }
       
@@ -1116,11 +1107,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
       if (hasPoorTeamplay) {
         actions.push({
           action: 'improve_teamwork',
-          priority: 'medium',
-          deadline: new Date(Date.now() + 240000), // 4 minutes
-          description: 'Focus on better team coordination and communication',
-          context: ['teamwork', 'communication'],
-          estimatedDuration: 240
+          priority: 2, // medium priority
+          deadline: new Date(Date.now() + 240000) // 4 minutes
         });
       }
     }
@@ -1129,11 +1117,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
     if (mapState.phase === 'freezetime') {
       actions.push({
         action: 'plan_round_strategy',
-        priority: 'high',
-        deadline: new Date(Date.now() + 15000), // 15 seconds (freezetime duration)
-        description: 'Plan strategy for the upcoming round',
-        context: ['strategy', 'team_coordination'],
-        estimatedDuration: 15
+        priority: 3, // high priority
+        deadline: new Date(Date.now() + 15000) // 15 seconds (freezetime duration)
       });
     }
 
@@ -1141,11 +1126,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
     if (playerState.money > 5000 && mapState.phase === 'freezetime') {
       actions.push({
         action: 'optimize_equipment',
-        priority: 'medium',
-        deadline: new Date(Date.now() + 10000), // 10 seconds
-        description: 'Consider dropping equipment for teammates or optimizing loadout',
-        context: ['economy', 'team_support'],
-        estimatedDuration: 10
+        priority: 2, // medium priority
+        deadline: new Date(Date.now() + 10000) // 10 seconds
       });
     }
 
@@ -1156,19 +1138,16 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
       hasRepeatedMistakes.forEach(mistake => {
         actions.push({
           action: 'address_repeated_mistake',
-          priority: 'medium',
-          deadline: new Date(Date.now() + 600000), // 10 minutes
-          description: `Address repeated mistake: ${mistake}`,
-          context: ['learning', 'improvement'],
-          estimatedDuration: 300
+          priority: 2, // medium priority
+          deadline: new Date(Date.now() + 600000) // 10 minutes
         });
       });
     }
 
     // Sort by priority and deadline
     return actions.sort((a, b) => {
-      const priorityOrder: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
-      const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+      // Priority is now numeric (3=high, 2=medium, 1=low)
+      const priorityDiff = b.priority - a.priority;
       if (priorityDiff !== 0) return priorityDiff;
       
       // Handle optional deadline field
