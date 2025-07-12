@@ -24,6 +24,10 @@ const AppRoutes = () => {
         <Route path="teams" element={<TeamsPage />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="performance/*" element={<PerformanceDashboard />} />
+        <Route path="coach" element={<div>AI Coach Page - Coming Soon</div>} />
+        <Route path="history" element={<div>Match History Page - Coming Soon</div>} />
+        <Route path="team-stats" element={<div>Team Stats Page - Coming Soon</div>} />
+        <Route path="settings" element={<div>Settings Page - Coming Soon</div>} />
       </Route>
     </Routes>
   );
