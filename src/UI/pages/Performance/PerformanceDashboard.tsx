@@ -4,7 +4,7 @@ import { Overview } from './Overview';
 import { MapAnalysis } from './MapAnalysis';
 import { WeaponAnalysis } from './WeaponAnalysis';
 import { MatchHistory } from './MatchHistory';
-import { Settings } from './Settings';
+import { UnifiedSettings } from '../Settings/UnifiedSettings';
 
 /**
  * Performance Dashboard
@@ -36,7 +36,7 @@ export const PerformanceDashboard: React.FC = () => {
           <Route path="maps" element={<MapAnalysis />} />
           <Route path="weapons" element={<WeaponAnalysis />} />
           <Route path="matches" element={<MatchHistory />} />
-          <Route path="settings" element={<Settings />} />
+          <Route path="settings" element={<UnifiedSettings />} />
           <Route path="*" element={<Navigate to="" />} />
         </Routes>
       </div>
@@ -65,4 +65,4 @@ const NavTab: React.FC<NavTabProps> = ({ to, label }) => {
       {label}
     </a>
   );
-}; 
+};

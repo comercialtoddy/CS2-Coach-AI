@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { apiUrl } from "../api/api";
+import { Team } from "../api/types";
 
 interface TeamsContextProps {
   teams: Team[];

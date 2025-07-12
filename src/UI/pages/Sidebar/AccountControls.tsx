@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MdSettings, MdDarkMode, MdLightMode } from "react-icons/md";
 import { Dialog } from "../../components";
 import { useThemes } from "../../hooks/useThemes";
-import { Settings } from "../Settings";
+import { UnifiedSettings } from "../Settings";
 import { useDrawer } from "../../hooks";
 
 export const AccountToggle = () => {
@@ -13,7 +13,7 @@ export const AccountToggle = () => {
   return (
     <>
       <Dialog open={open} onClose={() => setOpen(false)}>
-        <Settings onClose={() => setOpen(false)} />
+        <UnifiedSettings />
       </Dialog>
       <div className="relative flex flex-col gap-2 pb-5 text-text-secondary">
         <button
