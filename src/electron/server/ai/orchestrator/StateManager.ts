@@ -958,7 +958,7 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
     recentPatterns.forEach(pattern => {
       const topic = {
         topic: pattern.type,
-        timestamp: pattern.lastOccurrence || new Date(),
+        timestamp: new Date(),
         playerEngagement: pattern.confidence
       };
       topics.push(topic);

@@ -368,4 +368,4 @@ export class Tool_SuggestEconomyBuy implements ITool<EconomyBuyInput, EconomyBuy
       };
     }
   }
-} 
+}

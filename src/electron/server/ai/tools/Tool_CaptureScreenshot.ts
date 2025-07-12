@@ -1,5 +1,5 @@
-import { desktopCapturer, BrowserWindow, NativeImage } from 'electron';
-import { ITool, ToolExecutionContext, ToolExecutionResult, ToolParameterSchema, ToolMetadata, ToolCategory } from '../interfaces/ITool.js';
+import { desktopCapturer, NativeImage } from 'electron';
+import { ITool, ToolExecutionContext, ToolExecutionResult, ToolParameterSchema, ToolMetadata } from '../interfaces/ITool.js';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
@@ -274,4 +274,4 @@ export class Tool_CaptureScreenshot implements ITool<CaptureScreenshotInput, Cap
       };
     }
   }
-} 
+}

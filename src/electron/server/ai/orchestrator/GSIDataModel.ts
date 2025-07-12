@@ -270,7 +270,7 @@ export class GSIInputHandler {
   private lastSnapshot: GameStateSnapshot | null = null;
   private sequenceCounter: number = 0;
   private weaponDatabase: Map<string, EnhancedWeaponInfo> = new Map();
-  private behaviorHistory: Map<string, PlayerBehaviorAnalysis[]> = new Map();
+  private behaviorHistory: Map<string, (PlayerBehaviorAnalysis & { timestamp: number })[]> = new Map();
 
   constructor() {
     this.initializeWeaponDatabase();
@@ -1058,10 +1058,10 @@ export class GSIInputHandler {
 
   // Methods for complex behavior analysis
   private updateBehaviorTracking(snapshot: GameStateSnapshot): void {
-    if (!snapshot.player?.steamId) return;
+    if (!snapshot.processed?.playerState?.steamId) return;
 
-    const playerId = snapshot.player.steamId;
-    const currentBehavior = snapshot.player.behaviorAnalysis;
+    const playerId = snapshot.processed.playerState.steamId;
+    const currentBehavior = this.analyzeBehavior(snapshot.raw.player, snapshot.raw);
     
     if (!currentBehavior) return;
 
@@ -1069,10 +1069,12 @@ export class GSIInputHandler {
     const history = this.behaviorHistory.get(playerId) || [];
     
     // Add current behavior to history
-    history.push({
+    const behaviorWithTimestamp = {
       ...currentBehavior,
       timestamp: Date.now()
-    } as PlayerBehaviorAnalysis & { timestamp: number });
+    } as PlayerBehaviorAnalysis & { timestamp: number };
+    
+    history.push(behaviorWithTimestamp);
     
     // Keep only last 50 behavior snapshots to prevent memory bloat
     if (history.length > 50) {
