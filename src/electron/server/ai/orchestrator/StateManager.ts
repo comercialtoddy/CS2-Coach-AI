@@ -958,10 +958,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
     recentPatterns.forEach(pattern => {
       const topic = {
         topic: pattern.type,
-        lastDiscussed: pattern.lastOccurrence || new Date(),
-        importance: this.mapPatternToImportance(pattern.confidence),
-        context: pattern.description,
-        actionItems: pattern.implications
+        timestamp: pattern.lastOccurrence || new Date(),
+        playerEngagement: pattern.confidence
       };
       topics.push(topic);
     });
@@ -976,10 +974,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
         if (!existingTopic) {
           topics.push({
             topic: factor.type,
-            lastDiscussed: state.timestamp,
-            importance: factor.severity === 'critical' ? 'high' : 'medium',
-            context: factor.description,
-            actionItems: factor.context
+            timestamp: state.timestamp,
+            playerEngagement: factor.severity === 'critical' ? 0.9 : 0.7
           });
         }
       });
@@ -995,10 +991,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
       if (hasAggressiveBehavior) {
         topics.push({
           topic: 'excessive_aggression',
-          lastDiscussed: latestState.timestamp,
-          importance: 'medium',
-          context: 'Player showing very aggressive behavior that may lead to unnecessary risks',
-          actionItems: ['Consider more cautious positioning', 'Focus on team coordination']
+          timestamp: latestState.timestamp,
+          playerEngagement: 0.7
         });
       }
       
@@ -1006,10 +1000,8 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
       if (hasPoorPositioning) {
         topics.push({
           topic: 'positioning_improvement',
-          lastDiscussed: latestState.timestamp,
-          importance: 'high',
-          context: 'Player consistently taking poor positions',
-          actionItems: ['Review map positioning', 'Practice crosshair placement', 'Study professional demos']
+          timestamp: latestState.timestamp,
+          playerEngagement: 0.9
         });
       }
       
@@ -1017,21 +1009,19 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
       if (hasPoorEconomy) {
         topics.push({
           topic: 'economy_management',
-          lastDiscussed: latestState.timestamp,
-          importance: 'medium',
-          context: 'Player making poor economic decisions',
-          actionItems: ['Review buy strategies', 'Learn force-buy situations', 'Practice eco rounds']
+          timestamp: latestState.timestamp,
+          playerEngagement: 0.6
         });
       }
     }
 
-    // Sort by importance and recency, limit to most relevant topics
+    // Sort by engagement and recency, limit to most relevant topics
     return topics
       .sort((a, b) => {
-        const importanceOrder = { high: 3, medium: 2, low: 1 };
-        const importanceDiff = importanceOrder[b.importance] - importanceOrder[a.importance];
-        if (importanceDiff !== 0) return importanceDiff;
-        return b.lastDiscussed.getTime() - a.lastDiscussed.getTime();
+        // Sort by player engagement first, then by timestamp
+        const engagementDiff = b.playerEngagement - a.playerEngagement;
+        if (engagementDiff !== 0) return engagementDiff;
+        return b.timestamp.getTime() - a.timestamp.getTime();
       })
       .slice(0, 10); // Keep only top 10 most relevant topics
   }
