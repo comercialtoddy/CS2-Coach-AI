@@ -7,7 +7,7 @@
  * - Tool_UpdatePlayerProfile: Update player profiles in local database
  */
 
-import { Player } from '../../../UI/api/types.js';
+import { Player } from '../../../UI/api/types';
 
 // ===== GSI Data Models =====
 
@@ -267,7 +267,7 @@ export interface TrackerGGPlayerStats {
   segments: Array<{
     type: string;
     mode: string;
-    stats: Record<string, any>;
+    stats: Record<string, unknown>;
   }>;
 }
 
@@ -290,7 +290,18 @@ export interface TrackerGGResponse {
 /**
  * Extended Player Profile with AI-relevant data
  */
-export interface ExtendedPlayerProfile extends Player {
+export interface ExtendedPlayerProfile {
+  // Base Player properties
+  _id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  avatar: string;
+  country: string;
+  steamid: string;
+  team: string;
+  extra: Record<string, string>;
+  
   // TrackerGG Statistics
   trackerGGStats?: TrackerGGPlayerStats;
   trackerGGLastUpdated?: string;
@@ -440,8 +451,8 @@ export interface UpdatePlayerProfileOutput {
   playerId: string;
   changes?: {
     fieldsUpdated: string[];
-    previousValues?: Record<string, any>;
-    newValues?: Record<string, any>;
+    previousValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
   };
   metadata?: {
     created: boolean;
@@ -481,7 +492,7 @@ export interface ToolExecutionMetadata {
   error?: {
     type: ToolError;
     message: string;
-    details?: any;
+    details?: unknown;
   };
   resourceUsage?: {
     memoryUsed: number;
