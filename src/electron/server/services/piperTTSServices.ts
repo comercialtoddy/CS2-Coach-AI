@@ -445,4 +445,12 @@ export class PiperTTSService {
       });
     });
   }
-} 
+}
+
+// Export utility functions
+export function isPiperConfigured(): boolean {
+  const service = PiperTTSService.getInstance();
+  return service.getIsInitialized();
+}
+
+export default PiperTTSService;

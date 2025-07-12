@@ -744,7 +744,7 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
     this.metrics.lastUpdate = new Date();
   }
 
-  // Placeholder methods for complex analysis (would be implemented based on specific requirements)
+  // Methods for complex state analysis
   private determineChangeType(from: GameStateSnapshot | null, to: GameStateSnapshot): StateChange['changeType'] {
     if (!from) return 'normal_update';
     if (from.processed.mapState.round !== to.processed.mapState.round) return 'round_start';
@@ -875,13 +875,171 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
   }
 
   private extractObservedBehaviors(): SessionDataMemory['data']['observedBehaviors'] {
-    // Placeholder - would analyze state history for behavioral patterns
-    return [];
+    if (this.stateHistory.length < 3) return [];
+
+    const behaviors: SessionDataMemory['data']['observedBehaviors'] = [];
+    const recentStates = this.stateHistory.slice(-20); // Analyze last 20 states
+
+    // Analyze aggression patterns from observed behaviors
+    const aggressiveBehaviors = recentStates
+      .map(state => state.processed.playerState.observedBehaviors.filter(b => 
+        b.includes('aggressive') || b.includes('rush') || b.includes('push')
+      ).length / Math.max(state.processed.playerState.observedBehaviors.length, 1))
+      .filter(score => !isNaN(score));
+    
+    if (aggressiveBehaviors.length > 0) {
+      const avgAggression = aggressiveBehaviors.reduce((sum, score) => sum + score, 0) / aggressiveBehaviors.length;
+      if (avgAggression > 0.7) {
+        behaviors.push({
+          timestamp: new Date(),
+          behavior: 'aggressive_playstyle',
+          context: 'Player shows consistently aggressive behavior patterns',
+          significance: 0.8
+        });
+      } else if (avgAggression < 0.3) {
+        behaviors.push({
+          timestamp: new Date(),
+          behavior: 'passive_playstyle',
+          context: 'Player shows consistently passive behavior patterns',
+          significance: 0.8
+        });
+      }
+    }
+
+    // Analyze positioning patterns from observed behaviors
+    const positioningBehaviors = recentStates
+      .map(state => state.processed.playerState.observedBehaviors.filter(b => 
+        b.includes('position') || b.includes('exposed') || b.includes('isolated')
+      ).length / Math.max(state.processed.playerState.observedBehaviors.length, 1))
+      .filter(score => !isNaN(score));
+    
+    if (positioningBehaviors.length > 0) {
+      const avgPositioning = positioningBehaviors.reduce((sum, score) => sum + score, 0) / positioningBehaviors.length;
+      if (avgPositioning > 0.4) {
+        behaviors.push({
+          timestamp: new Date(),
+          behavior: 'poor_positioning',
+          context: 'Player frequently takes suboptimal positions',
+          significance: 0.7
+        });
+      }
+    }
+
+    // Analyze economic patterns from money management
+    const economyEfficiency = recentStates
+      .map(state => {
+        const money = state.processed.playerState.money;
+        const maxMoney = 16000;
+        return money / maxMoney;
+      })
+      .filter(score => !isNaN(score));
+    
+    if (economyEfficiency.length > 0) {
+      const avgEconomy = economyEfficiency.reduce((sum, score) => sum + score, 0) / economyEfficiency.length;
+      if (avgEconomy < 0.4) {
+        behaviors.push({
+          timestamp: new Date(),
+          behavior: 'poor_economy_management',
+          context: 'Player shows poor economic decision making',
+          significance: 0.6
+        });
+      }
+    }
+
+    return behaviors;
   }
 
   private extractRecentTopics(): SessionDataMemory['data']['recentTopics'] {
-    // Placeholder - would analyze interactions and coaching for recent topics
-    return [];
+    const topics: SessionDataMemory['data']['recentTopics'] = [];
+    const recentStates = this.stateHistory.slice(-10); // Analyze last 10 states
+    const recentPatterns = Array.from(this.detectedPatterns.values()).slice(-5);
+
+    // Extract topics from detected patterns
+    recentPatterns.forEach(pattern => {
+      const topic = {
+        topic: pattern.type,
+        lastDiscussed: pattern.lastOccurrence || new Date(),
+        importance: this.mapPatternToImportance(pattern.confidence),
+        context: pattern.description,
+        actionItems: pattern.implications
+      };
+      topics.push(topic);
+    });
+
+    // Extract topics from situational factors
+    recentStates.forEach(state => {
+      const criticalFactors = state.processed.situationalFactors
+        .filter(factor => factor.severity === 'high' || factor.severity === 'critical');
+      
+      criticalFactors.forEach(factor => {
+        const existingTopic = topics.find(t => t.topic === factor.type);
+        if (!existingTopic) {
+          topics.push({
+            topic: factor.type,
+            lastDiscussed: state.timestamp,
+            importance: factor.severity === 'critical' ? 'high' : 'medium',
+            context: factor.description,
+            actionItems: factor.context
+          });
+        }
+      });
+    });
+
+    // Extract topics from behavioral analysis
+    const latestState = recentStates[recentStates.length - 1];
+    if (latestState?.processed.playerState.observedBehaviors) {
+      const behaviors = latestState.processed.playerState.observedBehaviors;
+      
+      // Check for concerning behavior patterns
+      const hasAggressiveBehavior = behaviors.some(b => b.includes('aggressive') || b.includes('rush'));
+      if (hasAggressiveBehavior) {
+        topics.push({
+          topic: 'excessive_aggression',
+          lastDiscussed: latestState.timestamp,
+          importance: 'medium',
+          context: 'Player showing very aggressive behavior that may lead to unnecessary risks',
+          actionItems: ['Consider more cautious positioning', 'Focus on team coordination']
+        });
+      }
+      
+      const hasPoorPositioning = behaviors.some(b => b.includes('poor_position') || b.includes('exposed'));
+      if (hasPoorPositioning) {
+        topics.push({
+          topic: 'positioning_improvement',
+          lastDiscussed: latestState.timestamp,
+          importance: 'high',
+          context: 'Player consistently taking poor positions',
+          actionItems: ['Review map positioning', 'Practice crosshair placement', 'Study professional demos']
+        });
+      }
+      
+      const hasPoorEconomy = behaviors.some(b => b.includes('poor_buy') || b.includes('economy_mistake'));
+      if (hasPoorEconomy) {
+        topics.push({
+          topic: 'economy_management',
+          lastDiscussed: latestState.timestamp,
+          importance: 'medium',
+          context: 'Player making poor economic decisions',
+          actionItems: ['Review buy strategies', 'Learn force-buy situations', 'Practice eco rounds']
+        });
+      }
+    }
+
+    // Sort by importance and recency, limit to most relevant topics
+    return topics
+      .sort((a, b) => {
+        const importanceOrder = { high: 3, medium: 2, low: 1 };
+        const importanceDiff = importanceOrder[b.importance] - importanceOrder[a.importance];
+        if (importanceDiff !== 0) return importanceDiff;
+        return b.lastDiscussed.getTime() - a.lastDiscussed.getTime();
+      })
+      .slice(0, 10); // Keep only top 10 most relevant topics
+  }
+
+  private mapPatternToImportance(confidence: number): 'low' | 'medium' | 'high' {
+    if (confidence >= 0.8) return 'high';
+    if (confidence >= 0.6) return 'medium';
+    return 'low';
   }
 
   private generateCoachingNotes(): string[] {
@@ -904,8 +1062,147 @@ export class DynamicStateManager extends EventEmitter implements IStateManager {
   }
 
   private identifyPendingActions(): SessionDataMemory['data']['pendingActions'] {
-    // Placeholder - would identify required future actions
-    return [];
+    const actions: SessionDataMemory['data']['pendingActions'] = [];
+    const currentState = this.currentState;
+    
+    if (!currentState) return actions;
+
+    const playerState = currentState.processed.playerState;
+    const mapState = currentState.processed.mapState;
+    const situationalFactors = currentState.processed.situationalFactors;
+
+    // Check for immediate tactical actions needed
+    const criticalFactors = situationalFactors.filter(f => f.severity === 'critical');
+    criticalFactors.forEach(factor => {
+      actions.push({
+        action: `address_${factor.type}`,
+        priority: 'high',
+        deadline: new Date(Date.now() + 30000), // 30 seconds for critical issues
+        description: `Address critical situation: ${factor.description}`,
+        context: factor.context,
+        estimatedDuration: 30
+      });
+    });
+
+    // Check for behavioral improvements needed
+    if (playerState.observedBehaviors) {
+      const behaviors = playerState.observedBehaviors;
+      
+      const hasPoorPositioning = behaviors.some(b => b.includes('poor_position') || b.includes('exposed'));
+      if (hasPoorPositioning) {
+        actions.push({
+          action: 'improve_positioning',
+          priority: 'medium',
+          deadline: new Date(Date.now() + 300000), // 5 minutes
+          description: 'Focus on improving positioning in upcoming rounds',
+          context: ['positioning', 'map_awareness'],
+          estimatedDuration: 300
+        });
+      }
+      
+      const hasPoorEconomy = behaviors.some(b => b.includes('poor_buy') || b.includes('economy_mistake'));
+      if (hasPoorEconomy) {
+        actions.push({
+          action: 'review_economy',
+          priority: 'medium',
+          deadline: new Date(Date.now() + 180000), // 3 minutes
+          description: 'Review and adjust economic decision making',
+          context: ['economy', 'buy_strategy'],
+          estimatedDuration: 180
+        });
+      }
+      
+      const hasPoorTeamplay = behaviors.some(b => b.includes('isolated') || b.includes('poor_communication'));
+      if (hasPoorTeamplay) {
+        actions.push({
+          action: 'improve_teamwork',
+          priority: 'medium',
+          deadline: new Date(Date.now() + 240000), // 4 minutes
+          description: 'Focus on better team coordination and communication',
+          context: ['teamwork', 'communication'],
+          estimatedDuration: 240
+        });
+      }
+    }
+
+    // Check for round-specific actions
+    if (mapState.phase === 'freezetime') {
+      actions.push({
+        action: 'plan_round_strategy',
+        priority: 'high',
+        deadline: new Date(Date.now() + 15000), // 15 seconds (freezetime duration)
+        description: 'Plan strategy for the upcoming round',
+        context: ['strategy', 'team_coordination'],
+        estimatedDuration: 15
+      });
+    }
+
+    // Check for equipment/economy actions
+    if (playerState.money > 5000 && mapState.phase === 'freezetime') {
+      actions.push({
+        action: 'optimize_equipment',
+        priority: 'medium',
+        deadline: new Date(Date.now() + 10000), // 10 seconds
+        description: 'Consider dropping equipment for teammates or optimizing loadout',
+        context: ['economy', 'team_support'],
+        estimatedDuration: 10
+      });
+    }
+
+    // Check for learning opportunities
+    const recentStates = this.stateHistory.slice(-5);
+    const hasRepeatedMistakes = this.detectRepeatedMistakes(recentStates);
+    if (hasRepeatedMistakes.length > 0) {
+      hasRepeatedMistakes.forEach(mistake => {
+        actions.push({
+          action: 'address_repeated_mistake',
+          priority: 'medium',
+          deadline: new Date(Date.now() + 600000), // 10 minutes
+          description: `Address repeated mistake: ${mistake}`,
+          context: ['learning', 'improvement'],
+          estimatedDuration: 300
+        });
+      });
+    }
+
+    // Sort by priority and deadline
+    return actions.sort((a, b) => {
+      const priorityOrder: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
+      const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Handle optional deadline field
+      if (!a.deadline && !b.deadline) return 0;
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+      return a.deadline.getTime() - b.deadline.getTime();
+    });
+  }
+
+  private detectRepeatedMistakes(states: GameStateSnapshot[]): string[] {
+    const mistakes: string[] = [];
+    
+    // Check for repeated positioning mistakes
+    const poorPositioningCount = states.filter(state => {
+      const behaviors = state.processed.playerState.observedBehaviors || [];
+      return behaviors.some(b => b.includes('poor_position') || b.includes('exposed'));
+    }).length;
+    
+    if (poorPositioningCount >= 3) {
+      mistakes.push('poor_positioning');
+    }
+    
+    // Check for repeated economic mistakes
+    const poorEconomyCount = states.filter(state => {
+      const behaviors = state.processed.playerState.observedBehaviors || [];
+      return behaviors.some(b => b.includes('poor_buy') || b.includes('economy_mistake'));
+    }).length;
+    
+    if (poorEconomyCount >= 3) {
+      mistakes.push('poor_economy_management');
+    }
+    
+    return mistakes;
   }
 
   /**
@@ -946,4 +1243,4 @@ export async function getDefaultStateManager(memoryService?: MemoryService): Pro
     defaultManager = await createStateManager({}, memoryService);
   }
   return defaultManager;
-} 
+}

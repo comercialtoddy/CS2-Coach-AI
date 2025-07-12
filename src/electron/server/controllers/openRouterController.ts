@@ -6,7 +6,15 @@ import {
   isOpenRouterConfigured, 
   getOpenRouterStatus,
   DEFAULT_MODELS,
-  LLMCallOptions 
+  LLMCallOptions,
+  // Novas importações
+  getEnhancedModels,
+  getRecommendedModels,
+  getDynamicDefaultModels,
+  clearModelCache,
+  getCacheStatus,
+  ModelFilters,
+  EnhancedOpenRouterModel
 } from '../services/openRouterServices.js';
 import { CallLLMTool } from '../ai/tools/CallLLMTool.js';
 import { ToolManager } from '../ai/ToolManager.js';
@@ -18,6 +26,8 @@ export const getStatus = async (req: Request, res: Response) => {
   try {
     const status = getOpenRouterStatus();
     const testResult = status.configured ? await testConnection() : null;
+    const cacheStatus = getCacheStatus();
+    const dynamicModels = await getDynamicDefaultModels();
 
     res.json({
       success: true,
@@ -25,6 +35,8 @@ export const getStatus = async (req: Request, res: Response) => {
         ...status,
         availableModels: Object.keys(DEFAULT_MODELS),
         defaultModels: DEFAULT_MODELS,
+        dynamicModels,
+        cache: cacheStatus,
         healthCheck: testResult
       }
     });
@@ -67,7 +79,7 @@ export const testConnectionEndpoint = async (req: Request, res: Response) => {
 };
 
 /**
- * Get list of available models from OpenRouter
+ * Get list of available models from OpenRouter (raw models)
  */
 export const getModels = async (req: Request, res: Response) => {
   try {
@@ -93,6 +105,163 @@ export const getModels = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch available models',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Get enhanced models with filtering and caching
+ */
+export const getEnhancedModelsEndpoint = async (req: Request, res: Response) => {
+  try {
+    if (!isOpenRouterConfigured()) {
+      return res.status(400).json({
+        success: false,
+        error: 'OpenRouter API not configured. Please set OPENROUTER_API_KEY environment variable.'
+      });
+    }
+
+    const filters: ModelFilters = {
+      category: req.query.category as string,
+      maxCostPerMToken: req.query.maxCostPerMToken ? parseFloat(req.query.maxCostPerMToken as string) : undefined,
+      minContextLength: req.query.minContextLength ? parseInt(req.query.minContextLength as string) : undefined,
+      supportsStructuredOutputs: req.query.supportsStructuredOutputs === 'true',
+      supportsToolCalling: req.query.supportsToolCalling === 'true',
+      supportsImages: req.query.supportsImages === 'true',
+      quality: req.query.quality ? (req.query.quality as string).split(',') as ('low' | 'medium' | 'high' | 'premium')[] : undefined,
+      providers: req.query.providers ? (req.query.providers as string).split(',') : undefined,
+      sortBy: req.query.sortBy as 'cost' | 'speed' | 'intelligence' | 'context_length' | 'name',
+      sortOrder: req.query.sortOrder as 'asc' | 'desc',
+      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined
+    };
+
+    const result = await getEnhancedModels(filters);
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error fetching enhanced models:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch enhanced models',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Get recommended models for specific use cases
+ */
+export const getRecommendedModelsEndpoint = async (req: Request, res: Response) => {
+  try {
+    if (!isOpenRouterConfigured()) {
+      return res.status(400).json({
+        success: false,
+        error: 'OpenRouter API not configured. Please set OPENROUTER_API_KEY environment variable.'
+      });
+    }
+
+    const useCase = req.params.useCase as 'coding' | 'writing' | 'analysis' | 'chat' | 'reasoning' | 'cheap' | 'fast';
+    
+    if (!['coding', 'writing', 'analysis', 'chat', 'reasoning', 'cheap', 'fast'].includes(useCase)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid use case. Must be one of: coding, writing, analysis, chat, reasoning, cheap, fast'
+      });
+    }
+
+    const models = await getRecommendedModels(useCase);
+    
+    res.json({
+      success: true,
+      data: {
+        useCase,
+        models,
+        count: models.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching recommended models:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch recommended models',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Get dynamic default models (replacement for static DEFAULT_MODELS)
+ */
+export const getDynamicDefaultModelsEndpoint = async (req: Request, res: Response) => {
+  try {
+    if (!isOpenRouterConfigured()) {
+      return res.status(400).json({
+        success: false,
+        error: 'OpenRouter API not configured. Please set OPENROUTER_API_KEY environment variable.'
+      });
+    }
+
+    const dynamicModels = await getDynamicDefaultModels();
+    
+    res.json({
+      success: true,
+      data: {
+        dynamicModels,
+        staticModels: DEFAULT_MODELS,
+        cacheStatus: getCacheStatus()
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching dynamic default models:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch dynamic default models',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Clear model cache
+ */
+export const clearModelCacheEndpoint = async (req: Request, res: Response) => {
+  try {
+    clearModelCache();
+    
+    res.json({
+      success: true,
+      message: 'Model cache cleared successfully'
+    });
+  } catch (error) {
+    console.error('Error clearing model cache:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear model cache',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Get cache status
+ */
+export const getCacheStatusEndpoint = async (req: Request, res: Response) => {
+  try {
+    const cacheStatus = getCacheStatus();
+    
+    res.json({
+      success: true,
+      data: cacheStatus
+    });
+  } catch (error) {
+    console.error('Error getting cache status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get cache status',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -305,6 +474,8 @@ export const executeViaToolManager = async (req: Request, res: Response) => {
  */
 export const getExamples = async (req: Request, res: Response) => {
   try {
+    const dynamicModels = await getDynamicDefaultModels();
+    
     const examples = {
       basicCall: {
         endpoint: 'POST /openrouter/call',
@@ -312,7 +483,7 @@ export const getExamples = async (req: Request, res: Response) => {
         body: {
           prompt: 'Explain quantum computing in simple terms',
           options: {
-            model: DEFAULT_MODELS.BALANCED,
+            model: dynamicModels.BALANCED,
             maxTokens: 200,
             temperature: 0.7
           }
@@ -345,21 +516,31 @@ export const getExamples = async (req: Request, res: Response) => {
         body: {
           prompt: 'Write a haiku about programming',
           systemPrompt: 'You are a creative poet who specializes in haiku. Follow the 5-7-5 syllable pattern.',
-          model: DEFAULT_MODELS.CREATIVE,
-          fallbackModels: [DEFAULT_MODELS.BALANCED, DEFAULT_MODELS.FAST],
+          model: dynamicModels.CREATIVE,
+          fallbackModels: [dynamicModels.BALANCED, dynamicModels.FAST],
           temperature: 0.9,
           maxTokens: 100
         }
       },
-      toolManagerExecution: {
-        endpoint: 'POST /openrouter/tool-manager/execute',
-        description: 'Execute LLM call via the Tool Manager framework',
-        body: {
-          prompt: 'Summarize the benefits of renewable energy',
-          model: DEFAULT_MODELS.SMART,
-          maxTokens: 300,
-          temperature: 0.5
+      recommendedModels: {
+        endpoint: 'GET /openrouter/recommendations/coding',
+        description: 'Get recommended models for coding tasks',
+        response: 'Returns top 5 models optimized for coding with structured outputs support'
+      },
+      enhancedModels: {
+        endpoint: 'GET /openrouter/models/enhanced',
+        description: 'Get enhanced models with filtering and categorization',
+        queryParams: {
+          category: 'smart',
+          supportsStructuredOutputs: 'true',
+          sortBy: 'intelligence',
+          limit: '10'
         }
+      },
+      dynamicDefaults: {
+        endpoint: 'GET /openrouter/models/dynamic-defaults',
+        description: 'Get current dynamic default models (updated automatically)',
+        response: 'Returns dynamically selected best models for each category'
       }
     };
 
@@ -367,11 +548,17 @@ export const getExamples = async (req: Request, res: Response) => {
       success: true,
       data: {
         examples,
-        availableModels: DEFAULT_MODELS,
+        availableModels: dynamicModels,
+        staticModels: DEFAULT_MODELS,
         endpoints: {
           status: 'GET /openrouter/status',
           test: 'GET /openrouter/test',
           models: 'GET /openrouter/models',
+          enhancedModels: 'GET /openrouter/models/enhanced',
+          recommendations: 'GET /openrouter/recommendations/:useCase',
+          dynamicDefaults: 'GET /openrouter/models/dynamic-defaults',
+          clearCache: 'POST /openrouter/cache/clear',
+          cacheStatus: 'GET /openrouter/cache/status',
           simpleCall: 'POST /openrouter/call',
           toolCall: 'POST /openrouter/tool/call',
           toolInfo: 'GET /openrouter/tool/info',

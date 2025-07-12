@@ -1,0 +1,43 @@
+# Task ID: 31
+# Title: Validação e Implementação Final das Integrações de API
+# Status: done
+# Dependencies: 4, 6, 7, 8, 9, 10, 11, 16, 17, 28, 29
+# Priority: high
+# Description: Verificar, corrigir e finalizar todas as integrações de API do sistema, incluindo OpenRouter, GSI, Tracker.GG, Piper TTS e Socket.io. O objetivo é garantir que todos os serviços utilizem dados reais, a comunicação fim-a-fim seja robusta e todos os endpoints estejam operacionais.
+# Details:
+Esta tarefa é a validação final de todas as integrações externas e internas baseadas em API, garantindo que o sistema opere com dados reais e não simulados. O trabalho deve ser dividido por sistema: 1. **OpenRouter (Task 16):** Validar que a chave da API é carregada corretamente e que as chamadas para os diferentes modelos (FAST, SMART, etc.) funcionam, retornando respostas válidas do LLM. Testar o tratamento de erros para chaves inválidas ou falhas de rede. 2. **GSI e Ferramentas de IA (Tasks 6, 7, 10, 17):** Com o CS2 em execução, confirmar que o backend recebe um fluxo contínuo de dados GSI reais. Verificar se o `AIOrchestrator` processa esses dados e aciona as ferramentas de IA (`GetGSIInfoTool`, etc.) com o contexto do jogo em tempo real. 3. **Tracker.GG (Tasks 8, 10):** Executar chamadas através da `GetTrackerGGStatsTool` usando um Steam ID válido e confirmar que as estatísticas mais recentes são buscadas da API do Tracker.GG e processadas corretamente. 4. **Piper TTS (Task 11):** Acionar um evento de feedback da IA e verificar se o texto é enviado ao Piper, um arquivo de áudio é gerado com baixa latência e é reproduzível. 5. **Socket.io (Task 4):** Testar todos os canais de comunicação em tempo real, especialmente as atualizações de tarefas para o overlay (Task 24) e as atualizações de status para o HUD (Task 12), garantindo a entrega instantânea de mensagens.
+
+# Test Strategy:
+A verificação será realizada através de testes de integração fim-a-fim. 1. **Ciclo de Feedback Completo:** Iniciar o CS2 e executar uma ação específica no jogo (ex: obter uma eliminação). Verificar se a cadeia completa é executada: GSI recebido -> `AIOrchestrator` (Task 17) toma uma decisão -> `CallLLMTool` (Task 16) é chamado -> Piper TTS (Task 11) gera áudio -> O áudio é reproduzido. Todo o processo deve usar dados reais. 2. **Consulta de Dados Externos:** Acessar o dashboard do jogador (Task 25) e verificar se os dados de perfil são atualizados com informações reais obtidas através da API do Tracker.GG (Task 8). 3. **Validação de Comunicação com Overlay:** Com o jogo em execução, acionar manualmente a criação de uma nova tarefa no backend. Confirmar que o overlay de tarefas (Task 24) é exibido instantaneamente com os dados corretos via Socket.io (Task 4). 4. **Teste de Resiliência:** Desconectar a internet e verificar se os serviços que dependem de APIs externas (OpenRouter, Tracker.GG) tratam o erro de forma adequada, sem travar o sistema.
+
+# Subtasks:
+## 1. Validação da Integração com OpenRouter [done]
+### Dependencies: None
+### Description: Verificar a funcionalidade completa da integração com a API do OpenRouter, incluindo autenticação, chamadas aos modelos de LLM e tratamento de erros.
+### Details:
+Esta subtarefa foca em garantir que o sistema possa se comunicar de forma confiável com o OpenRouter. É necessário validar que a chave da API é carregada corretamente a partir das variáveis de ambiente, que as chamadas para os diferentes modelos (ex: FAST, SMART) retornam respostas estruturadas e válidas, e que o sistema lida de forma resiliente com falhas, como chaves de API inválidas, limites de taxa ou problemas de conectividade de rede.
+
+## 2. Validação do Fluxo de Dados GSI e Processamento pelo AIOrchestrator [done]
+### Dependencies: None
+### Description: Confirmar que os dados do Game State Integration (GSI) do CS2 são recebidos em tempo real pelo backend e processados corretamente pelo orquestrador de IA para acionar as ferramentas relevantes.
+### Details:
+Com uma instância do CS2 em execução e configurada para enviar dados GSI, esta subtarefa consiste em verificar se o backend está recebendo um fluxo contínuo de dados de jogo. Além disso, é crucial confirmar que o `AIOrchestrator` está analisando esses dados corretamente e utilizando-os para acionar as ferramentas de IA apropriadas (como `GetGSIInfoTool`) com o contexto do jogo em tempo real.
+
+## 3. Validação da Busca de Estatísticas com Tracker.GG [done]
+### Dependencies: None
+### Description: Garantir que a ferramenta `GetTrackerGGStatsTool` consegue buscar e processar com sucesso as estatísticas de um jogador a partir da API do Tracker.GG usando um Steam ID válido.
+### Details:
+Esta subtarefa isola e testa a integração com o serviço externo Tracker.GG. O objetivo é executar a função `GetTrackerGGStatsTool` com um Steam ID de um jogador real e ativo. A validação deve confirmar que uma requisição é enviada com sucesso para a API do Tracker.GG, que a resposta contém dados de estatísticas recentes e que esses dados são corretamente analisados e estruturados pelo sistema.
+
+## 4. Validação da Geração de Áudio com Piper TTS [done]
+### Dependencies: 31.2
+### Description: Verificar se o sistema de Text-To-Speech (TTS) com Piper está gerando arquivos de áudio a partir de texto com baixa latência e qualidade audível.
+### Details:
+Após um evento de jogo ser processado pela IA (dependência da subtarefa 2), um feedback em texto deve ser gerado. Esta subtarefa valida o passo seguinte: o texto é enviado para o serviço do Piper TTS, que deve gerar um arquivo de áudio (.wav ou .mp3) de forma rápida. A validação inclui verificar a existência do arquivo gerado, sua qualidade e a latência total do processo, desde o envio do texto até a disponibilidade do áudio.
+
+## 5. Validação da Comunicação em Tempo Real via Socket.io [done]
+### Dependencies: 31.2, 31.4
+### Description: Testar todos os canais de comunicação do Socket.io para garantir a entrega instantânea e confiável de mensagens para o overlay e o HUD.
+### Details:
+Esta é a validação final da comunicação com o frontend. É preciso garantir que os eventos processados pelo backend (como atualizações de estado do jogo vindas do GSI ou a notificação de que um novo áudio TTS está pronto) sejam transmitidos via Socket.io para os clientes conectados. Os testes devem cobrir os canais específicos para atualização de tarefas no overlay e de status no HUD, confirmando que as mensagens chegam em tempo real.
+

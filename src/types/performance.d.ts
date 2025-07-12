@@ -49,6 +49,22 @@ export interface WeaponStats {
   damage: number;
 }
 
+export interface TaskCriteria {
+  eventType?: string;
+  killCount?: number;
+  assistCount?: number;
+  roundWins?: number;
+  weapon?: string;
+  site?: string;
+  winCondition?: string;
+  mapName?: string;
+  teamSide?: 'CT' | 'T';
+  timeLimit?: number;
+  totalSteps?: number;
+  completedSteps?: number;
+  completed?: boolean;
+}
+
 export interface Settings {
   voice: {
     model: string;
@@ -68,4 +84,4 @@ export interface Settings {
     matchAnalysis: boolean;
     personalRecords: boolean;
   };
-} 
+}

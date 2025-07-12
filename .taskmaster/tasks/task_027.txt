@@ -1,6 +1,6 @@
 # Task ID: 27
 # Title: Rebranding do Projeto para CS2 Coach AI e Redesign da UI
-# Status: pending
+# Status: done
 # Dependencies: 1, 3, 12, 15, 24
 # Priority: medium
 # Description: Realizar o rebranding completo do projeto de OpenHud para 'CS2 Coach AI by Toddyclipsgg', atualizando todas as referências de nome e ativos de marca, e substituindo a UI existente por uma nova interface minimalista focada no agente de IA.
@@ -9,3 +9,35 @@ Esta tarefa envolve duas atividades principais: rebranding e redesenho da UI. Pr
 
 # Test Strategy:
 1. Faça uma busca global por 'OpenHud' em todo o projeto para garantir que nenhuma referência antiga permaneça. 2. Inicie a aplicação e verifique visualmente todos os elementos da interface do usuário, incluindo a janela principal, o ícone da bandeja do sistema e os overlays no jogo, para confirmar que o novo nome e os novos logotipos são exibidos corretamente. 3. Execute um teste de regressão completo para garantir que todas as funcionalidades existentes, como a captura de GSI, o processamento de dados e a comunicação com o backend, permaneçam intactas. 4. Teste especificamente o novo overlay de IA, enviando vários estados do agente (por exemplo, 'Analisando', 'Feedback', 'Nova Tarefa') do backend e verificando se a UI os exibe de forma clara e correta sem interferir no jogo. 5. Compile e empacote a aplicação para verificar se o executável final e o instalador usam o novo nome e ícone do projeto.
+
+# Subtasks:
+## 1. Busca e Substituição de 'OpenHud' por 'CS2 Coach AI' na Base de Código [done]
+### Dependencies: None
+### Description: Atualizar todas as referências textuais, nomes de variáveis, comentários e configurações de 'OpenHud' para 'CS2 Coach AI' em toda a base de código do projeto.
+### Details:
+Realizar uma busca e substituição global em todos os arquivos do projeto. Focar em arquivos de código-fonte (.js, .ts, .tsx), arquivos de configuração (package.json, vite.config.js), e documentação interna. O objetivo é erradicar completamente o nome antigo do projeto para alinhar com a nova marca.
+
+## 2. Substituição de Ativos Visuais da Marca [done]
+### Dependencies: None
+### Description: Substituir todos os logos, ícones, favicons e outros ativos visuais do 'OpenHud' pelos novos ativos da marca 'CS2 Coach AI by Toddyclipsgg'.
+### Details:
+Localizar os diretórios de ativos no front-end (ex: `src/assets`, `public`) e substituir todos os arquivos de imagem (.svg, .png, .ico) pelos novos. Garantir que o logo principal, o ícone da aplicação e o favicon sejam atualizados.
+
+## 3. Remoção dos Componentes de UI Legados [done]
+### Dependencies: 27.1
+### Description: Excluir os componentes React e estilos CSS/SCSS associados aos overlays legados do OpenHud, especificamente os criados nas tarefas 12 e 15.
+### Details:
+Identificar e remover os arquivos de componentes, folhas de estilo e quaisquer importações relacionadas aos antigos overlays de HUD e de tarefas. O objetivo é limpar a base de código para preparar a implementação da nova interface, evitando conflitos e código morto.
+
+## 4. Desenvolvimento dos Novos Componentes React para a Interface Minimalista [done]
+### Dependencies: 27.3
+### Description: Criar um novo conjunto de componentes React que formarão a nova interface de usuário minimalista, servindo como o overlay principal do agente de IA.
+### Details:
+Implementar novos componentes React para exibir de forma unificada as funcionalidades que antes pertenciam aos overlays de HUD (Tarefa 12) e de tarefas (Tarefa 24). O design deve ser limpo, moderno e focado na clareza das informações do agente de IA.
+
+## 5. Integração da Nova UI com o Backend via Socket.io [done]
+### Dependencies: 27.4
+### Description: Conectar os novos componentes React ao backend para receber e exibir atualizações de estado do jogo e do agente de IA em tempo real, utilizando a conexão Socket.io existente.
+### Details:
+Implementar a lógica de cliente para escutar os eventos do Socket.io e atualizar o estado dos novos componentes React com os dados recebidos. Garantir que a nova interface unificada reflita com precisão e em tempo real as informações do backend.
+

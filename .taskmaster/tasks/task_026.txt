@@ -1,6 +1,6 @@
 # Task ID: 26
 # Title: Criação da Documentação Abrangente do Projeto
-# Status: pending
+# Status: done
 # Dependencies: 1, 2, 3, 6, 7, 12, 13, 15, 24, 25
 # Priority: high
 # Description: Criar uma documentação abrangente e bem-estruturada para o projeto, cobrindo a arquitetura, guias de instalação, documentação da API, guias de usuário e diretrizes de contribuição.

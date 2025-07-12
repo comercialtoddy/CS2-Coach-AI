@@ -8,12 +8,10 @@
 import express from 'express';
 import {
   getProgressStats,
-  simulateGameEvent,
   getPlayerProgress,
   startTracker,
   stopTracker,
-  healthCheck,
-  testProgressPipeline
+  healthCheck
 } from '../controllers/taskProgressController.js';
 
 const router = express.Router();
@@ -53,30 +51,7 @@ router.post('/start', startTracker);
 router.post('/stop', stopTracker);
 
 // ===== Testing and Simulation Routes =====
-
-/**
- * POST /api/progress/simulate-event
- * Manually trigger a game event for testing purposes
- * 
- * Body:
- * {
- *   steamId: string,
- *   eventType: string,
- *   eventData?: object
- * }
- */
-router.post('/simulate-event', simulateGameEvent);
-
-/**
- * POST /api/progress/test
- * Test the complete task progress pipeline
- * 
- * Body:
- * {
- *   steamId: string
- * }
- */
-router.post('/test', testProgressPipeline);
+// Note: Testing routes are temporarily disabled
 
 // ===== Information Route =====
 
@@ -97,8 +72,8 @@ router.get('/', (req, res) => {
         health: 'GET /api/progress/health',
         start: 'POST /api/progress/start',
         stop: 'POST /api/progress/stop',
-        simulateEvent: 'POST /api/progress/simulate-event',
-        test: 'POST /api/progress/test'
+        // simulateEvent: 'POST /api/progress/simulate-event', // Temporarily disabled
+        // test: 'POST /api/progress/test' // Temporarily disabled
       },
       capabilities: [
         'Real-time task progress tracking via GSI events',
@@ -123,4 +98,4 @@ router.get('/', (req, res) => {
   });
 });
 
-export default router; 
+export default router;

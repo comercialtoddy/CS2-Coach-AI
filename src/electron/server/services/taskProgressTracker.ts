@@ -10,6 +10,7 @@ import { CSGO, CSGORaw } from 'csgogsi';
 import { GSI } from '../sockets/GSI.js';
 import { TaskGenerationService, GeneratedTask, TaskStatus } from './taskGenerationServices.js';
 import { MemoryService } from '../ai/memory/MemoryService.js';
+import { TaskCriteria } from '../../../types/performance.js';
 
 export interface GameEvent {
   type: string;
@@ -400,13 +401,45 @@ export class TaskProgressTracker extends EventEmitter {
   }
 
   private isClutchSituation(steamId: string, roundData: any): boolean {
-    // This would need more sophisticated logic based on round data
-    return false; // Placeholder
+    if (!this.lastGameState || !roundData) return false;
+
+    // Get the player's team
+    const player = this.lastGameState.players.find(p => p.steamid === steamId);
+    if (!player) return false;
+
+    const playerTeam = player.team.side;
+    const enemyTeam = playerTeam === 'CT' ? 'T' : 'CT';
+
+    // Count alive teammates and enemies
+    const aliveTeammates = this.lastGameState.players.filter(p => 
+      p.team.side === playerTeam && 
+      p.steamid !== steamId && 
+      p.state.health > 0
+    ).length;
+
+    const aliveEnemies = this.lastGameState.players.filter(p => 
+      p.team.side === enemyTeam && 
+      p.state.health > 0
+    ).length;
+
+    // It's a clutch if player is alone against 1 or more enemies
+    return aliveTeammates === 0 && aliveEnemies > 0;
   }
 
   private getEnemyCount(steamId: string): number {
-    // Count enemies alive when clutch happened
-    return 1; // Placeholder
+    if (!this.lastGameState) return 0;
+
+    // Get the player's team
+    const player = this.lastGameState.players.find(p => p.steamid === steamId);
+    if (!player) return 0;
+
+    const enemyTeam = player.team.side === 'CT' ? 'T' : 'CT';
+
+    // Count alive enemies
+    return this.lastGameState.players.filter(p => 
+      p.team.side === enemyTeam && 
+      p.state.health > 0
+    ).length;
   }
 
   private getMultiKillType(killCount: number): string {
@@ -447,6 +480,137 @@ export class TaskProgressTracker extends EventEmitter {
       lastUpdate: new Date()
     };
   }
+
+  /**
+   * Check if a task criteria is met for a given event
+   * @param criteria - Task completion criteria
+   * @param event - Game event to check against
+   * @param currentProgress - Current progress data
+   * @returns Whether the criteria is satisfied
+   */
+  private async checkTaskCriteria(
+    criteria: TaskCriteria,
+    event: GameEvent,
+    currentProgress: any
+  ): Promise<boolean> {
+    try {
+      // Parse criteria if it's a string
+      const parsedCriteria = typeof criteria === 'string' ? JSON.parse(criteria) : criteria;
+      
+      // Check event type match
+      if (parsedCriteria.eventType && parsedCriteria.eventType !== event.type) {
+        return false;
+      }
+      
+      // Check specific criteria based on event type
+      switch (event.type) {
+        case 'player_kill':
+          if (parsedCriteria.killCount) {
+            const currentKills = (currentProgress.kills || 0) + (event.data.count || 1);
+            return currentKills >= parsedCriteria.killCount;
+          }
+          if (parsedCriteria.weapon && event.data.weapon !== parsedCriteria.weapon) {
+            return false;
+          }
+          break;
+          
+        case 'bomb_plant':
+          if (parsedCriteria.site && event.data.site !== parsedCriteria.site) {
+            return false;
+          }
+          break;
+          
+        case 'flash_assist':
+          if (parsedCriteria.assistCount) {
+            const currentAssists = (currentProgress.assists || 0) + (event.data.count || 1);
+            return currentAssists >= parsedCriteria.assistCount;
+          }
+          break;
+          
+        case 'round_win':
+          if (parsedCriteria.winCondition && event.data.condition !== parsedCriteria.winCondition) {
+            return false;
+          }
+          break;
+          
+        default:
+          // For other event types, check generic conditions
+          break;
+      }
+      
+      // Check map-specific criteria
+      if (parsedCriteria.mapName && event.mapName !== parsedCriteria.mapName) {
+        return false;
+      }
+      
+      // Check team side criteria
+      if (parsedCriteria.teamSide && event.teamSide !== parsedCriteria.teamSide) {
+        return false;
+      }
+      
+      // Check time-based criteria
+      if (parsedCriteria.timeLimit) {
+        const taskCreatedTime = new Date(currentProgress.created_at || Date.now());
+        const timePassed = Date.now() - taskCreatedTime.getTime();
+        if (timePassed > parsedCriteria.timeLimit * 1000) {
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error checking task criteria:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Calculate progress percentage for a task
+   * @param task - The task to calculate progress for
+   * @param events - Recent events for the player
+   * @returns Progress percentage (0-100)
+   */
+  private calculateTaskProgress(task: any, events: GameEvent[]): number {
+    try {
+      const criteria = typeof task.completion_criteria === 'string' 
+        ? JSON.parse(task.completion_criteria) 
+        : task.completion_criteria;
+      
+      // Parse current progress
+      const currentProgress = typeof task.progress === 'string' 
+        ? JSON.parse(task.progress) 
+        : task.progress;
+      
+      // Calculate progress based on criteria type
+      if (criteria.killCount) {
+        const currentKills = currentProgress.kills || 0;
+        return Math.min(100, (currentKills / criteria.killCount) * 100);
+      }
+      
+      if (criteria.assistCount) {
+        const currentAssists = currentProgress.assists || 0;
+        return Math.min(100, (currentAssists / criteria.assistCount) * 100);
+      }
+      
+      if (criteria.roundWins) {
+        const currentWins = currentProgress.roundWins || 0;
+        return Math.min(100, (currentWins / criteria.roundWins) * 100);
+      }
+      
+      // For boolean criteria (bomb plant, defuse, etc.)
+      if (criteria.eventType && ['bomb_plant', 'bomb_defuse', 'clutch_win'].includes(criteria.eventType)) {
+        return currentProgress.completed ? 100 : 0;
+      }
+      
+      // Default progress calculation
+      const totalSteps = criteria.totalSteps || 1;
+      const completedSteps = currentProgress.completedSteps || 0;
+      return Math.min(100, (completedSteps / totalSteps) * 100);
+    } catch (error) {
+      console.error('Error calculating task progress:', error);
+      return 0;
+    }
+  }
 }
 
 /**
@@ -463,4 +627,4 @@ export async function createTaskProgressTracker(
   return tracker;
 }
 
-export default TaskProgressTracker; 
+export default TaskProgressTracker;

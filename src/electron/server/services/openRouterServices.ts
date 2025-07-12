@@ -29,9 +29,28 @@ export interface OpenRouterModel {
   description?: string;
   context_length?: number;
   pricing?: {
-    prompt: number;
-    completion: number;
+    prompt: string;
+    completion: string;
+    image?: string;
+    request?: string;
+    web_search?: string;
+    internal_reasoning?: string;
   };
+  // Novos campos baseados na API da OpenRouter
+  created: number;
+  architecture?: {
+    input_modalities?: string[];
+    output_modalities?: string[];
+    tokenizer?: string;
+    instruct_type?: string;
+  };
+  top_provider?: {
+    is_moderated?: boolean;
+  };
+  canonical_slug?: string;
+  hugging_face_id?: string;
+  per_request_limits?: Record<string, any>;
+  supported_parameters?: string[];
 }
 
 /**
@@ -1089,4 +1108,467 @@ export async function testConnection(): Promise<{
       }
     };
   }
+} 
+
+/**
+ * Enhanced model interface with computed properties
+ */
+export interface EnhancedOpenRouterModel extends OpenRouterModel {
+  category: 'fast' | 'balanced' | 'smart' | 'creative' | 'reasoning' | 'cheap' | 'other';
+  costPerMToken: {
+    input: number;
+    output: number;
+  };
+  supportsStructuredOutputs: boolean;
+  supportsToolCalling: boolean;
+  supportsImages: boolean;
+  quality: 'low' | 'medium' | 'high' | 'premium';
+  performance: {
+    speed: number; // 1-10 scale
+    cost: number; // 1-10 scale (1 = expensive, 10 = cheap)
+    intelligence: number; // 1-10 scale
+  };
+}
+
+/**
+ * Cache configuration for models
+ */
+interface ModelCache {
+  models: EnhancedOpenRouterModel[];
+  lastFetch: number;
+  categories: Record<string, EnhancedOpenRouterModel[]>;
+}
+
+// Cache global para modelos
+let modelCache: ModelCache | null = null;
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
+
+/**
+ * Enhanced model filtering and sorting options
+ */
+export interface ModelFilters {
+  category?: string;
+  maxCostPerMToken?: number;
+  minContextLength?: number;
+  supportsStructuredOutputs?: boolean;
+  supportsToolCalling?: boolean;
+  supportsImages?: boolean;
+  quality?: ('low' | 'medium' | 'high' | 'premium')[];
+  providers?: string[];
+  sortBy?: 'cost' | 'speed' | 'intelligence' | 'context_length' | 'name';
+  sortOrder?: 'asc' | 'desc';
+  limit?: number;
+}
+
+/**
+ * Categorize and enhance model data
+ */
+function enhanceModelData(model: OpenRouterModel): EnhancedOpenRouterModel {
+  const inputCost = parseFloat(model.pricing?.prompt || '0');
+  const outputCost = parseFloat(model.pricing?.completion || '0');
+  
+  // Categorização baseada no ID do modelo e características
+  const category = categorizeModel(model);
+  
+  // Calcula custos por milhão de tokens
+  const costPerMToken = {
+    input: inputCost * 1_000_000,
+    output: outputCost * 1_000_000
+  };
+  
+  // Detecção de recursos suportados
+  const supportsStructuredOutputs = model.supported_parameters?.includes('response_format') || false;
+  const supportsToolCalling = model.supported_parameters?.includes('tools') || false;
+  const supportsImages = model.architecture?.input_modalities?.includes('image') || false;
+  
+  // Classificação de qualidade baseada no nome e provedor
+  const quality = determineQuality(model);
+  
+  // Métricas de performance (escala 1-10)
+  const performance = calculatePerformance(model, costPerMToken);
+  
+  return {
+    ...model,
+    category,
+    costPerMToken,
+    supportsStructuredOutputs,
+    supportsToolCalling,
+    supportsImages,
+    quality,
+    performance
+  };
+}
+
+/**
+ * Categorize model based on ID and characteristics
+ */
+function categorizeModel(model: OpenRouterModel): EnhancedOpenRouterModel['category'] {
+  const id = model.id.toLowerCase();
+  const name = model.name.toLowerCase();
+  
+  // Modelos rápidos e baratos
+  if (id.includes('3.5-turbo') || id.includes('llama-3.1-8b') || id.includes('mistral-7b')) {
+    return 'fast';
+  }
+  
+  // Modelos inteligentes/premium
+  if (id.includes('gpt-4') || id.includes('claude-3') || id.includes('gemini-pro')) {
+    return 'smart';
+  }
+  
+  // Modelos creativos
+  if (id.includes('llama-2-70b') || name.includes('creative') || id.includes('mixtral')) {
+    return 'creative';
+  }
+  
+  // Modelos de raciocínio
+  if (id.includes('reasoning') || id.includes('r1') || id.includes('deepseek')) {
+    return 'reasoning';
+  }
+  
+  // Modelos baratos
+  if (parseFloat(model.pricing?.prompt || '1') < 0.000001) {
+    return 'cheap';
+  }
+  
+  // Modelos equilibrados (padrão)
+  return 'balanced';
+}
+
+/**
+ * Determine model quality tier
+ */
+function determineQuality(model: OpenRouterModel): EnhancedOpenRouterModel['quality'] {
+  const id = model.id.toLowerCase();
+  const inputCost = parseFloat(model.pricing?.prompt || '0');
+  
+  // Premium: GPT-4, Claude-3, modelos caros
+  if (id.includes('gpt-4') || id.includes('claude-3') || inputCost > 0.00001) {
+    return 'premium';
+  }
+  
+  // High: Modelos de boa qualidade
+  if (id.includes('gpt-3.5') || id.includes('gemini') || id.includes('llama-3')) {
+    return 'high';
+  }
+  
+  // Medium: Modelos intermediários
+  if (id.includes('mixtral') || id.includes('llama-2')) {
+    return 'medium';
+  }
+  
+  // Low: Modelos básicos
+  return 'low';
+}
+
+/**
+ * Calculate performance metrics
+ */
+function calculatePerformance(model: OpenRouterModel, costPerMToken: { input: number; output: number }) {
+  const avgCost = (costPerMToken.input + costPerMToken.output) / 2;
+  const contextLength = model.context_length || 4096;
+  
+  // Speed: baseado no tamanho do modelo (inferido do nome)
+  const speed = model.id.includes('3.5-turbo') || model.id.includes('7b') ? 9 :
+               model.id.includes('13b') || model.id.includes('mixtral') ? 7 :
+               model.id.includes('70b') || model.id.includes('gpt-4') ? 5 : 6;
+  
+  // Cost: inverso do custo (1 = caro, 10 = barato)
+  const cost = avgCost < 1 ? 10 : avgCost < 10 ? 8 : avgCost < 50 ? 6 : avgCost < 100 ? 4 : 2;
+  
+  // Intelligence: baseado no nome e características
+  const intelligence = model.id.includes('gpt-4') || model.id.includes('claude-3') ? 10 :
+                      model.id.includes('gpt-3.5') || model.id.includes('gemini') ? 8 :
+                      model.id.includes('llama-3') || model.id.includes('mixtral') ? 7 :
+                      model.id.includes('llama-2') ? 6 : 5;
+  
+  return { speed, cost, intelligence };
+}
+
+/**
+ * Get enhanced models with caching and filtering
+ */
+export async function getEnhancedModels(filters: ModelFilters = {}): Promise<{
+  models: EnhancedOpenRouterModel[];
+  metadata: {
+    totalModels: number;
+    categories: Record<string, number>;
+    cached: boolean;
+    lastUpdate: string;
+  };
+}> {
+  // Verifica se o cache é válido
+  const now = Date.now();
+  const isCacheValid = !!(modelCache && (now - modelCache.lastFetch) < CACHE_DURATION);
+  
+  if (!isCacheValid) {
+    console.log('Fetching fresh models from OpenRouter API...');
+    
+    try {
+      const rawModels = await getAvailableModels();
+      const enhancedModels = rawModels.map(enhanceModelData);
+      
+      // Organiza por categorias
+      const categories: Record<string, EnhancedOpenRouterModel[]> = {};
+      enhancedModels.forEach(model => {
+        if (!categories[model.category]) {
+          categories[model.category] = [];
+        }
+        categories[model.category].push(model);
+      });
+      
+      // Atualiza cache
+      modelCache = {
+        models: enhancedModels,
+        lastFetch: now,
+        categories
+      };
+      
+      console.log(`✅ Cached ${enhancedModels.length} models from OpenRouter`);
+    } catch (error) {
+      console.error('Failed to fetch models from OpenRouter:', error);
+      
+      // Se falhar e não há cache, retorna vazio
+      if (!modelCache) {
+        return {
+          models: [],
+          metadata: {
+            totalModels: 0,
+            categories: {},
+            cached: false,
+            lastUpdate: new Date().toISOString()
+          }
+        };
+      }
+      
+      // Usa cache antigo se disponível
+      console.log('Using stale cache due to API error');
+    }
+  }
+  
+  // Aplica filtros
+  let filteredModels = [...modelCache!.models];
+  
+  if (filters.category) {
+    filteredModels = filteredModels.filter(m => m.category === filters.category);
+  }
+  
+  if (filters.maxCostPerMToken) {
+    filteredModels = filteredModels.filter(m => 
+      m.costPerMToken.input <= filters.maxCostPerMToken! && 
+      m.costPerMToken.output <= filters.maxCostPerMToken!
+    );
+  }
+  
+  if (filters.minContextLength) {
+    filteredModels = filteredModels.filter(m => 
+      (m.context_length || 0) >= filters.minContextLength!
+    );
+  }
+  
+  if (filters.supportsStructuredOutputs !== undefined) {
+    filteredModels = filteredModels.filter(m => 
+      m.supportsStructuredOutputs === filters.supportsStructuredOutputs
+    );
+  }
+  
+  if (filters.supportsToolCalling !== undefined) {
+    filteredModels = filteredModels.filter(m => 
+      m.supportsToolCalling === filters.supportsToolCalling
+    );
+  }
+  
+  if (filters.supportsImages !== undefined) {
+    filteredModels = filteredModels.filter(m => 
+      m.supportsImages === filters.supportsImages
+    );
+  }
+  
+  if (filters.quality && filters.quality.length > 0) {
+    filteredModels = filteredModels.filter(m => 
+      filters.quality!.includes(m.quality)
+    );
+  }
+  
+  if (filters.providers && filters.providers.length > 0) {
+    filteredModels = filteredModels.filter(m => 
+      filters.providers!.some(provider => 
+        m.id.toLowerCase().includes(provider.toLowerCase())
+      )
+    );
+  }
+  
+  // Ordenação
+  if (filters.sortBy) {
+    filteredModels.sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (filters.sortBy) {
+        case 'cost':
+          aValue = a.costPerMToken.input + a.costPerMToken.output;
+          bValue = b.costPerMToken.input + b.costPerMToken.output;
+          break;
+        case 'speed':
+          aValue = a.performance.speed;
+          bValue = b.performance.speed;
+          break;
+        case 'intelligence':
+          aValue = a.performance.intelligence;
+          bValue = b.performance.intelligence;
+          break;
+        case 'context_length':
+          aValue = a.context_length || 0;
+          bValue = b.context_length || 0;
+          break;
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (filters.sortOrder === 'desc') {
+        return bValue > aValue ? 1 : bValue < aValue ? -1 : 0;
+      }
+      return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+    });
+  }
+  
+  // Limita resultados
+  if (filters.limit) {
+    filteredModels = filteredModels.slice(0, filters.limit);
+  }
+  
+  // Estatísticas das categorias
+  const categoryCounts: Record<string, number> = {};
+  modelCache!.models.forEach(model => {
+    categoryCounts[model.category] = (categoryCounts[model.category] || 0) + 1;
+  });
+  
+  return {
+    models: filteredModels,
+    metadata: {
+      totalModels: modelCache!.models.length,
+      categories: categoryCounts,
+      cached: isCacheValid,
+      lastUpdate: new Date(modelCache!.lastFetch).toISOString()
+    }
+  };
+}
+
+/**
+ * Get recommended models for specific use cases
+ */
+export async function getRecommendedModels(useCase: 'coding' | 'writing' | 'analysis' | 'chat' | 'reasoning' | 'cheap' | 'fast' | 'creative'): Promise<EnhancedOpenRouterModel[]> {
+  const filters: ModelFilters = {
+    sortBy: 'intelligence',
+    sortOrder: 'desc',
+    limit: 5
+  };
+  
+  switch (useCase) {
+    case 'coding':
+      filters.category = 'smart';
+      filters.supportsStructuredOutputs = true;
+      break;
+    case 'writing':
+      filters.category = 'creative';
+      filters.minContextLength = 8000;
+      break;
+    case 'analysis':
+      filters.category = 'smart';
+      filters.minContextLength = 16000;
+      break;
+    case 'chat':
+      filters.category = 'balanced';
+      filters.sortBy = 'speed';
+      break;
+    case 'reasoning':
+      filters.category = 'reasoning';
+      filters.sortBy = 'intelligence';
+      break;
+    case 'creative':
+      filters.category = 'creative';
+      filters.sortBy = 'intelligence';
+      break;
+    case 'cheap':
+      filters.category = 'cheap';
+      filters.sortBy = 'cost';
+      filters.sortOrder = 'desc';
+      break;
+    case 'fast':
+      filters.category = 'fast';
+      filters.sortBy = 'speed';
+      filters.sortOrder = 'desc';
+      break;
+  }
+  
+  const result = await getEnhancedModels(filters);
+  return result.models;
+}
+
+/**
+ * Get dynamic model recommendations to replace DEFAULT_MODELS
+ */
+export async function getDynamicDefaultModels(): Promise<Record<string, string>> {
+  try {
+    const recommendations = await Promise.all([
+      getRecommendedModels('fast'),
+      getRecommendedModels('chat'),
+      getRecommendedModels('reasoning'),
+      getRecommendedModels('creative'),
+      getRecommendedModels('analysis'),
+      getRecommendedModels('cheap')
+    ]);
+    
+    return {
+      FAST: recommendations[0][0]?.id || 'openai/gpt-3.5-turbo',
+      BALANCED: recommendations[1][0]?.id || 'anthropic/claude-3-sonnet-20240229',
+      SMART: recommendations[2][0]?.id || 'anthropic/claude-3-sonnet-20240229',
+      CREATIVE: recommendations[3][0]?.id || 'meta-llama/llama-2-70b-chat',
+      REASONING: recommendations[4][0]?.id || 'google/gemini-pro',
+      CHEAP: recommendations[5][0]?.id || 'mistral/mistral-7b-instruct'
+    };
+  } catch (error) {
+    console.error('Failed to get dynamic default models:', error);
+    return DEFAULT_MODELS;
+  }
+}
+
+/**
+ * Clear model cache (useful for testing or force refresh)
+ */
+export function clearModelCache(): void {
+  modelCache = null;
+  console.log('Model cache cleared');
+}
+
+/**
+ * Get cache status
+ */
+export function getCacheStatus(): {
+  isCached: boolean;
+  lastFetch: string | null;
+  modelsCount: number;
+  timeUntilRefresh: number;
+} {
+  if (!modelCache) {
+    return {
+      isCached: false,
+      lastFetch: null,
+      modelsCount: 0,
+      timeUntilRefresh: 0
+    };
+  }
+  
+  const now = Date.now();
+  const timeUntilRefresh = Math.max(0, CACHE_DURATION - (now - modelCache.lastFetch));
+  
+  return {
+    isCached: true,
+    lastFetch: new Date(modelCache.lastFetch).toISOString(),
+    modelsCount: modelCache.models.length,
+    timeUntilRefresh
+  };
 } 

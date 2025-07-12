@@ -507,7 +507,7 @@ export class ToolManager {
   }>> {
     const results: Record<string, any> = {};
 
-    for (const [name, entry] of this.tools) {
+    for (const [name, entry] of Array.from(this.tools.entries())) {
       if ('healthCheck' in entry.tool && typeof (entry.tool as ITool).healthCheck === 'function') {
         try {
           results[name] = await (entry.tool as ITool).healthCheck!();
@@ -534,7 +534,7 @@ export class ToolManager {
    */
   public clear(): void {
     // Call dispose on all tools
-    for (const [name, entry] of this.tools) {
+    for (const [name, entry] of Array.from(this.tools.entries())) {
       if (entry.tool.dispose) {
         entry.tool.dispose().catch(error => {
           console.error(`Error during tool cleanup for '${name}':`, error);
@@ -604,4 +604,4 @@ export class ToolManager {
 /**
  * Singleton instance of the tool manager
  */
-export const toolManager = new ToolManager(); 
+export const toolManager = new ToolManager();

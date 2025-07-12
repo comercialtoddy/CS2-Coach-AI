@@ -1,0 +1,43 @@
+# Task ID: 32
+# Title: Testes End-to-End e Validação Final do Sistema
+# Status: pending
+# Dependencies: 28, 29, 30, 31
+# Priority: high
+# Description: Realizar testes completos end-to-end de todo o sistema CS2 Coach AI, validando o fluxo completo desde a inicialização até a exibição de feedback e relatórios. O objetivo é garantir a estabilidade, performance e usabilidade do produto final, documentando e corrigindo quaisquer problemas críticos encontrados.
+# Details:
+Esta tarefa é a fase final de garantia de qualidade antes do lançamento. O processo deve ser metódico e abranger todas as funcionalidades integradas. 1. **Criação do Plano de Teste:** Desenvolver um guia de teste detalhado e um checklist de funcionalidades. O checklist deve cobrir todos os fluxos de usuário e funcionalidades chave, incluindo: Inicialização do aplicativo e carregamento da UI, conexão Backend-Frontend via Socket.io, recebimento e processamento de dados GSI, orquestração da IA (chamadas de LLM, ferramentas de dados), geração e exibição de overlays (HUD, Tarefas, Player de Mídia), captura automática de screenshots e videoclipes, geração de áudio TTS e persistência de dados no Dashboard. 2. **Execução dos Testes:** Executar o plano de teste em um ambiente que simule o uso real, jogando múltiplas partidas de CS2. 3. **Documentação de Bugs:** Registrar todos os bugs, falhas e problemas de usabilidade encontrados em um sistema de rastreamento, incluindo passos para reprodução, comportamento esperado vs. real e severidade. 4. **Correção de Problemas Críticos:** Trabalhar com a equipe para priorizar e corrigir todos os bugs críticos e de alta prioridade. 5. **Validação de Performance:** Medir e documentar o impacto no FPS do jogo, latência do feedback da IA e tempo de resposta da UI.
+
+# Test Strategy:
+A conclusão bem-sucedida desta tarefa será verificada através dos seguintes critérios: 1. **Checklist de Teste Preenchido:** Apresentação do checklist de funcionalidades completamente preenchido, confirmando que 100% dos itens foram testados. 2. **Relatório de Bugs e Resoluções:** Apresentação do relatório de bugs, demonstrando que todos os problemas críticos e de alta prioridade foram resolvidos, verificados e fechados. 3. **Demonstração de Validação:** Realização de uma sessão de demonstração ao vivo, executando o fluxo completo do sistema sem encontrar falhas críticas. 4. **Aprovação do Guia de Teste:** O guia de teste final deve ser revisado e aprovado, servindo como documentação para futuros testes de regressão.
+
+# Subtasks:
+## 1. Elaboração do Plano de Teste E2E e Configuração do Ambiente [pending]
+### Dependencies: None
+### Description: Criar um plano de teste detalhado e um checklist abrangente para todas as funcionalidades do sistema. Além disso, preparar o ambiente de teste para garantir que ele simule de forma realista o ambiente de um usuário final.
+### Details:
+Desenvolver um documento de plano de teste que inclua: 1. Checklist de funcionalidades a serem validadas (Inicialização, Conexão Socket.io, Processamento GSI, Orquestração IA, Overlays, Captura de Mídia, TTS, Dashboard). 2. Casos de teste específicos para cada item do checklist, com passos claros e resultados esperados. 3. Configuração de uma máquina de teste com CS2 instalado, a última build do CS2 Coach AI e ferramentas de monitoramento de performance (ex: MSI Afterburner, Fraps).
+
+## 2. Execução dos Testes Funcionais End-to-End [pending]
+### Dependencies: None
+### Description: Executar sistematicamente todos os casos de teste definidos no plano para validar a funcionalidade de ponta a ponta do sistema, desde a inicialização até a análise pós-partida no dashboard.
+### Details:
+Seguir o checklist e os casos de teste do subtask anterior. Jogar múltiplas partidas completas de CS2, tentando ativamente usar todas as funcionalidades do coach AI. Validar que: 1. Os dados do GSI são recebidos e processados corretamente. 2. A IA fornece feedback relevante e em tempo hábil. 3. Todos os overlays (HUD, Tarefas, Player de Mídia) são exibidos corretamente e sem falhas visuais. 4. A captura de screenshots e vídeos é acionada e salva nos locais corretos. 5. O áudio TTS é gerado e reproduzido de forma clara. 6. Os dados da partida são persistidos e exibidos corretamente no dashboard.
+
+## 3. Execução dos Testes de Performance e Avaliação de Usabilidade [pending]
+### Dependencies: None
+### Description: Medir o impacto do aplicativo no desempenho do jogo e avaliar a experiência geral do usuário (UX/UI) para garantir que o produto seja performático e intuitivo.
+### Details:
+Durante a execução dos testes funcionais, monitorar e documentar as seguintes métricas de performance: 1. Queda de FPS (Frames Per Second) no jogo com o aplicativo rodando em primeiro e segundo plano. 2. Latência entre um evento no jogo e o feedback correspondente da IA. 3. Tempo de resposta da interface do usuário (UI). Para a avaliação de usabilidade, analisar: 1. Intuitividade do processo de instalação e configuração. 2. Clareza e utilidade das informações nos overlays. 3. Nível de intrusão dos elementos visuais e sonoros durante o jogo.
+
+## 4. Registro Detalhado e Triagem de Bugs e Problemas [pending]
+### Dependencies: None
+### Description: Documentar formalmente todos os bugs, falhas de performance e problemas de usabilidade encontrados durante a fase de execução em um sistema de rastreamento de problemas.
+### Details:
+Para cada problema identificado, criar um ticket no sistema de rastreamento (ex: Jira, GitHub Issues) contendo: 1. Título claro e conciso. 2. Passos detalhados para reproduzir o problema. 3. Comportamento esperado versus o comportamento real observado. 4. Anexos relevantes como screenshots, vídeos e arquivos de log. 5. Classificação de severidade (Crítico, Alto, Médio, Baixo) e prioridade. Realizar uma reunião de triagem com a equipe para revisar e priorizar os tickets.
+
+## 5. Validação das Correções e Geração do Relatório Final de Testes [pending]
+### Dependencies: None
+### Description: Verificar as correções implementadas pela equipe de desenvolvimento para os bugs críticos e de alta prioridade, realizar testes de regressão e compilar um relatório final sobre o estado do produto.
+### Details:
+Após a equipe de desenvolvimento entregar uma nova build com as correções, executar novamente os casos de teste que falharam para confirmar que os problemas foram resolvidos. Realizar um 'smoke test' rápido nas principais funcionalidades para garantir que as correções não introduziram novos bugs (regressão). Por fim, criar um relatório de resumo dos testes contendo: visão geral do processo, métricas de testes (passou/falhou), lista de problemas conhecidos não resolvidos (de baixa prioridade) e uma recomendação final de 'Go/No-Go' para o lançamento.
+

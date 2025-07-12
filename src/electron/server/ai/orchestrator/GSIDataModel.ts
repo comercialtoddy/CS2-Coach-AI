@@ -1056,8 +1056,75 @@ export class GSIInputHandler {
     return { contexts, changes, urgency };
   }
 
-  // Placeholder methods for complex analysis (would be implemented based on specific requirements)
-  private updateBehaviorTracking(snapshot: GameStateSnapshot): void { /* Implementation */ }
+  // Methods for complex behavior analysis
+  private updateBehaviorTracking(snapshot: GameStateSnapshot): void {
+    if (!snapshot.player?.steamId) return;
+
+    const playerId = snapshot.player.steamId;
+    const currentBehavior = snapshot.player.behaviorAnalysis;
+    
+    if (!currentBehavior) return;
+
+    // Get existing behavior history or create new array
+    const history = this.behaviorHistory.get(playerId) || [];
+    
+    // Add current behavior to history
+    history.push({
+      ...currentBehavior,
+      timestamp: Date.now()
+    } as PlayerBehaviorAnalysis & { timestamp: number });
+    
+    // Keep only last 50 behavior snapshots to prevent memory bloat
+    if (history.length > 50) {
+      history.splice(0, history.length - 50);
+    }
+    
+    // Update the behavior history map
+    this.behaviorHistory.set(playerId, history);
+    
+    // Analyze trends and patterns
+    this.analyzeBehaviorTrends(playerId, history);
+  }
+
+  private analyzeBehaviorTrends(playerId: string, history: (PlayerBehaviorAnalysis & { timestamp: number })[]): void {
+    if (history.length < 3) return; // Need at least 3 data points for trend analysis
+
+    const recent = history.slice(-10); // Analyze last 10 behaviors
+    const older = history.slice(-20, -10); // Compare with previous 10
+
+    if (older.length === 0) return;
+
+    // Calculate trend changes
+    const trends = {
+      aggression: this.calculateTrend(recent.map(h => h.aggression), older.map(h => h.aggression)),
+      caution: this.calculateTrend(recent.map(h => h.caution), older.map(h => h.caution)),
+      teamplay: this.calculateTrend(recent.map(h => h.teamplay), older.map(h => h.teamplay)),
+      positioning: this.calculateTrend(recent.map(h => h.positioning), older.map(h => h.positioning)),
+      economy: this.calculateTrend(recent.map(h => h.economy), older.map(h => h.economy))
+    };
+
+    // Store trends for future analysis (could be used by AI coaching system)
+    console.log(`Player ${playerId} behavior trends:`, trends);
+  }
+
+  private calculateTrend(recent: number[], older: number[]): { direction: 'improving' | 'declining' | 'stable', magnitude: number } {
+    const recentAvg = recent.reduce((sum, val) => sum + val, 0) / recent.length;
+    const olderAvg = older.reduce((sum, val) => sum + val, 0) / older.length;
+    const difference = recentAvg - olderAvg;
+    const magnitude = Math.abs(difference);
+
+    let direction: 'improving' | 'declining' | 'stable';
+    if (magnitude < 0.05) {
+      direction = 'stable';
+    } else if (difference > 0) {
+      direction = 'improving';
+    } else {
+      direction = 'declining';
+    }
+
+    return { direction, magnitude };
+  }
+
   private calculateAggression(player: CSGO['player'], data: CSGO): number {
     if (!player || !player.state) return 0.5;
 
@@ -1541,8 +1608,104 @@ export class GSIInputHandler {
 
   private calculateTeamSupport(players: any[]): number {
     // Calculate how well players are positioned to support each other
-    // This is a placeholder implementation - you should implement proper support calculation
-    return 0.5;
+    if (!players || players.length < 2) return 0;
+
+    const alivePlayers = players.filter(p => p && p.state?.health > 0 && p.position);
+    if (alivePlayers.length < 2) return 0;
+
+    let totalSupport = 0;
+    let supportPairs = 0;
+
+    // Check each pair of players for mutual support potential
+    for (let i = 0; i < alivePlayers.length; i++) {
+      for (let j = i + 1; j < alivePlayers.length; j++) {
+        const player1 = alivePlayers[i];
+        const player2 = alivePlayers[j];
+        
+        if (!player1.position || !player2.position) continue;
+
+        const distance = this.calculateDistance(
+          player1.position as [number, number, number],
+          player2.position as [number, number, number]
+        );
+
+        // Optimal support distance is between 500-1500 units
+        let supportScore = 0;
+        if (distance < 500) {
+          // Too close - vulnerable to grenades/flanks
+          supportScore = 0.3;
+        } else if (distance <= 1500) {
+          // Good support distance
+          supportScore = 1.0 - (Math.abs(distance - 1000) / 500);
+        } else if (distance <= 2500) {
+          // Acceptable support distance
+          supportScore = 0.5 - ((distance - 1500) / 2000);
+        } else {
+          // Too far for effective support
+          supportScore = 0.1;
+        }
+
+        // Bonus for line of sight
+        if (this.hasLineOfSight(
+          player1.position as [number, number, number],
+          player2.position as [number, number, number]
+        )) {
+          supportScore += 0.2;
+        }
+
+        // Bonus for covering different angles
+        const angleDifference = this.calculateAngleDifference(player1, player2);
+        if (angleDifference > 45) {
+          supportScore += 0.1;
+        }
+
+        totalSupport += Math.max(0, Math.min(1, supportScore));
+        supportPairs++;
+      }
+    }
+
+    return supportPairs > 0 ? totalSupport / supportPairs : 0;
+  }
+
+  private calculateAngleDifference(player1: any, player2: any): number {
+    // Calculate angle difference based on player positions and facing directions
+    if (!player1?.position || !player2?.position) return 0;
+
+    // If we have facing angles, use them directly
+    if (player1.forward && player2.forward) {
+      const angle1 = Math.atan2(player1.forward.y, player1.forward.x) * (180 / Math.PI);
+      const angle2 = Math.atan2(player2.forward.y, player2.forward.x) * (180 / Math.PI);
+      return this.normalizeAngleDifference(angle1, angle2);
+    }
+
+    // Fallback: calculate based on relative positions
+    const dx = player2.position[0] - player1.position[0];
+    const dy = player2.position[1] - player1.position[1];
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    
+    // Assume players are generally facing forward (0 degrees) and calculate difference
+    return Math.abs(angle) > 90 ? 180 - Math.abs(angle) : Math.abs(angle);
+  }
+
+  private normalizeAngleDifference(angle1: number, angle2: number): number {
+    // Normalize angles to 0-360 range
+    const normalizeAngle = (angle: number): number => {
+      angle = angle % 360;
+      return angle < 0 ? angle + 360 : angle;
+    };
+
+    const norm1 = normalizeAngle(angle1);
+    const norm2 = normalizeAngle(angle2);
+    
+    // Calculate the absolute difference
+    let diff = Math.abs(norm1 - norm2);
+    
+    // Take the smaller angle (shortest path)
+    if (diff > 180) {
+      diff = 360 - diff;
+    }
+    
+    return diff;
   }
 
   private calculateTeamEconomy(data: CSGO, side: 'CT' | 'T'): ExtendedTeamGameState['economy'] {
@@ -1641,4 +1804,4 @@ export function createGSIInputHandler(): GSIInputHandler {
 
 // ===== Export Default Instance =====
 
-export const defaultGSIHandler = createGSIInputHandler(); 
+export const defaultGSIHandler = createGSIInputHandler();

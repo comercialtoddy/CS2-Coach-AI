@@ -7,6 +7,8 @@
  * - Tool_UpdatePlayerProfile: Update player profiles in local database
  */
 
+import { Player } from '../../../UI/api/types.js';
+
 // ===== GSI Data Models =====
 
 /**
@@ -486,4 +488,4 @@ export interface ToolExecutionMetadata {
     networkRequests: number;
     databaseQueries: number;
   };
-} 
+}

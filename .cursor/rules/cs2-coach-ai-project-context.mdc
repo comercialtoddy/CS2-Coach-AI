@@ -3,11 +3,11 @@ description:
 globs: 
 alwaysApply: true
 ---
-# OpenHud Project Context & Structure
+# CS2 Coach AI Project Context & Structure
 
 ## Project Overview
 
-OpenHud is an Electron-based desktop application for managing CS:GO/CS2 HUD (Heads-Up Display) customizations. It provides a comprehensive interface for managing players, teams, matches, and HUD configurations with real-time game state integration.
+CS2 Coach AI is an Electron-based desktop application for managing CS:GO/CS2 HUD (Heads-Up Display) customizations. It provides a comprehensive interface for managing players, teams, matches, and HUD configurations with real-time game state integration.
 
 ## Core Architecture
 
@@ -108,7 +108,7 @@ OpenHud is an Electron-based desktop application for managing CS:GO/CS2 HUD (Hea
 ## Integration Points
 
 ### **CS:GO/CS2 Game Integration**
-- **Game State Integration**: [gamestate_integration_openhud.cfg](mdc:src/assets/gamestate_integration_openhud.cfg) - GSI configuration
+- **Game State Integration**:  [gamestate_integration_cs2coachai.cfg](mdc:src/assets/gamestate_integration_cs2coachai.cfg) - GSI configuration
 - **HUD Assets**: [defaultHud/](mdc:src/assets/defaultHud) - Default HUD templates and assets
 - **Observer Config**: [Observe.cfg](mdc:src/assets/Observe.cfg) - Game observer mode configuration
 

@@ -34,11 +34,9 @@ export {
 // Export taskProgressController with renamed healthCheck
 export {
     getProgressStats,
-    simulateGameEvent,
     getPlayerProgress,
     startTracker,
     stopTracker,
-    testProgressPipeline,
     healthCheck as taskProgressHealthCheck
 } from "./taskProgressController.js";
 

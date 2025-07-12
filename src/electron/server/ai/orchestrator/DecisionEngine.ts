@@ -834,7 +834,7 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
   private async applyDecisionRules(context: AIDecisionContext, analysis: ContextAnalysis): Promise<AIDecision[]> {
     const decisions: AIDecision[] = [];
     
-    for (const [ruleId, rule] of this.decisionRules) {
+    for (const [ruleId, rule] of Array.from(this.decisionRules.entries())) {
       // Check if rule applies to current context
       if (!rule.contexts.includes(analysis.gameContext)) continue;
       
@@ -1061,19 +1061,85 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
   }
 
   private prepareToolInput(toolName: string, decision: AIDecision | null, stepIndex: number): any {
-    // This is a placeholder - in a real implementation, this would involve
-    // complex logic to map the decision context to specific tool inputs.
-        return {
+    const baseInput = {
       gameState: decision?.context.gameState,
       memory: decision?.context.playerMemory,
       step: stepIndex,
-      // The following properties are examples and might not be used by all tools
-      // We are leaving them here for illustrative purposes.
       timeout: this.calculateOptimalTimeout(toolName),
       retryPolicy: this.getRetryPolicy(toolName),
       fallback: this.getFallbackTool(toolName),
       expectedOutput: this.getExpectedOutput(toolName)
     };
+
+    // Tool-specific input preparation
+    switch (toolName) {
+      case 'Tool_GetGSIInfo':
+        return {
+          ...baseInput,
+          requestedData: ['player', 'team', 'round', 'map'],
+          includeHistory: true
+        };
+
+      case 'Tool_AnalyzePositioning':
+        return {
+          ...baseInput,
+          playerPosition: decision?.context.gameState?.processed?.playerState?.position,
+          teamPositions: [], // TeamGameState doesn't contain member positions
+          mapData: decision?.context.gameState?.processed?.mapState,
+          analysisType: 'tactical'
+        };
+
+      case 'Tool_CallLLM':
+        return {
+          ...baseInput,
+          prompt: this.generateLLMPrompt(decision),
+          maxTokens: 500,
+          temperature: 0.7,
+          context: decision?.context
+        };
+
+      case 'Tool_SuggestEconomyBuy':
+        return {
+          ...baseInput,
+          playerMoney: decision?.context.gameState?.processed?.playerState?.money,
+          teamMoney: decision?.context.gameState?.processed?.teamState?.economy?.totalMoney,
+          // roundType not available in processed gameState
+          equipment: decision?.context.gameState?.processed?.playerState?.weapons
+        };
+
+      case 'Tool_GetTrackerGGStats':
+        return {
+          ...baseInput,
+          playerId: decision?.context.gameState?.processed?.playerState?.steamId,
+          statsType: ['recent', 'overall'],
+          includeComparison: true
+        };
+
+      case 'Tool_UpdatePlayerProfile':
+        return {
+          ...baseInput,
+          profileData: this.extractProfileData(decision),
+          updateType: 'performance'
+        };
+
+      case 'Tool_PiperTTS':
+        return {
+          ...baseInput,
+          text: decision?.rationale || '',
+          voice: 'default',
+          speed: 1.0
+        };
+
+      case 'Tool_SummarizeConversation':
+        return {
+          ...baseInput,
+          conversationHistory: decision?.context.playerMemory?.slice(-10) || [],
+          summaryType: 'coaching'
+        };
+
+      default:
+        return baseInput;
+    }
   }
 
   private calculateOptimalTimeout(toolName: string): number {
@@ -1144,9 +1210,35 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
   }
 
   private findDecisionByFeedback(feedback: UserFeedback): AIDecision | null {
-    // This would need to be implemented based on how decisions are tracked
-    // For now, return null as placeholder
-    return null;
+    // Search through recent decisions to find the one matching the feedback
+    if (!feedback.decisionId) return null;
+
+    // Check if we have the decision in our recent decisions cache
+    const decisionTimestamp = this.recentDecisions.get(feedback.decisionId);
+    if (!decisionTimestamp) return null;
+
+    // Reconstruct basic decision info from the feedback and stored data
+    const ruleId = this.extractRuleIdFromDecision({ id: feedback.decisionId } as AIDecision);
+    const rule = this.decisionRules.get(ruleId);
+    
+    if (!rule) return null;
+
+    // Create a minimal decision object for learning purposes
+    return {
+      id: feedback.decisionId,
+      type: rule.name,
+      priority: rule.priority,
+      confidence: rule.confidence,
+      rationale: rule.description,
+      toolChain: this.generateToolChain(rule.toolChain),
+      context: {} as any, // Context would need to be stored separately for full reconstruction
+      metadata: {
+        complexity: this.calculateComplexity(rule.toolChain),
+        executionTime: this.estimateProcessingTime(rule.toolChain),
+        expectedOutcome: 'Decision outcome based on rule: ' + rule.name,
+        riskLevel: 'medium'
+      }
+    };
   }
 
   private extractRuleIdFromDecision(decision: AIDecision): string {
@@ -1341,6 +1433,74 @@ export class GSIDecisionEngine extends EventEmitter implements IDecisionEngine {
 
   // Fix the array comparison method
   private arraysEqual<T>(a: T[], b: T[]): boolean {
-    return a.length === b.length && a.every((val, index) => val === b[index]);
+    return a.length === b.length && a.every((val, i) => val === b[i]);
   }
-} 
+
+  private generateLLMPrompt(decision: AIDecision | null): string {
+    if (!decision) return 'Analyze the current game state and provide coaching advice.';
+
+    const context = decision.context;
+    const gameState = context.gameState?.processed;
+    const player = gameState?.playerState;
+    const team = gameState?.teamState;
+
+    let prompt = `You are an AI CS2 coach. Current situation:\n`;
+    
+    if (player) {
+      prompt += `Player: Health ${player.health}, Money $${player.money}, `;
+      prompt += `Position: ${player.position ? `(${player.position.x}, ${player.position.y})` : 'unknown'}\n`;
+    }
+
+    if (team) {
+      prompt += `Team Score: ${team.score}\n`;
+    }
+
+    if (gameState?.phase) {
+      prompt += `Game Phase: ${gameState.phase}\n`;
+    }
+
+    if (decision.rationale) {
+        prompt += `Coaching Objective: ${decision.rationale}\n`;
+      }
+
+    prompt += `\nProvide specific, actionable coaching advice for this situation.`;
+    
+    return prompt;
+  }
+
+  private extractProfileData(decision: AIDecision | null): any {
+    if (!decision) return {};
+
+    const context = decision.context;
+    const gameState = context.gameState?.processed;
+    const player = gameState?.playerState;
+    const team = gameState?.teamState;
+
+    return {
+      playerId: player?.steamId,
+      currentPerformance: {
+        kills: player?.statistics?.kills || 0,
+        deaths: player?.statistics?.deaths || 0,
+        assists: player?.statistics?.assists || 0,
+        score: player?.statistics?.rating || 0,
+        health: player?.health || 0,
+        money: player?.money || 0
+      },
+      teamPerformance: {
+        teamScore: team?.score || 0,
+        playersAlive: 0, // TeamGameState doesn't contain player data
+        totalPlayers: 0 // TeamGameState doesn't contain player data
+      },
+      gameContext: {
+          phase: gameState?.phase,
+          mapName: gameState?.mapState?.name
+        },
+      timestamp: new Date().toISOString(),
+      decisionContext: {
+        rationale: decision.rationale,
+        priority: decision.priority,
+        confidence: decision.confidence
+      }
+    };
+  }
+}

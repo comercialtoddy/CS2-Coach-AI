@@ -9,15 +9,15 @@ import {
 // Player avatar storage
 export const playerPictureStorage = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: (_req, _file, cb) => {
       cb(null, getPlayerPicturesPath());
     },
-    filename: (req, file, cb) => {
+    filename: (_req, file, cb) => {
       const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
       cb(null, uniqueName);
     },
   }),
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -34,15 +34,15 @@ export const playerPictureStorage = multer({
 // Team logo storage
 export const teamLogoStorage = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: (_req, _file, cb) => {
       cb(null, getTeamLogosPath());
     },
-    filename: (req, file, cb) => {
+    filename: (_req, file, cb) => {
       const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
       cb(null, uniqueName);
     },
   }),
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);

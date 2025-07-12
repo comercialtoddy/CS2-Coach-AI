@@ -1,0 +1,46 @@
+# Task ID: 33
+# Title: Implementação Completa dos Componentes da Interface do Usuário (UI)
+# Status: done
+# Dependencies: 3, 5, 10, 18, 25, 29, 31
+# Priority: high
+# Description: Desenvolver e integrar todos os componentes React restantes para a interface do usuário, como Dashboard, Players, Teams e Matches, garantindo uma experiência de usuário completa e conectada aos serviços de backend.
+# Details:
+Esta tarefa consiste em reconstruir e finalizar a interface do usuário da aplicação. O trabalho será dividido em componentes principais, utilizando React e se conectando aos endpoints da API já definidos. 1. **Estrutura de Roteamento:** Utilizar `react-router-dom` para criar as rotas para `/dashboard`, `/players`, `/players/:id`, `/teams`, `/matches`, e `/matches/:id`. 2. **Dashboard (`/dashboard`):** Recriar a página principal que exibe um resumo do desempenho do jogador, estatísticas chave (K/D, win rate), e atalhos para outras seções. Os dados devem ser buscados do backend, que os consolida a partir do `PlayerProfile`. 3. **Página de Jogadores (`/players`):** Implementar uma visualização em lista ou grade de todos os jogadores rastreados. Adicionar funcionalidade de busca e filtro. Cada jogador na lista deve ser um link para sua página de perfil detalhada. 4. **Página de Perfil do Jogador (`/players/:id`):** Criar uma página que exiba informações detalhadas de um jogador específico, incluindo histórico de partidas, estatísticas de armas, análise de mapas e progresso de tarefas, utilizando dados do `PlayerProfile` e `MatchHistory`. 5. **Página de Times (`/teams`):** Desenvolver uma seção para visualizar e gerenciar times. 6. **Página de Partidas (`/matches`):** Criar uma lista paginada do histórico de partidas do jogador. Cada item deve exibir informações resumidas (mapa, placar, data) e ser um link para a análise detalhada da partida. 7. **Análise de Partida (`/matches/:id`):** Implementar a visualização detalhada de uma partida, com placar final, estatísticas de todos os jogadores e eventos importantes da partida. 8. **Gerenciamento de Estado e Dados:** Utilizar `react-query` ou `swr` para gerenciar o estado do servidor (fetching, caching, e atualização de dados da API) de forma eficiente, incluindo o tratamento de estados de carregamento e erro.
+
+# Test Strategy:
+A validação será feita em etapas. 1. **Teste de Compilação e Renderização:** Verificar se a aplicação React compila sem erros e se todos os novos componentes e páginas são renderizados corretamente. 2. **Teste de Navegação:** Clicar em todos os links de navegação (menu, links em listas) para garantir que o roteamento funciona como esperado entre todas as páginas (Dashboard, Players, Perfil do Jogador, Matches, etc.). 3. **Validação da Integração com API:** Com o backend em execução e o banco de dados populado com dados de teste, navegar por cada página e verificar se os dados corretos são buscados e exibidos. Usar as ferramentas de desenvolvedor do navegador para inspecionar as chamadas de rede e confirmar que os endpoints corretos estão sendo atingidos. 4. **Teste de Interatividade:** Testar todas as funcionalidades interativas, como barras de busca, filtros e botões, para garantir que eles alteram a visualização de dados conforme o esperado. 5. **Verificação de Estados da UI:** Confirmar que os indicadores de carregamento (loading spinners) são exibidos durante as buscas de dados e que mensagens de erro apropriadas aparecem em caso de falha na comunicação com a API.
+
+# Subtasks:
+## 1. Configuração do Roteamento e Layout Principal da Aplicação [done]
+### Dependencies: None
+### Description: Estabelecer a estrutura de navegação da aplicação utilizando `react-router-dom` e criar o layout base, incluindo componentes como barra de navegação e uma área de conteúdo principal, que serão compartilhados entre todas as páginas.
+### Details:
+1. Instale e configure o `react-router-dom`. 2. No componente principal da aplicação (ex: `App.js`), defina o `BrowserRouter` e as rotas para: `/dashboard`, `/players`, `/players/:id`, `/teams`, `/matches`, e `/matches/:id`. 3. Crie um componente de Layout que contenha uma barra de navegação com links para as rotas principais e utilize o componente `<Outlet />` para renderizar o conteúdo da rota ativa. 4. Inicialmente, cada rota deve renderizar um componente de placeholder simples para validar a configuração.
+<info added on 2025-07-11T18:32:58.956Z>
+A configuração do roteamento foi concluída. Foram criadas todas as páginas principais (PlayersPage, PlayerProfilePage, MatchesPage, MatchDetailsPage, TeamsPage, Dashboard) com componentes placeholder funcionais que utilizam os hooks existentes. O arquivo App.tsx foi atualizado para incluir as rotas /dashboard, /players, /players/:id, /teams, /matches (com redirecionamento para /), /matches/:id e /performance/*. O roteamento está totalmente funcional e pronto para navegação.
+</info added on 2025-07-11T18:32:58.956Z>
+
+## 2. Desenvolvimento da Página de Listagem de Jogadores (`/players`) [done]
+### Dependencies: 33.1
+### Description: Implementar a página que exibe uma lista ou grade de todos os jogadores rastreados. A página deve buscar dados da API, permitir busca e filtragem, e cada jogador na lista deve ser um link para sua página de perfil detalhada.
+### Details:
+1. Crie o componente `PlayersListPage`. 2. Utilize `react-query` para buscar a lista de jogadores do endpoint da API. 3. Implemente a exibição de estados de carregamento (loading) e erro. 4. Renderize os jogadores em uma lista ou grade, mostrando informações essenciais (nome, avatar). 5. Adicione um campo de input para busca que filtre os resultados. 6. Cada item da lista deve ser um componente `<Link>` do `react-router-dom` que navega para `/players/:id`, passando o ID do jogador correspondente.
+
+## 3. Desenvolvimento da Página de Perfil do Jogador (`/players/:id`) [done]
+### Dependencies: 33.2
+### Description: Criar a página de perfil detalhado para um jogador específico. A página deve buscar e exibir informações completas, como estatísticas gerais (`PlayerProfile`) e histórico de partidas (`MatchHistory`).
+### Details:
+1. Crie o componente `PlayerProfilePage`. 2. Utilize o hook `useParams` de `react-router-dom` para extrair o `id` do jogador da URL. 3. Use `react-query` para buscar os dados detalhados do jogador a partir dos endpoints da API, utilizando o `id` obtido. 4. Estruture a página em seções para exibir: resumo de estatísticas (K/D, win rate), lista de partidas recentes, análise de armas, etc. 5. Implemente tratamento para o caso de um jogador não ser encontrado (erro 404).
+
+## 4. Implementação da Página de Listagem de Partidas (`/matches`) e do Dashboard (`/dashboard`) [done]
+### Dependencies: 33.1
+### Description: Desenvolver a página que lista o histórico de partidas do jogador com paginação e a página de Dashboard, que exibe um resumo de estatísticas chave e atividades recentes.
+### Details:
+1. **Página de Partidas (`/matches`):** Crie o componente `MatchesListPage`. Use `react-query` para buscar a lista de partidas de forma paginada. Exiba informações resumidas de cada partida (mapa, placar, data) e transforme cada item em um link para `/matches/:id`. 2. **Página de Dashboard (`/dashboard`):** Crie o componente `DashboardPage`. Busque dados consolidados do backend (estatísticas chave, últimas 5 partidas). Apresente os dados em cards ou gráficos para uma visualização rápida.
+
+## 5. Implementação da Análise de Partida (`/matches/:id`) e Página de Times (`/teams`) [done]
+### Dependencies: 33.4
+### Description: Finalizar a interface com a página de detalhes da partida, mostrando placares e estatísticas de todos os participantes, e criar a página para visualização de times.
+### Details:
+1. **Análise de Partida (`/matches/:id`):** Crie o componente `MatchDetailsPage`. Use `useParams` para obter o `id` da partida. Busque os dados detalhados da partida via API. Exiba o placar final, uma tabela com as estatísticas de cada jogador na partida e outros eventos relevantes. 2. **Página de Times (`/teams`):** Crie o componente `TeamsPage`. Implemente a funcionalidade para buscar e visualizar os times existentes a partir da API. A interface deve listar os times e, opcionalmente, seus membros.
+

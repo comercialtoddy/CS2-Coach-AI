@@ -10,6 +10,7 @@ import {
   createPlayer, 
   getPlayers 
 } from '../../services/playersServices.js';
+import { Player } from '../../../UI/api/types.js';
 
 /**
  * Tool_UpdatePlayerProfile - Updates player profiles in the local database
@@ -143,7 +144,7 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
   /**
    * Main execution method
    */
-  async execute(input: UpdatePlayerProfileInput, context: ToolExecutionContext): Promise<ToolExecutionResult<UpdatePlayerProfileOutput>> {
+  async execute(input: UpdatePlayerProfileInput, _context: ToolExecutionContext): Promise<ToolExecutionResult<UpdatePlayerProfileOutput>> {
     const startTime = Date.now();
     
     if (input.validateData !== false) {
@@ -306,4 +307,4 @@ export class UpdatePlayerProfileTool implements ITool<UpdatePlayerProfileInput, 
       extra: player.extra
     };
   }
-} 
+}

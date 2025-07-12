@@ -1,5 +1,11 @@
 import { ITool, ToolExecutionContext, ToolExecutionResult, ToolParameterSchema, ToolMetadata, ToolCategory } from '../interfaces/ITool.js';
 import { getPlayers } from '../../services/playersServices.js';
+import { db } from '../../../database/database.js';
+import { promisify } from 'util';
+
+// Promisify database methods for async/await usage
+const dbGet = promisify(db.get.bind(db)) as (sql: string, params?: any[]) => Promise<any>;
+const dbAll = promisify(db.all.bind(db)) as (sql: string, params?: any[]) => Promise<any[]>;
 
 /**
  * Input interface for the PlayerDataTool
@@ -145,6 +151,62 @@ export class PlayerDataTool implements ITool<PlayerDataToolInput, PlayerDataTool
   }
 
   /**
+   * Get real player statistics from database
+   */
+  private async getPlayerStats(playerId: string): Promise<{
+    matchesPlayed: number;
+    averageRating: number;
+    lastActive: Date;
+  }> {
+    try {
+      // Try to get real stats from performance_stats table
+      const statsQuery = `
+        SELECT 
+          COUNT(*) as matchesPlayed,
+          AVG(CASE WHEN deaths > 0 THEN CAST(kills as FLOAT) / deaths ELSE kills END) as averageRating,
+          MAX(created_at) as lastActive
+        FROM performance_stats 
+        WHERE player_id = ?
+      `;
+      
+      const stats = await dbGet(statsQuery, [playerId]);
+      
+      if (stats && stats.matchesPlayed > 0) {
+        return {
+          matchesPlayed: stats.matchesPlayed || 0,
+          averageRating: Math.round((stats.averageRating || 1.0) * 100) / 100,
+          lastActive: stats.lastActive ? new Date(stats.lastActive) : new Date()
+        };
+      }
+
+      // If no performance data, try to get basic stats from generated_tasks table
+      const taskStatsQuery = `
+        SELECT 
+          COUNT(*) as totalTasks,
+          MAX(updated_at) as lastActive
+        FROM generated_tasks 
+        WHERE player_id = ?
+      `;
+      
+      const taskStats = await dbGet(taskStatsQuery, [playerId]);
+      
+      return {
+        matchesPlayed: 0, // No match data available
+        averageRating: 1.0, // Default rating
+        lastActive: taskStats?.lastActive ? new Date(taskStats.lastActive) : new Date()
+      };
+    } catch (error) {
+      console.error('Error getting player stats:', error);
+      // Return default stats if database query fails
+      return {
+        matchesPlayed: 0,
+        averageRating: 1.0,
+        lastActive: new Date()
+      };
+    }
+  }
+
+  /**
    * Executes the tool to retrieve player data
    */
   public async execute(
@@ -197,15 +259,10 @@ export class PlayerDataTool implements ITool<PlayerDataToolInput, PlayerDataTool
         }
       };
 
-      // Include stats if requested
+      // Include real stats if requested
       if (input.includeStats) {
-        // In a real implementation, this would query match statistics
-        // For now, we'll provide mock stats
-        playerData.stats = {
-          matchesPlayed: Math.floor(Math.random() * 200) + 50,
-          averageRating: Math.round((Math.random() * 0.8 + 0.8) * 100) / 100, // 0.8-1.6 rating
-          lastActive: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000) // Within last 30 days
-        };
+        // Get real player statistics from database
+        playerData.stats = await this.getPlayerStats(player.steamid || player._id);
       }
 
       return {

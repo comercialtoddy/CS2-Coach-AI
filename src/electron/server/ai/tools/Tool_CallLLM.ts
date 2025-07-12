@@ -1,4 +1,5 @@
 import { ITool, ToolExecutionContext, ToolExecutionResult, ToolParameterSchema, ToolMetadata } from '../interfaces/ITool.js';
+import { callLLM } from '../../services/openRouterServices.js';
 
 interface CallLLMInput {
   prompt: string;
@@ -113,12 +114,30 @@ export class Tool_CallLLM implements ITool<CallLLMInput, CallLLMOutput> {
         };
       }
 
-      // For now, just return a mock response
-      // TODO: Implement actual OpenRouter API call
+      // Use the real OpenRouter service to make the LLM call
+      const response = await callLLM(input.prompt, {
+        model: input.model,
+        temperature: input.temperature,
+        maxTokens: input.maxTokens,
+        timeout: 30000, // 30 seconds timeout
+        retries: 2 // Retry twice on failure
+      });
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: {
+            code: response.error?.code || 'LLM_ERROR',
+            message: response.error?.message || 'Failed to get LLM response',
+            details: response.error?.details
+          }
+        };
+      }
+
       return {
         success: true,
         data: {
-          response: `Mock response for prompt: ${input.prompt.slice(0, 50)}...`
+          response: response.content || 'No content returned from LLM'
         }
       };
     } catch (error) {

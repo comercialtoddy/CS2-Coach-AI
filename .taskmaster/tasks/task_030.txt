@@ -1,0 +1,43 @@
+# Task ID: 30
+# Title: Correção de Problemas Git e Restauração de Funcionalidades do Frontend
+# Status: cancelled
+# Dependencies: 16, 25, 27, 28
+# Priority: high
+# Description: Analisar o estado atual do repositório Git para identificar e corrigir arquivos deletados ou modificados indevidamente. Restaurar componentes essenciais da interface do usuário, como o Dashboard e suas subpáginas, garantindo que a aplicação volte a funcionar como esperado.
+# Details:
+Esta tarefa é uma ação corretiva crítica para restaurar a funcionalidade do frontend que foi perdida, conforme identificado por uma análise do `git status`. O processo deve seguir os seguintes passos: 1. **Análise do Git:** Execute `git status` e `git diff` para obter uma visão completa dos arquivos deletados (componentes Dashboard, Matches, Players, Teams) e modificados (controladores OpenRouter). 2. **Restauração de Componentes:** Utilize comandos Git como `git restore <file>` ou `git checkout <commit_hash> -- <file>` para restaurar os arquivos de componentes React que foram removidos do diretório do frontend. A prioridade é restaurar a estrutura de pastas e arquivos conforme implementado na Tarefa 25. 3. **Correção de Roteamento e Imports:** Após restaurar os arquivos, revise `RouteSelect.tsx` e o arquivo de roteamento principal (ex: `App.tsx`) para garantir que as rotas para os componentes restaurados estejam corretamente definidas e funcionais. Corrija quaisquer `import` quebrados em toda a aplicação que faziam referência a esses componentes. 4. **Ajustes de Layout:** Inspecione e ajuste o `Layout.tsx` para garantir que ele se integre corretamente com os componentes restaurados e esteja alinhado com as mudanças de rebranding da Tarefa 27. 5. **Revisão dos Controladores:** Analise as modificações nos controladores do OpenRouter. Determine se as alterações são benéficas ou se introduziram erros. Reverta quaisquer alterações problemáticas para garantir a estabilidade da integração com a IA (Tarefa 16). 6. **Commit Corretivo:** Após a restauração e verificação local, faça um commit das correções com uma mensagem clara, como 'fix(frontend): Restaura componentes do dashboard e corrige rotas quebradas'.
+
+# Test Strategy:
+A verificação será feita em múltiplas etapas para garantir a restauração completa: 1. **Verificação de Compilação:** Confirme que o projeto frontend (React) compila com sucesso sem erros após a restauração dos arquivos e correção dos imports. 2. **Teste de Navegação:** Inicie a aplicação e navegue para cada uma das páginas restauradas (Dashboard, Matches, Players, Teams). Verifique se as páginas carregam sem erros 404 ou crashes no cliente. 3. **Validação de Componentes:** Em cada página restaurada, verifique se os componentes visuais básicos são renderizados corretamente, mesmo que sem dados. Confirme que a estrutura do layout está intacta. 4. **Teste de Regressão da API:** Execute testes que validem a funcionalidade dos controladores OpenRouter modificados. Utilize endpoints de teste existentes, se disponíveis, para confirmar que a comunicação com o serviço de LLM não foi comprometida. 5. **Revisão de Código (Pull Request):** O PR deve mostrar claramente os arquivos restaurados e as correções de import/rota. O revisor deve confirmar que a funcionalidade principal do dashboard foi restabelecida e que não há regressões aparentes.
+
+# Subtasks:
+## 1. Análise do Git e Identificação de Arquivos Afetados [pending]
+### Dependencies: None
+### Description: Realizar uma análise detalhada do estado atual do repositório Git para criar uma lista precisa de todos os arquivos de componentes React que foram deletados e dos controladores que foram modificados indevidamente.
+### Details:
+Execute `git status` para obter uma visão geral das mudanças não commitadas. Utilize `git log --stat` ou `git diff <commit_anterior>..HEAD --name-status` para identificar o commit exato que removeu os componentes (Dashboard, Matches, Players, Teams) e alterou os controladores (openRouterController). O resultado deve ser uma lista clara de arquivos a serem restaurados e arquivos a serem revertidos.
+
+## 2. Restauração dos Arquivos de Componentes do Frontend [pending]
+### Dependencies: None
+### Description: Com base na análise da subtarefa anterior, restaurar os arquivos de componentes React que foram deletados, trazendo-os de volta para a árvore de trabalho do projeto.
+### Details:
+Use o comando `git restore <caminho_do_arquivo>` para cada componente deletado (ex: `src/components/Dashboard/Dashboard.tsx`, `src/components/Matches/Matches.tsx`, etc.). Alternativamente, use `git checkout <hash_do_commit_bom> -- <caminho_do_arquivo>` para restaurar a versão de um commit específico conhecido por ser estável. O objetivo é ter os arquivos fisicamente de volta no sistema de arquivos.
+
+## 3. Correção do Roteamento da Aplicação e Imports Quebrados [pending]
+### Dependencies: None
+### Description: Após restaurar os arquivos dos componentes, é necessário reintegrá-los à aplicação, corrigindo as definições de rotas e quaisquer declarações de `import` que se tornaram inválidas.
+### Details:
+Abra o arquivo principal de roteamento (ex: `App.tsx` ou `RouteSelect.tsx`) e garanta que as rotas para os componentes restaurados (Dashboard, Matches, etc.) estejam corretamente definidas e ativas. Realize uma busca em todo o projeto por erros de importação e corrija os caminhos para que apontem para os arquivos restaurados. A aplicação deve compilar sem erros de resolução de módulo.
+
+## 4. Revisão e Reversão de Alterações nos Controladores [pending]
+### Dependencies: None
+### Description: Analisar as modificações feitas nos controladores do OpenRouter e outros arquivos de serviço relacionados. Reverter quaisquer alterações que sejam prejudiciais ou não intencionais para restaurar a estabilidade da integração com a IA.
+### Details:
+Utilize `git diff` para inspecionar as mudanças nos arquivos `openRouterController.ts`, `routes.ts` e `services.ts`. Compare as alterações com os requisitos da Tarefa 16. Se as modificações introduziram erros ou não são desejadas, reverta-as usando `git restore <arquivo>` para descartar as mudanças no diretório de trabalho.
+
+## 5. Verificação Funcional, Ajustes de Layout e Commit Corretivo [pending]
+### Dependencies: None
+### Description: Realizar uma verificação completa da aplicação para garantir que todas as funcionalidades do dashboard foram restauradas. Fazer ajustes finos no layout e, finalmente, agrupar todas as correções em um único commit.
+### Details:
+Inicie a aplicação localmente. Navegue para a página do Dashboard e todas as suas subpáginas (Matches, Players, Teams) para confirmar que estão renderizando e funcionando corretamente. Verifique o `Layout.tsx` para garantir que ele se integra visualmente com os componentes restaurados e as mudanças de rebranding da Tarefa 27. Após a validação completa, execute `git add .` e `git commit -m 'fix(frontend): Restaura componentes do dashboard e corrige rotas quebradas'`.
+

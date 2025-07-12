@@ -279,7 +279,8 @@ export class GetGSIInfoTool implements ITool<GetGSIInfoInput, GetGSIInfoOutput> 
               missingDataPoints.push(dataPoint);
           }
         } catch (error) {
-          console.warn(`Failed to extract data point ${dataPoint}:`, error);
+          // Log error for debugging but don't include in missing data points
+          console.error(`Failed to extract GSI data point ${dataPoint}:`, error);
           missingDataPoints.push(dataPoint);
         }
       }
