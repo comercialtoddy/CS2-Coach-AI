@@ -1,14 +1,17 @@
 import { Routes, Route, Navigate, HashRouter } from "react-router-dom";
 import { Dashboard } from "./pages/Dashboard/Dashboard";
-import { MatchesPage } from "./pages/Matches/MatchPage";
+import { MatchesPage } from "./pages/Matches/MatchesPage";
 import { MatchDetailsPage } from "./pages/Matches/MatchDetailsPage";
 import { PlayersPage } from "./pages/Players/PlayersPage";
 import { PlayerProfilePage } from "./pages/Players/PlayerProfilePage";
 import { TeamsPage } from "./pages/Teams/TeamsPage";
 import { AppProviders } from "./context/AppProviders";
 import { Layout } from "./pages/Layout";
-import { AgentOverlay } from "./pages/AgentOverlay";
-import { PerformanceDashboard } from "./pages/Performance";
+import { AgentOverlay } from "./pages/AgentOverlay/AgentOverlay";
+import { PerformanceDashboard } from "./pages/Performance/PerformanceDashboard";
+import { CoachPage } from "./pages/Coach/CoachPage";
+import { TeamStatsPage } from "./pages/TeamStats/TeamStatsPage";
+import { UnifiedSettings } from "./pages/Settings/UnifiedSettings";
 
 const AppRoutes = () => {
   return (
@@ -24,10 +27,10 @@ const AppRoutes = () => {
         <Route path="teams" element={<TeamsPage />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="performance/*" element={<PerformanceDashboard />} />
-        <Route path="coach" element={<div>AI Coach Page - Coming Soon</div>} />
-        <Route path="history" element={<div>Match History Page - Coming Soon</div>} />
-        <Route path="team-stats" element={<div>Team Stats Page - Coming Soon</div>} />
-        <Route path="settings" element={<div>Settings Page - Coming Soon</div>} />
+        <Route path="coach" element={<CoachPage />} />
+        <Route path="history" element={<MatchesPage />} />
+        <Route path="team-stats" element={<TeamStatsPage />} />
+        <Route path="settings" element={<UnifiedSettings />} />
       </Route>
     </Routes>
   );
