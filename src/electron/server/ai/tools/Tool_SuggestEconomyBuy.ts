@@ -3,20 +3,8 @@ import { CSGO, Side } from 'csgogsi';
 import { BuyStrategyType, getRecommendedBuyStrategy } from './economyRules.js';
 import { PlayerRole, getAdvancedBuyRecommendations } from './advancedEconomyRules.js';
 
-interface GSIPlayer {
-  team: string;
-  state?: {
-    money?: number;
-    equip_value?: number;
-  };
-  observer_slot?: number;
-  weapons?: Record<string, GSIWeapon>;
-  position?: string;
-}
 
-interface GSIWeapon {
-  name: string;
-}
+
 
 interface EconomyBuyInput {
   gsiData: CSGO;
@@ -276,7 +264,7 @@ export class Tool_SuggestEconomyBuy implements ITool<EconomyBuyInput, EconomyBuy
   /**
    * Execute the tool
    */
-  public async execute(input: EconomyBuyInput, context: ToolExecutionContext): Promise<ToolExecutionResult<EconomyBuyOutput>> {
+  public async execute(input: EconomyBuyInput, _context: ToolExecutionContext): Promise<ToolExecutionResult<EconomyBuyOutput>> {
     try {
       const validation = this.validateInput(input);
       if (!validation.isValid) {

@@ -141,7 +141,7 @@ export class Tool_CaptureScreenshot implements ITool<CaptureScreenshotInput, Cap
   /**
    * Execute the screenshot capture
    */
-  public async execute(input: CaptureScreenshotInput, context: ToolExecutionContext): Promise<ToolExecutionResult<CaptureScreenshotOutput>> {
+  public async execute(input: CaptureScreenshotInput, _context: ToolExecutionContext): Promise<ToolExecutionResult<CaptureScreenshotOutput>> {
     try {
       const validation = this.validateInput(input);
       if (!validation.isValid) {

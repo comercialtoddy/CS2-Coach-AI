@@ -1,5 +1,5 @@
 import { ConversationSummary } from '../interfaces/ConversationTypes.js';
-import { Database, RunResult } from 'sqlite3';
+import { Database } from 'sqlite3';
 import path from 'path';
 import { app } from 'electron';
 
@@ -272,4 +272,4 @@ export class SummaryStorage {
       });
     });
   }
-} 
+}

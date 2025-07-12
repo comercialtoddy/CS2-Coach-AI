@@ -252,7 +252,7 @@ export class GetTrackerGGStatsTool implements ITool<GetTrackerGGStatsInput, GetT
   /**
    * Main execution method
    */
-  async execute(input: GetTrackerGGStatsInput, context: ToolExecutionContext): Promise<ToolExecutionResult<GetTrackerGGStatsOutput>> {
+  async execute(input: GetTrackerGGStatsInput, _context: ToolExecutionContext): Promise<ToolExecutionResult<GetTrackerGGStatsOutput>> {
     const startTime = Date.now();
     
     try {
@@ -556,4 +556,4 @@ export class GetTrackerGGStatsTool implements ITool<GetTrackerGGStatsInput, GetT
 
     return keyMap[trackerKey] || null;
   }
-} 
+}
