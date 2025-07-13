@@ -1,5 +1,6 @@
 import { useMatchesContext } from "../context";
 import { apiUrl } from "../api/api";
+import { Match } from "../api/types";
 import axios from "axios";
 
 export const useMatches = () => {

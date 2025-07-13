@@ -7,16 +7,12 @@ import {
   MdTrendingDown, 
   MdSportsEsports,
   MdPeople,
-  MdBarChart,
-  MdMap,
   MdSettings,
   MdRefresh,
-  MdPlayArrow,
-  MdStop,
   MdAnalytics,
   MdEmojiEvents,
-  MdTimer,
-  MdTarget
+  MdStart,
+  MdPlayArrow
 } from 'react-icons/md';
 import { HUDCard } from '../../components/HUDCard';
 import { HUDButton } from '../../components/HUDButton';
@@ -128,15 +124,15 @@ const mockRecentMatches: RecentMatch[] = [
 ];
 
 export const Dashboard: React.FC = () => {
-  const [stats, setStats] = useState<DashboardStats>(mockStats);
-  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>(mockRecentMatches);
+  const [stats] = useState<DashboardStats>(mockStats);
+  const [recentMatches] = useState<RecentMatch[]>(mockRecentMatches);
   const [isLoading, setIsLoading] = useState(false);
   const [isGameRunning, setIsGameRunning] = useState(false);
   const navigate = useNavigate();
 
-  const { matches, loading: matchesLoading } = useMatches();
-  const { players, loading: playersLoading } = usePlayers();
-  const { teams, loading: teamsLoading } = useTeams();
+  useMatches();
+  usePlayers();
+  useTeams();
 
   useEffect(() => {
     // Simulate checking if CS2 is running
@@ -196,7 +192,7 @@ export const Dashboard: React.FC = () => {
     {
       title: 'AI Coach',
       description: 'Assistente inteligente',
-      icon: <MdTarget />,
+      icon: <MdStart />,
       path: '/coach',
       color: 'red',
       disabled: true
@@ -313,7 +309,7 @@ export const Dashboard: React.FC = () => {
           <div className="text-xs text-text-secondary mt-1">-1.8% esta semana</div>
         </HUDCard>
         
-        <HUDCard title="MVPs" glowColor="yellow" className="text-center">
+        <HUDCard title="MVPs" glowColor="orange" className="text-center">
           <div className="text-2xl font-bold text-yellow-400">{stats.mvps}</div>
           <div className="text-xs text-text-secondary mt-1">Este mês</div>
         </HUDCard>

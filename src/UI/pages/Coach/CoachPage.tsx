@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   MdPsychology, 
   MdTrendingUp, 
   MdWarning, 
   MdLightbulb,
-  MdTarget,
+  MdStart,
   MdAnalytics,
   MdSend,
   MdMic,
@@ -15,7 +15,6 @@ import {
   MdStar,
   MdThumbUp,
   MdThumbDown,
-  MdHistory,
   MdSmartToy
 } from 'react-icons/md';
 import { HUDCard } from '../../components/HUDCard';
@@ -184,7 +183,7 @@ export const CoachPage: React.FC = () => {
       case 'improvement': return <MdTrendingUp />;
       case 'warning': return <MdWarning />;
       case 'tip': return <MdLightbulb />;
-      case 'strategy': return <MdTarget />;
+      case 'strategy': return <MdStart />;
       default: return <MdAnalytics />;
     }
   };
@@ -193,9 +192,9 @@ export const CoachPage: React.FC = () => {
     switch (type) {
       case 'improvement': return 'blue';
       case 'warning': return 'red';
-      case 'tip': return 'yellow';
+      case 'tip': return 'orange';
       case 'strategy': return 'purple';
-      default: return 'gray';
+      default: return 'green';
     }
   };
 
@@ -409,7 +408,9 @@ export const CoachPage: React.FC = () => {
                 onClick={handleVoiceToggle}
                 icon={isListening ? <MdMic /> : <MdMicOff />}
                 className={isListening ? 'animate-pulse' : ''}
-              />
+              >
+                {isListening ? 'Ouvindo' : 'Falar'}
+              </HUDButton>
               
               <HUDButton
                 variant="primary"
@@ -446,7 +447,7 @@ export const CoachPage: React.FC = () => {
           <div className="text-xs text-text-secondary mt-1">Este mês</div>
         </HUDCard>
         
-        <HUDCard title="Avaliação" glowColor="yellow" className="text-center">
+        <HUDCard title="Avaliação" glowColor="orange" className="text-center">
           <div className="text-2xl font-bold text-yellow-400 flex items-center justify-center gap-1">
             4.8 <MdStar className="text-lg" />
           </div>
