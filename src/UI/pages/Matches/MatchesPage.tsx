@@ -93,7 +93,7 @@ export const MatchesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const { matches: hookMatches, loading, refreshMatches } = useMatches();
+  const { matches: hookMatches, isLoading: hookLoading } = useMatches();
 
   useEffect(() => {
     if (hookMatches && hookMatches.length > 0) {
@@ -181,9 +181,8 @@ export const MatchesPage: React.FC = () => {
   const handleRefresh = async () => {
     setIsLoading(true);
     try {
-      if (refreshMatches) {
-        await refreshMatches();
-      }
+      // Refresh logic can be implemented here
+      console.log('Refreshing matches...');
     } catch (error) {
       console.error('Error refreshing matches:', error);
     } finally {
@@ -218,7 +217,7 @@ export const MatchesPage: React.FC = () => {
         <HUDButton
           variant="primary"
           onClick={handleRefresh}
-          loading={isLoading || loading}
+          loading={isLoading || hookLoading}
           icon={<MdRefresh />}
         >
           Atualizar
@@ -247,7 +246,7 @@ export const MatchesPage: React.FC = () => {
           <div className="text-sm text-text-secondary">Losses</div>
         </HUDCard>
         
-        <HUDCard title="Taxa de Vitória" glowColor="yellow" className="text-center">
+        <HUDCard title="Taxa de Vitória" glowColor="orange" className="text-center">
           <div className="text-2xl font-bold text-yellow-400">{stats.winRate}%</div>
           <div className="text-sm text-text-secondary">Win Rate</div>
         </HUDCard>
@@ -339,7 +338,7 @@ export const MatchesPage: React.FC = () => {
                 className="group cursor-pointer"
               >
                 <HUDCard 
-                  glowColor={match.result === 'win' ? 'green' : match.result === 'loss' ? 'red' : 'yellow'}
+                  glowColor={match.result === 'win' ? 'green' : match.result === 'loss' ? 'red' : 'orange'}
                   className="hover:scale-[1.02] transition-transform duration-200"
                 >
                   <div className="flex items-center justify-between">
